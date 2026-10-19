@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy Environment Speaking Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@500;600;700&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one deck of colour cards on a quiet ground (header, instruction + progress, wrapping grid).
+   Choosing a card opens it large in a dialog; the card flips to a ~1-minute sample answer. */
+:root{
+  --bg:#F5F4F9;
+  --surface:#FFFFFF;
+  --soft:#E9E7F1;
+  --ink:#1E1B2E;
+  --muted:#686480;
+  --line:#DCD9E8;
+  --card-ink:#1E1B2E;
+  --paper:rgba(255,255,255,.72);
+  --accent:#5B3FD6; --accent-ink:#FFFFFF;
+  --k0:#FF8A6B; --k1:#FFC34D; --k2:#3FC4A9; --k3:#6AA6FF; --k4:#A98BF5; --k5:#F27DAE;
+  --good:#1D8A55;
+  --shadow:rgba(30,27,46,.18);
+  --qr-bg:#FFFFFF;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+    --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+  --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html, body{height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.5; overflow:hidden}
+/* App shell: header stays put, the deck scrolls inside its own box, so the page also works in a fixed-size embed (e.g. Canva). */
+.wrap{
+  height:100%; max-width:1240px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 0;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,20px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+
+.k0{--c:var(--k0)} .k1{--c:var(--k1)} .k2{--c:var(--k2)}
+.k3{--c:var(--k3)} .k4{--c:var(--k4)} .k5{--c:var(--k5)}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; min-width:0}
+.mark{display:flex; gap:4px; flex:none}
+.mark i{width:12px; height:28px; border-radius:6px}
+.mark i:nth-child(1){background:var(--k0)} .mark i:nth-child(2){background:var(--k1); height:20px; align-self:flex-end}
+.mark i:nth-child(3){background:var(--k3); height:34px; margin-top:-6px}
+.topic{
+  font:700 .8rem var(--font-body); letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent); border-radius:999px; padding:4px 12px; white-space:nowrap;
+}
+h1{
+  font-family:var(--font-display); font-weight:800; font-optical-sizing:auto;
+  font-size:clamp(1.9rem,3.4vw,2.9rem); line-height:1.05; margin:0; letter-spacing:-.02em; text-wrap:balance;
+}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:1.5px solid var(--line); border-radius:999px;
+  padding:6px 16px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+.tool.hot{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+.row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
+.top, .row{flex:none}
+.instr{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.4vw,1.15rem)*var(--scale)); max-width:75ch}
+.progress{
+  font:600 .9rem var(--font-body); font-variant-numeric:tabular-nums; color:var(--muted);
+  display:flex; align-items:center; gap:10px; white-space:nowrap;
+}
+.meter{width:120px; height:8px; border-radius:99px; background:var(--soft); overflow:hidden}
+.meter i{display:block; height:100%; width:var(--w,0%); background:var(--good); border-radius:99px; transition:width .3s}
+
+/* deck */
+.deck{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr));
+  gap:clamp(14px,1.6vw,20px);
+  align-content:start; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding:8px 8px 24px; margin-inline:-8px;
+  scrollbar-width:thin; scrollbar-color:var(--line) transparent;
+}
+.pick{
+  display:flex; flex-direction:column; gap:12px; text-align:left; min-width:0;
+  padding:16px 16px 18px; border:0; border-radius:20px;
+  background:var(--c); color:var(--card-ink); cursor:pointer;
+  box-shadow:0 1px 2px var(--shadow), 0 14px 24px -18px var(--shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.pick:hover{transform:translateY(-3px); box-shadow:0 2px 4px var(--shadow), 0 20px 30px -18px var(--shadow)}
+.pick:active{transform:translateY(0)}
+.pick .head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.pick .no{font:800 1.9rem/1 var(--font-display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.pick .emo{
+  display:grid; place-items:center; width:38px; height:38px; border-radius:50%;
+  background:var(--paper); font-size:1.2rem; line-height:1; font-family:var(--emoji);
+}
+.pick .pq{font:600 calc(clamp(.96rem,1.2vw,1.06rem)*var(--scale))/1.4 var(--font-body); overflow-wrap:anywhere}
+.stamp{
+  display:none; align-self:flex-start; margin-top:auto;
+  font:700 .76rem var(--font-body); letter-spacing:.06em; text-transform:uppercase; color:var(--good);
+}
+.pick.done{background:var(--soft); color:var(--muted); box-shadow:none}
+.pick.done .emo{background:var(--surface); filter:grayscale(1); opacity:.6}
+.pick.done .stamp{display:block}
+
+/* open card */
+dialog{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(960px, calc(100% - 24px)); max-width:none;
+  max-height:calc(100% - 24px); overflow:visible;
+}
+dialog::backdrop{background:rgba(16,13,30,.6); backdrop-filter:blur(3px)}
+.sheet{
+  display:flex; flex-direction:column; gap:18px;
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+  overflow-y:auto; padding:4px 4px 14px;
+}
+.flip{perspective:1800px}
+.inner{display:grid; transform-style:preserve-3d; transition:transform .65s cubic-bezier(.45,.05,.2,1)}
+.inner.flipped{transform:rotateY(180deg)}
+.face{
+  grid-area:1/1; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  border-radius:28px; box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  padding:clamp(22px,3.8vw,48px); display:flex; flex-direction:column; gap:clamp(14px,2vw,22px); min-width:0;
+}
+.front{background:var(--c); color:var(--card-ink)}
+.face{max-height:calc(100vh - 120px); max-height:calc(100dvh - 120px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin}
+@media (max-width:600px){ .face{max-height:calc(100vh - 200px); max-height:calc(100dvh - 200px)} }
+.back{background:var(--surface); color:var(--ink); transform:rotateY(180deg); border-top:10px solid var(--c)}
+.fhead{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.chip{font:700 .82rem var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:var(--card-ink); opacity:.75}
+.bigemo{
+  display:grid; place-items:center; width:64px; height:64px; border-radius:50%; flex:none;
+  background:var(--paper); font-size:2rem; line-height:1; font-family:var(--emoji);
+}
+.bigq{
+  margin:0; font:700 calc(clamp(1.7rem,3.6vw,2.9rem)*var(--scale))/1.15 var(--font-display);
+  letter-spacing:-.015em; text-wrap:balance; overflow-wrap:anywhere;
+}
+.follow{
+  background:var(--paper); color:var(--card-ink); border-radius:18px;
+  padding:clamp(14px,2vw,22px); display:flex; flex-direction:column; gap:6px;
+}
+.lbl{font:700 .78rem var(--font-body); letter-spacing:.08em; text-transform:uppercase}
+.follow .lbl{opacity:.65}
+.follow p{margin:0; font:600 calc(clamp(1.1rem,2vw,1.55rem)*var(--scale))/1.35 var(--font-body)}
+.backhead{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 16px}
+.backhead .lbl{color:var(--good)}
+.backhead .meta{font:500 .88rem var(--font-body); color:var(--muted); font-variant-numeric:tabular-nums}
+.backq{margin:0; color:var(--muted); font-size:calc(clamp(.98rem,1.4vw,1.12rem)*var(--scale)); font-weight:600}
+.answer{display:flex; flex-direction:column; gap:.8em; max-width:75ch}
+.answer p{margin:0; font-weight:500; font-size:calc(clamp(1.06rem,1.75vw,1.42rem)*var(--scale)); line-height:1.6; text-wrap:pretty}
+
+.bar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1rem,1.45vw,1.15rem)*var(--scale))/1 var(--font-body);
+  border-radius:16px; padding:.8em 1.25em; min-height:54px; cursor:pointer;
+  border:0; background:var(--surface); color:var(--ink);
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.5); transition:transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn.main{flex:0 1 360px; background:var(--accent); color:var(--accent-ink)}
+.timer{
+  font-variant-numeric:tabular-nums; min-width:9.5em; color:var(--card-ink);
+  background:linear-gradient(to right, var(--k1) calc(var(--p,1)*100%), #FFF3D6 0);
+}
+.timer.up{background:var(--k0)}
+@media (max-width:600px){
+  .btn.main{order:-1; flex-basis:100%}
+  .bar .btn:not(.main){flex:1}
+}
+
+/* QR panel */
+#qrDlg{width:min(560px, calc(100% - 24px))}
+.qrpanel{
+  background:var(--surface); color:var(--ink); border-radius:28px;
+  padding:clamp(20px,3.4vw,36px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.4rem,3vw,2rem)/1.15 var(--font-display); letter-spacing:-.015em; text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted); font-size:1rem}
+.qrbox{width:min(440px, 68vmin, 100%); padding:6px; border-radius:16px; background:var(--qr-bg); border:4px solid var(--k3)}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{
+  margin:0; font:600 .9rem var(--font-body); color:var(--muted); overflow-wrap:anywhere;
+  -webkit-user-select:all; user-select:all;
+}
+.qrbtns{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:100%}
+.qrbtns .btn{flex:1 1 160px; box-shadow:none; border:1.5px solid var(--line)}
+.qrbtns .btn.main{border-color:var(--accent)}
+.tool.qr-open{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+/* Short frames (embeds, small laptop screens): tighter chrome so more cards show */
+@media (max-height:700px){
+  .wrap{padding-block:10px 0; gap:8px}
+  h1{font-size:clamp(1.4rem,3vw,2rem)}
+  .mark{transform:scale(.72); transform-origin:left center; margin-right:-8px}
+  .tool{min-height:34px; padding:3px 12px; font-size:.82rem}
+  .instr{font-size:.9rem}
+  .pick{padding:12px 12px 14px; gap:8px; border-radius:16px}
+  .pick .no{font-size:1.5rem}
+  .pick .emo{width:32px; height:32px; font-size:1rem}
+  .face{padding:18px 24px; gap:12px; border-radius:22px}
+  .bigemo{width:48px; height:48px; font-size:1.5rem}
+  .follow{padding:12px 16px}
+  .btn{min-height:44px; padding:.6em 1em}
+  .sheet{gap:12px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .inner, .pick, .btn, .meter i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Speaking Cards</h1>
+      <span class="topic">Environment · Easy</span>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="random" type="button">Random card</button>
+      <button class="tool" id="reset" type="button">Reset</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <p class="instr">Choose a card and speak for about one minute. Answer all parts of the question, then flip the card to see a sample answer.</p>
+    <span class="progress"><span class="meter"><i id="meter"></i></span><span id="progress"></span></span>
+  </div>
+
+  <main class="deck" id="deck" aria-label="Speaking cards"></main>
+</div>
+
+<dialog id="dlg" aria-label="Speaking card">
+  <div class="sheet">
+    <div class="flip">
+      <div class="inner" id="inner">
+        <section class="face front" id="front"></section>
+        <section class="face back" id="back" aria-hidden="true"></section>
+      </div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="close" type="button">← All cards</button>
+      <button class="btn timer" id="timer" type="button">Start 1:00</button>
+      <button class="btn main" id="flipBtn" type="button" autofocus>Show sample answer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open the cards</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens Environment · Easy"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM13 4h1v1h-1zM17 4h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM22 4h1v1h-1zM25 4h1v1h-1zM27 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM13 5h1v1h-1zM16 5h1v1h-1zM18 5h1v1h-1zM20 5h1v1h-1zM24 5h1v1h-1zM25 5h1v1h-1zM26 5h1v1h-1zM29 5h1v1h-1zM31 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM18 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM32 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM12 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM17 7h1v1h-1zM19 7h1v1h-1zM20 7h1v1h-1zM21 7h1v1h-1zM23 7h1v1h-1zM26 7h1v1h-1zM27 7h1v1h-1zM29 7h1v1h-1zM30 7h1v1h-1zM32 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM12 8h1v1h-1zM13 8h1v1h-1zM15 8h1v1h-1zM19 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM25 8h1v1h-1zM27 8h1v1h-1zM29 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM12 9h1v1h-1zM14 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM22 9h1v1h-1zM25 9h1v1h-1zM26 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM31 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM12 11h1v1h-1zM14 11h1v1h-1zM17 11h1v1h-1zM18 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM25 11h1v1h-1zM26 11h1v1h-1zM28 11h1v1h-1zM30 11h1v1h-1zM31 11h1v1h-1zM32 11h1v1h-1zM4 12h1v1h-1zM6 12h1v1h-1zM7 12h1v1h-1zM8 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM14 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM17 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM26 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM30 12h1v1h-1zM31 12h1v1h-1zM34 12h1v1h-1zM35 12h1v1h-1zM36 12h1v1h-1zM37 12h1v1h-1zM38 12h1v1h-1zM5 13h1v1h-1zM6 13h1v1h-1zM7 13h1v1h-1zM9 13h1v1h-1zM11 13h1v1h-1zM12 13h1v1h-1zM14 13h1v1h-1zM16 13h1v1h-1zM19 13h1v1h-1zM20 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM27 13h1v1h-1zM29 13h1v1h-1zM32 13h1v1h-1zM33 13h1v1h-1zM35 13h1v1h-1zM39 13h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM8 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM12 14h1v1h-1zM13 14h1v1h-1zM15 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM25 14h1v1h-1zM28 14h1v1h-1zM29 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM35 14h1v1h-1zM37 14h1v1h-1zM39 14h1v1h-1zM40 14h1v1h-1zM4 15h1v1h-1zM5 15h1v1h-1zM7 15h1v1h-1zM11 15h1v1h-1zM12 15h1v1h-1zM17 15h1v1h-1zM18 15h1v1h-1zM20 15h1v1h-1zM25 15h1v1h-1zM27 15h1v1h-1zM30 15h1v1h-1zM31 15h1v1h-1zM36 15h1v1h-1zM40 15h1v1h-1zM7 16h1v1h-1zM8 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM18 16h1v1h-1zM21 16h1v1h-1zM23 16h1v1h-1zM24 16h1v1h-1zM26 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM29 16h1v1h-1zM32 16h1v1h-1zM33 16h1v1h-1zM34 16h1v1h-1zM35 16h1v1h-1zM36 16h1v1h-1zM38 16h1v1h-1zM39 16h1v1h-1zM40 16h1v1h-1zM4 17h1v1h-1zM5 17h1v1h-1zM8 17h1v1h-1zM16 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM30 17h1v1h-1zM32 17h1v1h-1zM33 17h1v1h-1zM35 17h1v1h-1zM39 17h1v1h-1zM5 18h1v1h-1zM8 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM21 18h1v1h-1zM24 18h1v1h-1zM26 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM35 18h1v1h-1zM36 18h1v1h-1zM37 18h1v1h-1zM39 18h1v1h-1zM40 18h1v1h-1zM5 19h1v1h-1zM7 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM12 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM20 19h1v1h-1zM21 19h1v1h-1zM22 19h1v1h-1zM23 19h1v1h-1zM24 19h1v1h-1zM25 19h1v1h-1zM27 19h1v1h-1zM30 19h1v1h-1zM34 19h1v1h-1zM35 19h1v1h-1zM36 19h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM6 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM14 20h1v1h-1zM16 20h1v1h-1zM18 20h1v1h-1zM20 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM26 20h1v1h-1zM28 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM33 20h1v1h-1zM34 20h1v1h-1zM36 20h1v1h-1zM38 20h1v1h-1zM5 21h1v1h-1zM6 21h1v1h-1zM7 21h1v1h-1zM9 21h1v1h-1zM12 21h1v1h-1zM13 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM18 21h1v1h-1zM19 21h1v1h-1zM21 21h1v1h-1zM22 21h1v1h-1zM23 21h1v1h-1zM24 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM32 21h1v1h-1zM35 21h1v1h-1zM39 21h1v1h-1zM4 22h1v1h-1zM6 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM14 22h1v1h-1zM15 22h1v1h-1zM17 22h1v1h-1zM19 22h1v1h-1zM20 22h1v1h-1zM21 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM26 22h1v1h-1zM29 22h1v1h-1zM31 22h1v1h-1zM35 22h1v1h-1zM36 22h1v1h-1zM39 22h1v1h-1zM40 22h1v1h-1zM4 23h1v1h-1zM5 23h1v1h-1zM7 23h1v1h-1zM8 23h1v1h-1zM11 23h1v1h-1zM12 23h1v1h-1zM13 23h1v1h-1zM15 23h1v1h-1zM16 23h1v1h-1zM19 23h1v1h-1zM22 23h1v1h-1zM23 23h1v1h-1zM25 23h1v1h-1zM26 23h1v1h-1zM27 23h1v1h-1zM32 23h1v1h-1zM33 23h1v1h-1zM34 23h1v1h-1zM35 23h1v1h-1zM40 23h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM7 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM14 24h1v1h-1zM15 24h1v1h-1zM16 24h1v1h-1zM19 24h1v1h-1zM21 24h1v1h-1zM26 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM32 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM38 24h1v1h-1zM4 25h1v1h-1zM5 25h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM13 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM20 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM25 25h1v1h-1zM27 25h1v1h-1zM29 25h1v1h-1zM32 25h1v1h-1zM37 25h1v1h-1zM39 25h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM7 26h1v1h-1zM10 26h1v1h-1zM14 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM22 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM29 26h1v1h-1zM30 26h1v1h-1zM31 26h1v1h-1zM32 26h1v1h-1zM35 26h1v1h-1zM36 26h1v1h-1zM37 26h1v1h-1zM39 26h1v1h-1zM40 26h1v1h-1zM8 27h1v1h-1zM9 27h1v1h-1zM11 27h1v1h-1zM12 27h1v1h-1zM15 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM19 27h1v1h-1zM20 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM25 27h1v1h-1zM27 27h1v1h-1zM32 27h1v1h-1zM34 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM39 27h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM7 28h1v1h-1zM9 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM12 28h1v1h-1zM13 28h1v1h-1zM15 28h1v1h-1zM17 28h1v1h-1zM19 28h1v1h-1zM22 28h1v1h-1zM23 28h1v1h-1zM24 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM30 28h1v1h-1zM33 28h1v1h-1zM34 28h1v1h-1zM36 28h1v1h-1zM38 28h1v1h-1zM39 28h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM11 29h1v1h-1zM13 29h1v1h-1zM14 29h1v1h-1zM17 29h1v1h-1zM19 29h1v1h-1zM20 29h1v1h-1zM23 29h1v1h-1zM24 29h1v1h-1zM25 29h1v1h-1zM27 29h1v1h-1zM29 29h1v1h-1zM30 29h1v1h-1zM33 29h1v1h-1zM35 29h1v1h-1zM37 29h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM7 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM13 30h1v1h-1zM14 30h1v1h-1zM16 30h1v1h-1zM24 30h1v1h-1zM28 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM33 30h1v1h-1zM36 30h1v1h-1zM37 30h1v1h-1zM38 30h1v1h-1zM39 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM7 31h1v1h-1zM14 31h1v1h-1zM15 31h1v1h-1zM16 31h1v1h-1zM17 31h1v1h-1zM18 31h1v1h-1zM20 31h1v1h-1zM25 31h1v1h-1zM27 31h1v1h-1zM28 31h1v1h-1zM30 31h1v1h-1zM35 31h1v1h-1zM36 31h1v1h-1zM40 31h1v1h-1zM4 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM12 32h1v1h-1zM13 32h1v1h-1zM18 32h1v1h-1zM21 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM37 32h1v1h-1zM38 32h1v1h-1zM39 32h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM14 33h1v1h-1zM15 33h1v1h-1zM18 33h1v1h-1zM20 33h1v1h-1zM21 33h1v1h-1zM23 33h1v1h-1zM24 33h1v1h-1zM27 33h1v1h-1zM28 33h1v1h-1zM30 33h1v1h-1zM31 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM37 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM13 34h1v1h-1zM14 34h1v1h-1zM17 34h1v1h-1zM19 34h1v1h-1zM20 34h1v1h-1zM21 34h1v1h-1zM24 34h1v1h-1zM25 34h1v1h-1zM26 34h1v1h-1zM29 34h1v1h-1zM30 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM38 34h1v1h-1zM39 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM12 35h1v1h-1zM13 35h1v1h-1zM16 35h1v1h-1zM17 35h1v1h-1zM18 35h1v1h-1zM21 35h1v1h-1zM22 35h1v1h-1zM25 35h1v1h-1zM26 35h1v1h-1zM28 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM37 35h1v1h-1zM39 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM12 36h1v1h-1zM13 36h1v1h-1zM19 36h1v1h-1zM20 36h1v1h-1zM23 36h1v1h-1zM26 36h1v1h-1zM29 36h1v1h-1zM30 36h1v1h-1zM31 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM38 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM12 37h1v1h-1zM13 37h1v1h-1zM15 37h1v1h-1zM16 37h1v1h-1zM17 37h1v1h-1zM18 37h1v1h-1zM19 37h1v1h-1zM22 37h1v1h-1zM23 37h1v1h-1zM24 37h1v1h-1zM27 37h1v1h-1zM31 37h1v1h-1zM33 37h1v1h-1zM34 37h1v1h-1zM36 37h1v1h-1zM37 37h1v1h-1zM38 37h1v1h-1zM40 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM12 38h1v1h-1zM14 38h1v1h-1zM15 38h1v1h-1zM16 38h1v1h-1zM17 38h1v1h-1zM18 38h1v1h-1zM19 38h1v1h-1zM20 38h1v1h-1zM22 38h1v1h-1zM24 38h1v1h-1zM26 38h1v1h-1zM29 38h1v1h-1zM30 38h1v1h-1zM31 38h1v1h-1zM33 38h1v1h-1zM38 38h1v1h-1zM39 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM13 39h1v1h-1zM17 39h1v1h-1zM19 39h1v1h-1zM22 39h1v1h-1zM24 39h1v1h-1zM25 39h1v1h-1zM28 39h1v1h-1zM30 39h1v1h-1zM31 39h1v1h-1zM32 39h1v1h-1zM33 39h1v1h-1zM34 39h1v1h-1zM36 39h1v1h-1zM37 39h1v1h-1zM40 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM14 40h1v1h-1zM18 40h1v1h-1zM19 40h1v1h-1zM20 40h1v1h-1zM21 40h1v1h-1zM26 40h1v1h-1zM27 40h1v1h-1zM29 40h1v1h-1zM30 40h1v1h-1zM33 40h1v1h-1zM34 40h1v1h-1zM36 40h1v1h-1zM37 40h1v1h-1zM38 40h1v1h-1zM39 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/environment-easy/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const CARDS = [
+  {q:"When was the last time you spent time in nature?",
+   f:["What did you do, and how did you feel?"],
+   a:["The last time I spent time in nature was two weekends ago. My friends and I took a bus to a forest about an hour outside the city. We walked along a path next to a small river for nearly three hours, and then we had a picnic under the trees. We had brought simple food, like sandwiches, fruit and tea in a thermos.",
+      "I felt really relaxed that day. During the week, I spend most of my time in classrooms or in front of a screen, so being surrounded by trees and fresh air was a nice change. It was also very quiet, and the only sounds were birds and the river. When I got home, I was tired but in a very good mood. I've decided to do this at least once a month, because it really helps me clear my head."]},
+  {q:"Have you ever participated in an environmental activity, such as a clean-up event or a tree-planting campaign?",
+   f:["What was your experience like?"],
+   a:["Yes, I have. When I was in high school, our school organised a tree-planting day on a hill near our town. Around fifty students joined, along with some teachers and volunteers from a local environmental group. The volunteers showed us how to dig the holes and plant the young trees properly, and each of us planted about five trees.",
+      "It was harder than I expected. The ground was dry and rocky, and it was quite hot, so we were all exhausted by lunchtime. But the experience was really rewarding. I felt that I was doing something useful with my own hands, not just talking about the environment. A few years later, I went back to the same area with my family, and some of the trees had grown quite tall. It was a lovely feeling to know that I had helped."]},
+  {q:"Describe a time when you saw someone behaving irresponsibly towards the environment.",
+   f:["How did you react?"],
+   a:["Last summer, I was at the beach with my friends. A family next to us had a big picnic with plastic plates, bottles and bags. When they left in the evening, they just left all their rubbish on the sand, and the wind started blowing some of the plastic bags towards the sea. I was really shocked, because there were bins only a few metres away.",
+      "At first, I didn't know what to do, because I didn't want to start an argument. In the end, I politely called out to them and said that they had forgotten their rubbish. The father looked a bit embarrassed, and he came back and collected some of it. My friends and I picked up the rest and put it in the bin. I felt a bit nervous, but I'm glad I said something instead of just watching."]},
+  {q:"Do you usually consider environmental factors when buying a product?",
+   f:["Can you give an example of a recent purchase?"],
+   a:["To be honest, not always. Price is usually the first thing I think about, because I'm a student and I don't have much money. However, I've started to pay more attention to environmental factors recently, especially for things I buy often, like bags, bottles and cleaning products.",
+      "For example, last month I needed a new water bottle. In the past, I would probably have bought a pack of plastic bottles every week. This time, I bought a steel bottle that I can refill at school. It was a bit more expensive at first, but I think it will save me money in the long run, and it reduces plastic waste. I also bring my own cloth bag to the supermarket now, partly because plastic bags aren't free in Türkiye anymore. So I'm not perfect, but I'm trying to make better choices."]},
+  {q:"Have you ever visited a place that was much cleaner or more polluted than you expected?",
+   f:["Describe your experience."],
+   a:["Yes. A couple of years ago, I visited a small town on the Black Sea coast with my family. I had seen beautiful photos of it online, with green hills and clear water, so I was very excited. But when we arrived, I was quite disappointed. There was a lot of rubbish on the beach, mostly plastic bottles and bags that the waves had brought in. Near the harbour, the water looked dark and smelled bad.",
+      "I was surprised, because the photos had looked so perfect. It made me realise that social media often shows only the best side of a place. We still enjoyed the trip, especially the food and the mountain villages, but I couldn't stop thinking about that beach. Since then, I've been more careful about believing travel photos, and I always make sure I don't leave anything behind when I visit a beach."]},
+  {q:"When was the last time you chose to walk or use public transportation instead of travelling by car?",
+   f:["What influenced your decision?"],
+   a:["Actually, I do this almost every day, because I don't have a car. But the last time I really chose to walk was last Saturday. My friend offered to drive me to the city centre, which is about thirty minutes on foot from my house, but I decided to walk instead.",
+      "A few things influenced my decision. First, the weather was lovely, sunny but not too hot, so I wanted to enjoy it. Second, I knew the traffic in the city centre would be terrible on a Saturday afternoon, and finding a parking space is almost impossible. Walking was probably faster in the end! I also wanted some exercise, because I had been sitting at my desk all week. I listened to a podcast on the way, and I arrived feeling fresh and energetic. I think I'll make it a weekend habit."]},
+  {q:"Have you ever tried to persuade someone to change a habit that was harmful to the environment?",
+   f:["What happened?"],
+   a:["Yes, I've tried with my dad. He used to leave the car engine running while he waited for us outside shops or school. Sometimes he waited for fifteen or twenty minutes with the engine on, especially in winter, because he wanted to keep the car warm. I told him several times that this wastes fuel and pollutes the air for no reason.",
+      "At first, he didn't really listen. He said it was only a few minutes and that it didn't make a big difference. So I tried a different approach. I calculated how much extra fuel he was using and how much it cost him every month. That worked much better! Now he usually switches the engine off while he's waiting, unless it's extremely cold. I learned that people often change their habits more easily when they see a personal benefit, not just an environmental one."]},
+  {q:"Describe a place you used to visit that has changed because of construction or urban development.",
+   f:["What was it like before?"],
+   a:["When I was a child, there was a large empty field near my grandparents' house. It wasn't a park, just open land with tall grass, a few old trees and lots of wildflowers in spring. All the children in the neighbourhood used to play football there after school, and in summer we flew kites and had picnics with our families.",
+      "About five years ago, construction companies started building there. Now the field has completely disappeared, and there are six tall apartment blocks and a car park instead. The old trees were cut down, too. When I visit my grandparents now, the area feels much busier and noisier, and there's nowhere for children to play outside. I understand that cities need more housing, but I feel sad that the only green space in the neighbourhood was lost. I think new projects should always include parks."]},
+  {q:"Have you ever experienced a water or electricity shortage?",
+   f:["How did it affect your daily routine?"],
+   a:["Yes, I have. Last summer, there were water cuts in our neighbourhood for about two weeks because of a drought. The water was usually cut from early evening until the next morning. At first, we didn't take it seriously, but then we realised it was going to happen every day.",
+      "It changed our daily routine quite a lot. We had to fill big bottles and buckets with water in the afternoon so that we could wash the dishes and flush the toilet at night. I had to take quick showers in the morning instead of in the evening, which I didn't like at all. Cooking dinner was also more difficult. The experience made me realise how much water we usually waste without thinking. Even now, I turn off the tap while I'm brushing my teeth, and I try to take shorter showers."]},
+  {q:"Do you prefer spending your free time in natural environments or urban areas?",
+   f:["Can you describe a recent experience that explains your preference?"],
+   a:["I definitely prefer natural environments. Cities are convenient, and I enjoy going to cafés and cinemas sometimes, but after a while the noise and crowds make me feel tired. In nature, I feel calmer and I can think more clearly.",
+      "A recent experience that explains my preference happened last month. On Saturday, I went to a shopping mall with my friends. It was crowded and loud, and after three hours I had a headache and had spent too much money. The next day, I went for a walk in a forest near the city with my sister. We walked for about two hours, sat by a lake and talked about everything. It cost almost nothing, and I came home feeling relaxed and happy. The difference between those two days was really clear to me."]},
+  {q:"Have you ever stopped buying or using a product because you thought it was harmful to the environment?",
+   f:["What made you decide to stop?"],
+   a:["Yes. I used to buy wet wipes all the time. I used them to clean my face, my hands and even my desk. I thought they were very practical, and I probably used a whole pack every week.",
+      "Then I watched a short documentary online about the sewers in big cities. It showed huge blockages caused by wet wipes, because they don't break down like toilet paper. It also explained that many wipes contain plastic and end up in the sea. I was really surprised, because I had always thought they were just paper. After that, I decided to stop buying them. Now I use a small towel or a washable cloth instead, and I wash my face with water. It was a small change, and honestly, I don't miss them at all. I save a little money every month, too."]},
+  {q:"Think about the last time you travelled to another city or country.",
+   f:["Did you notice any differences in how people treated the environment?"],
+   a:["The last time I travelled abroad was last year, when I went to Germany to visit my cousin. I noticed several differences in how people treated the environment there. The first thing I saw was that people separate their rubbish very carefully. My cousin had four or five different bins in her kitchen, for paper, plastic, glass and food waste.",
+      "Another difference was the deposit system for bottles. When you buy a drink, you pay a little extra, and you get that money back when you return the empty bottle to a machine in the supermarket. Because of this, I hardly saw any bottles on the streets. Also, many people cycled to work, even older people. Of course, Germany isn't perfect, but I think some of these ideas could work very well in Türkiye, especially the bottle system."]},
+  {q:"Have you ever taken care of a plant or grown something yourself?",
+   f:["What challenges did you experience?"],
+   a:["Yes. Last spring, I decided to grow tomatoes and basil on the balcony of my flat. I bought some seeds, soil and a few pots, and I watched some videos online to learn the basics. I was very excited at the beginning and checked them every morning.",
+      "However, I faced quite a few challenges. First, I watered the basil too much, and its leaves turned yellow, so I had to start again. Then, in summer, the balcony became very hot in the afternoons, and the tomato plants almost dried out while I was away for a weekend. I also had small insects on the leaves for a while. In the end, I managed to grow about fifteen small tomatoes. It wasn't a big harvest, but they tasted much better than the ones from the supermarket, and I felt really proud of myself."]},
+  {q:"Describe a time when extreme weather conditions affected your plans.",
+   f:["What happened, and how did you deal with the situation?"],
+   a:["Last winter, I was planning to go back to my hometown for the semester break. I had bought a bus ticket for Friday evening. However, on Friday morning, there was a very heavy snowstorm, and the highway between the two cities was closed. My bus was cancelled, and I was really disappointed, because I hadn't seen my family for months.",
+      "At first, I felt quite stressed, because nobody knew when the roads would open again. I called the bus company several times, but they couldn't give me a clear answer. In the end, I decided to stay calm and make the best of it. I stayed in the dormitory and spent the weekend with a few friends who also couldn't leave. We cooked together and watched films. On Monday, the roads were open again, and I finally travelled home. The experience taught me to be more flexible."]},
+  {q:"Have you ever visited a national park, forest, or protected natural area?",
+   f:["What made the experience memorable?"],
+   a:["Yes. Two years ago, I visited Yedigöller National Park in Bolu with my family. As the name suggests, there are seven lakes surrounded by thick forests. We went in October, which is the best time to visit, because the leaves change colour.",
+      "The experience was memorable for several reasons. First, the colours were amazing. The trees were red, orange, yellow and green, and you could see their reflections in the lakes, like a painting. Second, it was very peaceful. We walked around the lakes for hours and hardly heard any traffic. I also saw a deer near the forest, which was the first time I had seen one in the wild. Finally, I liked the rules there. Visitors weren't allowed to leave rubbish or light fires anywhere, so the park was very clean. I'd love to go back in winter."]}
+];
+
+const EMOJI = ["🌲","🌱","🚯","🛒","🏖️","🚶","🗣️","🏗️","🚰","🏞️",
+               "🧻","✈️","🪴","🌨️","🦌"];
+
+const NCOL = 6;
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+const TIME = 60;
+
+const state = { done:new Set(), scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("spk-env-easy") || "null");
+  if(s){
+    if(Array.isArray(s.done)) state.done = new Set(s.done.filter(i => Number.isInteger(i) && i >= 0 && i < CARDS.length));
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("spk-env-easy", JSON.stringify({done:[...state.done], scale:state.scale})); }catch(e){}
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const $ = id => document.getElementById(id);
+const deck = $("deck"), dlg = $("dlg"), inner = $("inner"), front = $("front"), back = $("back");
+const flipBtn = $("flipBtn"), timerBtn = $("timer");
+
+/* deck */
+function renderDeck(){
+  deck.innerHTML = CARDS.map((c,i) => `
+    <button class="pick k${i%NCOL}${state.done.has(i) ? " done" : ""}" type="button" data-i="${i}" aria-label="Card ${i+1}: ${esc(c.q)}">
+      <span class="head"><span class="no">${pad(i+1)}</span><span class="emo" aria-hidden="true">${EMOJI[i]}</span></span>
+      <span class="pq">${esc(c.q)}</span>
+      <span class="stamp">✓ Done</span>
+    </button>`).join("");
+  $("progress").textContent = `${state.done.size} of ${CARDS.length} done`;
+  $("meter").style.setProperty("--w", `${state.done.size / CARDS.length * 100}%`);
+}
+deck.addEventListener("click", e => {
+  const b = e.target.closest(".pick"); if(b) openCard(+b.dataset.i);
+});
+
+/* open card */
+let flipped = false;
+function openCard(i){
+  const c = CARDS[i], col = `k${i%NCOL}`;
+  const words = c.a.join(" ").split(/\s+/).length;
+  front.className = `face front ${col}`;
+  back.className = `face back ${col}`;
+  front.innerHTML = `
+    <div class="fhead"><span class="chip">Card ${pad(i+1)} / ${CARDS.length}</span><span class="bigemo" aria-hidden="true">${EMOJI[i]}</span></div>
+    <h2 class="bigq">${esc(c.q)}</h2>
+    ${c.f.length ? `<div class="follow"><span class="lbl">Follow-up</span>${c.f.map(f => `<p>${esc(f)}</p>`).join("")}</div>` : ""}`;
+  back.innerHTML = `
+    <div class="backhead"><span class="lbl">Sample answer</span><span class="meta">${words} words · about 1 minute</span></div>
+    <p class="backq">${esc(c.q)}</p>
+    <div class="answer">${c.a.map(p => `<p>${esc(p)}</p>`).join("")}</div>`;
+  setFlip(false, true);
+  resetTimer();
+  state.done.add(i);
+  save();
+  if(!dlg.open) dlg.showModal();
+  flipBtn.focus();
+  dlg.querySelector(".sheet").scrollTop = 0;
+}
+function setFlip(v, instant){
+  flipped = v;
+  if(instant){ inner.style.transition = "none"; }
+  inner.classList.toggle("flipped", v);
+  if(instant){ void inner.offsetWidth; inner.style.transition = ""; }
+  front.setAttribute("aria-hidden", v ? "true" : "false");
+  back.setAttribute("aria-hidden", v ? "false" : "true");
+  flipBtn.textContent = v ? "Back to question" : "Show sample answer";
+}
+flipBtn.addEventListener("click", () => setFlip(!flipped));
+$("close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("close", () => { stopTimer(); renderDeck(); });
+dlg.addEventListener("click", e => { if(e.target === dlg) dlg.close(); });
+
+/* one-minute timer */
+let left = TIME, tick = null, endAt = 0;
+function fmt(s){ return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function paintTimer(){
+  const secs = Math.ceil(left);
+  timerBtn.style.setProperty("--p", Math.max(0, left / TIME));
+  timerBtn.classList.toggle("up", left <= 0);
+  timerBtn.textContent = left <= 0 ? "Time’s up · Again"
+    : tick ? `Pause ${fmt(secs)}`
+    : left < TIME ? `Resume ${fmt(secs)}` : "Start 1:00";
+}
+function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } }
+function resetTimer(){ stopTimer(); left = TIME; paintTimer(); }
+timerBtn.addEventListener("click", () => {
+  if(left <= 0){ resetTimer(); }
+  if(tick){ left = Math.max(0, (endAt - Date.now()) / 1000); stopTimer(); paintTimer(); return; }
+  endAt = Date.now() + left * 1000;
+  tick = setInterval(() => {
+    left = Math.max(0, (endAt - Date.now()) / 1000);
+    if(left <= 0) stopTimer();
+    paintTimer();
+  }, 200);
+  paintTimer();
+});
+
+/* tools */
+$("random").addEventListener("click", () => {
+  const all = [...CARDS.keys()];
+  const pool = all.filter(i => !state.done.has(i));
+  const from = pool.length ? pool : all;
+  openCard(from[Math.floor(Math.random() * from.length)]);
+});
+let resetArmed = null;
+const resetBtn = $("reset");
+function disarm(){ resetArmed = null; resetBtn.textContent = "Reset"; resetBtn.classList.remove("hot"); }
+resetBtn.addEventListener("click", () => {
+  if(resetArmed){ clearTimeout(resetArmed); disarm(); state.done.clear(); save(); renderDeck(); return; }
+  resetBtn.textContent = "Tap again to clear"; resetBtn.classList.add("hot");
+  resetArmed = setTimeout(disarm, 3000);
+});
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+$("smaller").addEventListener("click", () => { state.scale = SCALES[Math.max(0, SCALES.indexOf(state.scale) - 1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { state.scale = SCALES[Math.min(SCALES.length - 1, SCALES.indexOf(state.scale) + 1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+applyScale();
+renderDeck();
+</script>
+</body>
+</html>

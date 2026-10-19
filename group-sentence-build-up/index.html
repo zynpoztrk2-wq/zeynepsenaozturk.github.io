@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Group Sentence Build-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Lexend:wght@400;500;600&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one centred board stage with 8 group tabs (Add Specific Information only). Title + tools, activity tabs, number strip, then one big card per item:
+   toy-block word tiles (or a vague sentence with question bubbles) above a reveal slot and chunky controls. */
+:root{
+  --bg:#EDF5F0;
+  --dot:#D2E5D9;
+  --surface:#FFFFFF;
+  --ink:#2B2948;
+  --muted:#686689;
+  --line:#DAD7EA;
+  --accent:#F0517B;
+  --accent-deep:#C5385F;
+  --accent-ink:#FFFFFF;
+  --pink:#FFD4E0;  --pink-e:#EFA2B8;
+  --lemon:#FFEEA6; --lemon-e:#DDC255;
+  --sky:#CDE7FF;   --sky-e:#8EBCE5;
+  --peach:#FFDCC3; --peach-e:#E8AA7F;
+  --lilac:#E4DAFF; --lilac-e:#B2A1E5;
+  --good:#23885A;  --good-bg:#E3F6EB; --good-line:#9BD7B7;
+  --font-display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Lexend","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+  --qr-bg:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1B1A2E; --dot:#29283F; --surface:#252440; --ink:#F1EFFF; --muted:#A8A5CA; --line:#3A3858;
+    --accent:#FF7C9E; --accent-deep:#B9446A; --accent-ink:#2A0E1B;
+    --pink:#4B2639; --pink-e:#7B3E5C; --lemon:#453B1C; --lemon-e:#77662E; --sky:#1E3853; --sky-e:#335F88;
+    --peach:#4A2E1E; --peach-e:#7D4F2F; --lilac:#342B5A; --lilac-e:#5A4B93;
+    --good:#74D9A6; --good-bg:#1B3A2C; --good-line:#2F6B4E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1B1A2E; --dot:#29283F; --surface:#252440; --ink:#F1EFFF; --muted:#A8A5CA; --line:#3A3858;
+  --accent:#FF7C9E; --accent-deep:#B9446A; --accent-ink:#2A0E1B;
+  --pink:#4B2639; --pink-e:#7B3E5C; --lemon:#453B1C; --lemon-e:#77662E; --sky:#1E3853; --sky-e:#335F88;
+  --peach:#4A2E1E; --peach-e:#7D4F2F; --lilac:#342B5A; --lilac-e:#5A4B93;
+  --good:#74D9A6; --good-bg:#1B3A2C; --good-line:#2F6B4E;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background-color:var(--bg);
+  background-image:radial-gradient(var(--dot) 1.4px, transparent 1.7px);
+  background-size:24px 24px;
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.5;
+}
+.wrap{
+  max-width:1180px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 36px;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,18px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--sky-e); outline-offset:3px}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; min-width:0}
+.topic{
+  font:600 .78rem var(--font-body); letter-spacing:.08em; text-transform:uppercase; white-space:nowrap;
+  padding:4px 12px; border-radius:999px; color:var(--ink); background:var(--lilac); border:2px solid var(--lilac-e);
+}
+.stack{display:grid; grid-template-columns:repeat(2,17px); grid-template-rows:repeat(2,17px); gap:3px; flex:none}
+.stack i{border-radius:5px; border:2px solid}
+.stack i:nth-child(1){grid-area:2/1; background:var(--pink); border-color:var(--pink-e)}
+.stack i:nth-child(2){grid-area:2/2; background:var(--lemon); border-color:var(--lemon-e)}
+.stack i:nth-child(3){grid-area:1/2; background:var(--sky); border-color:var(--sky-e)}
+h1{
+  font-family:var(--font-display); font-weight:800;
+  font-size:clamp(1.9rem,3.4vw,3rem); line-height:1.05; margin:0;
+  letter-spacing:-.01em; text-wrap:balance;
+}
+h1 span{color:var(--accent)}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:2px solid var(--line); border-radius:12px;
+  padding:6px 12px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+
+/* activity tabs */
+.tabs{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px 12px}
+@media (max-width:760px){ .tabs{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.tab .tl{display:flex; flex-direction:column; gap:1px; min-width:0}
+.tab .tl small{font:500 .8rem/1.2 var(--font-body); color:var(--muted); overflow-wrap:anywhere}
+.tab{
+  display:flex; align-items:center; gap:10px;
+  font:700 clamp(1rem,1.6vw,1.22rem)/1.1 var(--font-display); color:var(--muted);
+  background:var(--surface); border:2px solid var(--line); border-radius:16px;
+  padding:8px 12px 7px 10px; cursor:pointer; box-shadow:0 4px 0 var(--line);
+  text-align:left; min-width:0;
+}
+.tab .n{
+  display:grid; place-items:center; flex:none; width:30px; height:30px; border-radius:9px;
+  background:var(--lilac); border:2px solid var(--lilac-e); color:var(--ink); font-size:1.05rem; padding-top:2px;
+}
+.tab[aria-selected="true"]{color:var(--ink); border-color:var(--ink); box-shadow:0 4px 0 var(--ink)}
+.tab[aria-selected="true"] .n{background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink)}
+
+/* number strip */
+.strip{display:flex; flex-wrap:wrap; gap:8px 22px; align-items:center}
+.group{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.glabel{
+  font:600 .74rem var(--font-body); text-transform:uppercase; letter-spacing:.09em;
+  color:var(--muted); margin-right:4px; white-space:nowrap;
+}
+.num{
+  position:relative; width:37px; height:37px; border-radius:11px;
+  font:600 .92rem var(--font-body); font-variant-numeric:tabular-nums;
+  border:2px solid var(--line); background:var(--surface); color:var(--muted); cursor:pointer;
+}
+.num:hover{border-color:var(--muted); color:var(--ink)}
+.num.done::after{
+  content:""; position:absolute; top:-5px; right:-5px; width:12px; height:12px; border-radius:50%;
+  background:var(--good); border:2px solid var(--surface);
+}
+.num[aria-current="true"]{background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink)}
+
+/* stage card */
+.card{
+  background:var(--surface); border:2px solid var(--line); border-radius:28px;
+  box-shadow:0 8px 0 var(--line);
+  padding:clamp(18px,3vw,40px);
+  display:flex; flex-direction:column; gap:clamp(18px,2.4vw,28px);
+}
+@media (min-width:760px){ .card{min-height:min(64vh,720px)} }
+.body{flex:1; display:flex; flex-direction:column; gap:clamp(16px,2.2vw,26px); min-width:0}
+.head{display:flex; flex-direction:column; gap:6px}
+.count{
+  font:800 calc(clamp(1.15rem,1.9vw,1.5rem)*var(--scale))/1 var(--font-display);
+  font-variant-numeric:tabular-nums; color:var(--accent);
+}
+.count small{color:var(--muted); font-weight:600; font-size:.8em}
+.instr{
+  margin:0; max-width:72ch; color:var(--muted);
+  font-size:calc(clamp(.95rem,1.35vw,1.12rem)*var(--scale)); line-height:1.5;
+}
+
+/* word tiles */
+.tiles{display:flex; flex-wrap:wrap; gap:clamp(12px,1.5vw,18px); align-items:center; padding-bottom:6px}
+.tile{
+  font:500 calc(clamp(1.15rem,2.3vw,1.95rem)*var(--scale))/1.25 var(--font-body);
+  padding:.42em .8em .5em; border-radius:16px; border:2px solid var(--e);
+  background:var(--b); color:var(--ink); box-shadow:0 5px 0 var(--e);
+  transform:rotate(var(--r,0deg)); min-width:0; overflow-wrap:anywhere;
+}
+.c0{--b:var(--pink);  --e:var(--pink-e)}
+.c1{--b:var(--lemon); --e:var(--lemon-e)}
+.c2{--b:var(--sky);   --e:var(--sky-e)}
+.c3{--b:var(--peach); --e:var(--peach-e)}
+.c4{--b:var(--lilac); --e:var(--lilac-e)}
+
+/* vague sentence */
+.vague-wrap{display:flex; flex-direction:column; gap:10px; align-items:flex-start}
+.tag{
+  font:600 .76rem var(--font-body); letter-spacing:.09em; text-transform:uppercase;
+  padding:3px 11px; border-radius:999px; color:var(--ink);
+  background:var(--pink); border:2px solid var(--pink-e);
+}
+.vague{
+  margin:0; font:700 calc(clamp(1.75rem,3.8vw,3.1rem)*var(--scale))/1.18 var(--font-display);
+  text-decoration:underline wavy var(--accent); text-decoration-thickness:2px; text-underline-offset:.2em;
+  text-wrap:balance;
+}
+
+/* guiding questions */
+.qs{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+.q{
+  font:500 calc(clamp(1.05rem,1.8vw,1.42rem)*var(--scale))/1.3 var(--font-body);
+  padding:.6em .9em; border-radius:16px; background:var(--b); border:2px solid var(--e);
+  min-width:0; overflow-wrap:anywhere;
+}
+@media (max-width:620px){ .qs{grid-template-columns:1fr} }
+
+/* WHO → WHAT → HOW/WHY → WHEN/WHERE chain */
+.chain{display:flex; flex-wrap:wrap; align-items:center; gap:10px 8px; list-style:none; margin:0; padding:0 0 6px}
+.chain li{display:flex; align-items:center; gap:8px}
+.chain .step{
+  font:700 calc(clamp(1.05rem,1.9vw,1.5rem)*var(--scale))/1.1 var(--font-display);
+  padding:.4em .8em .3em; border-radius:14px; background:var(--b); border:2px solid var(--e);
+  box-shadow:0 4px 0 var(--e); white-space:nowrap;
+}
+.chain .arr{color:var(--muted); font-size:calc(1.3rem*var(--scale)); line-height:1}
+
+/* reveal slot */
+.slot{
+  border:3px dashed var(--line); border-radius:22px;
+  padding:clamp(16px,2.4vw,28px);
+  min-height:calc(clamp(5rem,9vw,7rem)*var(--scale));
+  display:flex; flex-direction:column; justify-content:center; gap:10px;
+  transition:background-color .25s, border-color .25s;
+}
+.slot.open{border-style:solid; border-color:var(--good-line); background:var(--good-bg)}
+.slot-label{font:600 .76rem var(--font-body); letter-spacing:.09em; text-transform:uppercase; color:var(--good)}
+.hint{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.5vw,1.2rem)*var(--scale))}
+.sentence{
+  margin:0; font:500 calc(clamp(1.3rem,2.7vw,2.25rem)*var(--scale))/1.4 var(--font-body);
+  text-wrap:pretty; overflow-wrap:anywhere;
+}
+.sentence .w{display:inline-block; animation:pop .4s cubic-bezier(.3,1.5,.6,1) both; animation-delay:calc(var(--i)*45ms)}
+.sentence.still .w{animation:none}
+@keyframes pop{from{opacity:0; transform:translateY(.45em) scale(.85)} to{opacity:1; transform:none}}
+
+.steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+.steps li{
+  display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline;
+  font-size:calc(clamp(1.1rem,2vw,1.6rem)*var(--scale)); line-height:1.35;
+}
+.steps .k{font-weight:600; color:var(--muted)}
+.steps .k::after{content:" →"; color:var(--muted)}
+.steps li.in{animation:slide .35s ease-out both}
+@keyframes slide{from{opacity:0; transform:translateX(-12px)} to{opacity:1; transform:none}}
+.final{margin-top:6px}
+
+/* controls */
+.controls{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1.05rem,1.6vw,1.28rem)*var(--scale))/1 var(--font-display);
+  border-radius:16px; padding:.62em 1.1em .5em; min-height:54px; cursor:pointer;
+  border:2px solid var(--line); background:var(--surface); color:var(--ink);
+  box-shadow:0 5px 0 var(--line); transition:transform .08s, box-shadow .08s;
+}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn:active:not(:disabled){transform:translateY(4px); box-shadow:0 1px 0 var(--line)}
+.btn:disabled{opacity:.38; cursor:default}
+.btn.main{
+  flex:0 1 420px; background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink);
+  box-shadow:0 5px 0 var(--accent-deep);
+}
+.btn.main:hover:not(:disabled){border-color:var(--accent-deep); filter:brightness(1.04)}
+.btn.main:active:not(:disabled){box-shadow:0 1px 0 var(--accent-deep)}
+@media (max-width:560px){
+  .btn.main{order:-1; flex-basis:100%}
+  .btn.side{flex:1}
+}
+.keys{margin:0; text-align:center; color:var(--muted); font-size:.82rem}
+.keys kbd{
+  font:600 .78rem var(--font-body); padding:1px 7px; border-radius:6px;
+  border:1.5px solid var(--line); background:var(--surface); box-shadow:0 2px 0 var(--line);
+}
+@media (hover:none){ .keys{display:none} }
+
+/* QR panel */
+.tool.qr-open{background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink)}
+#qrDlg{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(560px, calc(100% - 24px)); max-width:none; max-height:calc(100% - 24px); overflow:visible;
+}
+#qrDlg::backdrop{background:rgba(30,28,60,.55)}
+.qrpanel{
+  background:var(--surface); border:2px solid var(--line); border-radius:28px; box-shadow:0 8px 0 var(--line);
+  padding:clamp(20px,3.4vw,34px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.5rem,3vw,2.1rem)/1.1 var(--font-display); text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted)}
+.qrbox{
+  width:min(440px, 66vmin, 100%); padding:6px; border-radius:16px; background:var(--qr-bg);
+  border:3px solid var(--sky-e); box-shadow:0 5px 0 var(--sky-e);
+}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{margin:0; font-size:.88rem; color:var(--muted); overflow-wrap:anywhere; -webkit-user-select:all; user-select:all}
+.qrbtns{display:flex; flex-wrap:wrap; gap:12px; justify-content:center; width:100%; padding-bottom:6px}
+.qrbtns .btn{flex:1 1 150px}
+
+@media (prefers-reduced-motion:reduce){
+  .sentence .w, .steps li.in{animation:none}
+  .btn, .slot{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="stack" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Sentence <span>Build-Up</span></h1>
+      <span class="topic">Add Specific Information</span>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Groups"></nav>
+
+  <div class="strip" id="strip" aria-label="Jump to item"></div>
+
+  <main class="card" id="card">
+    <div class="body" id="body"></div>
+    <div class="controls">
+      <button class="btn side" id="prev" type="button">← Previous</button>
+      <button class="btn main" id="reveal" type="button">Show possible answer</button>
+      <button class="btn side" id="next" type="button">Next →</button>
+    </div>
+  </main>
+  <p class="keys"><kbd>←</kbd> <kbd>→</kbd> move &nbsp;·&nbsp; <kbd>Space</kbd> reveal</p>
+</div>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open Group Sentence Build-Up</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens Group Sentence Build-Up"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM15 4h1v1h-1zM17 4h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM22 4h1v1h-1zM23 4h1v1h-1zM26 4h1v1h-1zM27 4h1v1h-1zM30 4h1v1h-1zM31 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM13 5h1v1h-1zM14 5h1v1h-1zM15 5h1v1h-1zM16 5h1v1h-1zM17 5h1v1h-1zM18 5h1v1h-1zM20 5h1v1h-1zM21 5h1v1h-1zM22 5h1v1h-1zM24 5h1v1h-1zM25 5h1v1h-1zM27 5h1v1h-1zM28 5h1v1h-1zM29 5h1v1h-1zM31 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM14 6h1v1h-1zM21 6h1v1h-1zM24 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM31 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM17 7h1v1h-1zM18 7h1v1h-1zM20 7h1v1h-1zM22 7h1v1h-1zM23 7h1v1h-1zM26 7h1v1h-1zM27 7h1v1h-1zM28 7h1v1h-1zM30 7h1v1h-1zM32 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM15 8h1v1h-1zM20 8h1v1h-1zM21 8h1v1h-1zM25 8h1v1h-1zM27 8h1v1h-1zM30 8h1v1h-1zM31 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM12 9h1v1h-1zM13 9h1v1h-1zM14 9h1v1h-1zM15 9h1v1h-1zM16 9h1v1h-1zM19 9h1v1h-1zM23 9h1v1h-1zM24 9h1v1h-1zM26 9h1v1h-1zM28 9h1v1h-1zM31 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM13 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM18 11h1v1h-1zM20 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM25 11h1v1h-1zM26 11h1v1h-1zM27 11h1v1h-1zM30 11h1v1h-1zM31 11h1v1h-1zM4 12h1v1h-1zM7 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM14 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM17 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM23 12h1v1h-1zM24 12h1v1h-1zM25 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM30 12h1v1h-1zM32 12h1v1h-1zM33 12h1v1h-1zM35 12h1v1h-1zM6 13h1v1h-1zM9 13h1v1h-1zM11 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM16 13h1v1h-1zM18 13h1v1h-1zM19 13h1v1h-1zM24 13h1v1h-1zM26 13h1v1h-1zM28 13h1v1h-1zM32 13h1v1h-1zM34 13h1v1h-1zM40 13h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM30 14h1v1h-1zM32 14h1v1h-1zM36 14h1v1h-1zM39 14h1v1h-1zM40 14h1v1h-1zM5 15h1v1h-1zM8 15h1v1h-1zM11 15h1v1h-1zM13 15h1v1h-1zM14 15h1v1h-1zM16 15h1v1h-1zM19 15h1v1h-1zM22 15h1v1h-1zM24 15h1v1h-1zM25 15h1v1h-1zM27 15h1v1h-1zM29 15h1v1h-1zM31 15h1v1h-1zM34 15h1v1h-1zM35 15h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM13 16h1v1h-1zM20 16h1v1h-1zM21 16h1v1h-1zM25 16h1v1h-1zM28 16h1v1h-1zM29 16h1v1h-1zM30 16h1v1h-1zM31 16h1v1h-1zM33 16h1v1h-1zM34 16h1v1h-1zM35 16h1v1h-1zM37 16h1v1h-1zM39 16h1v1h-1zM40 16h1v1h-1zM4 17h1v1h-1zM6 17h1v1h-1zM7 17h1v1h-1zM9 17h1v1h-1zM12 17h1v1h-1zM14 17h1v1h-1zM16 17h1v1h-1zM17 17h1v1h-1zM18 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM25 17h1v1h-1zM28 17h1v1h-1zM30 17h1v1h-1zM34 17h1v1h-1zM35 17h1v1h-1zM38 17h1v1h-1zM40 17h1v1h-1zM4 18h1v1h-1zM5 18h1v1h-1zM8 18h1v1h-1zM10 18h1v1h-1zM14 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM21 18h1v1h-1zM24 18h1v1h-1zM27 18h1v1h-1zM29 18h1v1h-1zM30 18h1v1h-1zM32 18h1v1h-1zM34 18h1v1h-1zM35 18h1v1h-1zM36 18h1v1h-1zM38 18h1v1h-1zM40 18h1v1h-1zM4 19h1v1h-1zM6 19h1v1h-1zM7 19h1v1h-1zM12 19h1v1h-1zM14 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM18 19h1v1h-1zM20 19h1v1h-1zM21 19h1v1h-1zM24 19h1v1h-1zM25 19h1v1h-1zM28 19h1v1h-1zM29 19h1v1h-1zM30 19h1v1h-1zM33 19h1v1h-1zM36 19h1v1h-1zM39 19h1v1h-1zM40 19h1v1h-1zM4 20h1v1h-1zM6 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM19 20h1v1h-1zM21 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM26 20h1v1h-1zM31 20h1v1h-1zM33 20h1v1h-1zM34 20h1v1h-1zM35 20h1v1h-1zM37 20h1v1h-1zM38 20h1v1h-1zM4 21h1v1h-1zM11 21h1v1h-1zM14 21h1v1h-1zM16 21h1v1h-1zM19 21h1v1h-1zM21 21h1v1h-1zM25 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM29 21h1v1h-1zM32 21h1v1h-1zM34 21h1v1h-1zM36 21h1v1h-1zM39 21h1v1h-1zM40 21h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM12 22h1v1h-1zM15 22h1v1h-1zM17 22h1v1h-1zM18 22h1v1h-1zM21 22h1v1h-1zM29 22h1v1h-1zM30 22h1v1h-1zM32 22h1v1h-1zM35 22h1v1h-1zM37 22h1v1h-1zM38 22h1v1h-1zM39 22h1v1h-1zM40 22h1v1h-1zM6 23h1v1h-1zM9 23h1v1h-1zM15 23h1v1h-1zM17 23h1v1h-1zM18 23h1v1h-1zM21 23h1v1h-1zM24 23h1v1h-1zM25 23h1v1h-1zM27 23h1v1h-1zM28 23h1v1h-1zM35 23h1v1h-1zM38 23h1v1h-1zM39 23h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM12 24h1v1h-1zM17 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM23 24h1v1h-1zM25 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM31 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM37 24h1v1h-1zM39 24h1v1h-1zM4 25h1v1h-1zM7 25h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM13 25h1v1h-1zM14 25h1v1h-1zM16 25h1v1h-1zM18 25h1v1h-1zM20 25h1v1h-1zM21 25h1v1h-1zM25 25h1v1h-1zM28 25h1v1h-1zM29 25h1v1h-1zM32 25h1v1h-1zM33 25h1v1h-1zM34 25h1v1h-1zM35 25h1v1h-1zM37 25h1v1h-1zM40 25h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM6 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM13 26h1v1h-1zM18 26h1v1h-1zM20 26h1v1h-1zM23 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM30 26h1v1h-1zM32 26h1v1h-1zM39 26h1v1h-1zM40 26h1v1h-1zM5 27h1v1h-1zM12 27h1v1h-1zM13 27h1v1h-1zM15 27h1v1h-1zM18 27h1v1h-1zM19 27h1v1h-1zM20 27h1v1h-1zM25 27h1v1h-1zM26 27h1v1h-1zM27 27h1v1h-1zM28 27h1v1h-1zM29 27h1v1h-1zM30 27h1v1h-1zM32 27h1v1h-1zM39 27h1v1h-1zM40 27h1v1h-1zM4 28h1v1h-1zM7 28h1v1h-1zM8 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM13 28h1v1h-1zM15 28h1v1h-1zM16 28h1v1h-1zM17 28h1v1h-1zM18 28h1v1h-1zM20 28h1v1h-1zM21 28h1v1h-1zM22 28h1v1h-1zM23 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM31 28h1v1h-1zM32 28h1v1h-1zM33 28h1v1h-1zM34 28h1v1h-1zM37 28h1v1h-1zM39 28h1v1h-1zM5 29h1v1h-1zM8 29h1v1h-1zM9 29h1v1h-1zM11 29h1v1h-1zM16 29h1v1h-1zM20 29h1v1h-1zM21 29h1v1h-1zM23 29h1v1h-1zM25 29h1v1h-1zM26 29h1v1h-1zM29 29h1v1h-1zM32 29h1v1h-1zM34 29h1v1h-1zM35 29h1v1h-1zM37 29h1v1h-1zM38 29h1v1h-1zM39 29h1v1h-1zM40 29h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM12 30h1v1h-1zM14 30h1v1h-1zM15 30h1v1h-1zM17 30h1v1h-1zM20 30h1v1h-1zM21 30h1v1h-1zM24 30h1v1h-1zM25 30h1v1h-1zM26 30h1v1h-1zM27 30h1v1h-1zM28 30h1v1h-1zM30 30h1v1h-1zM32 30h1v1h-1zM36 30h1v1h-1zM40 30h1v1h-1zM5 31h1v1h-1zM7 31h1v1h-1zM8 31h1v1h-1zM9 31h1v1h-1zM12 31h1v1h-1zM16 31h1v1h-1zM18 31h1v1h-1zM19 31h1v1h-1zM21 31h1v1h-1zM22 31h1v1h-1zM23 31h1v1h-1zM24 31h1v1h-1zM25 31h1v1h-1zM27 31h1v1h-1zM29 31h1v1h-1zM30 31h1v1h-1zM33 31h1v1h-1zM34 31h1v1h-1zM36 31h1v1h-1zM40 31h1v1h-1zM4 32h1v1h-1zM5 32h1v1h-1zM6 32h1v1h-1zM7 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM11 32h1v1h-1zM12 32h1v1h-1zM14 32h1v1h-1zM17 32h1v1h-1zM21 32h1v1h-1zM23 32h1v1h-1zM24 32h1v1h-1zM25 32h1v1h-1zM28 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM38 32h1v1h-1zM40 32h1v1h-1zM12 33h1v1h-1zM16 33h1v1h-1zM20 33h1v1h-1zM21 33h1v1h-1zM22 33h1v1h-1zM27 33h1v1h-1zM31 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM37 33h1v1h-1zM40 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM13 34h1v1h-1zM15 34h1v1h-1zM16 34h1v1h-1zM18 34h1v1h-1zM25 34h1v1h-1zM29 34h1v1h-1zM31 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM37 34h1v1h-1zM39 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM12 35h1v1h-1zM14 35h1v1h-1zM20 35h1v1h-1zM21 35h1v1h-1zM22 35h1v1h-1zM25 35h1v1h-1zM26 35h1v1h-1zM27 35h1v1h-1zM30 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM37 35h1v1h-1zM38 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM13 36h1v1h-1zM23 36h1v1h-1zM25 36h1v1h-1zM27 36h1v1h-1zM29 36h1v1h-1zM30 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM37 36h1v1h-1zM39 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM12 37h1v1h-1zM14 37h1v1h-1zM16 37h1v1h-1zM17 37h1v1h-1zM20 37h1v1h-1zM21 37h1v1h-1zM22 37h1v1h-1zM24 37h1v1h-1zM28 37h1v1h-1zM29 37h1v1h-1zM30 37h1v1h-1zM31 37h1v1h-1zM35 37h1v1h-1zM36 37h1v1h-1zM37 37h1v1h-1zM38 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM15 38h1v1h-1zM16 38h1v1h-1zM18 38h1v1h-1zM20 38h1v1h-1zM22 38h1v1h-1zM23 38h1v1h-1zM25 38h1v1h-1zM26 38h1v1h-1zM33 38h1v1h-1zM35 38h1v1h-1zM36 38h1v1h-1zM37 38h1v1h-1zM38 38h1v1h-1zM39 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM15 39h1v1h-1zM16 39h1v1h-1zM17 39h1v1h-1zM19 39h1v1h-1zM20 39h1v1h-1zM24 39h1v1h-1zM25 39h1v1h-1zM28 39h1v1h-1zM29 39h1v1h-1zM31 39h1v1h-1zM32 39h1v1h-1zM33 39h1v1h-1zM35 39h1v1h-1zM37 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM16 40h1v1h-1zM18 40h1v1h-1zM21 40h1v1h-1zM24 40h1v1h-1zM25 40h1v1h-1zM29 40h1v1h-1zM31 40h1v1h-1zM32 40h1v1h-1zM33 40h1v1h-1zM34 40h1v1h-1zM39 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/group-sentence-build-up/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const GROUPS = [
+{name:"Education & Learning", items:[
+  {v:"Homework is a problem.", q:["For whom?","What exactly is the problem?","When does it happen?","What is the result?"],
+   a:"Too much homework can be a problem for high school students because it leaves them little time for sleep and sport on weekdays."},
+  {v:"Teachers are important.", q:["Which teachers?","Important for whom?","In what way?","What can they change?"],
+   a:"Primary school teachers are important for young children because they can help them develop a love of reading that lasts for life."},
+  {v:"Exams are stressful.", q:["Which exams?","Stressful for whom?","Why?","What happens as a result?"],
+   a:"University entrance exams can be very stressful for teenagers because their future plans often depend on a single test."},
+  {v:"Libraries are useful.", q:["Which libraries?","Useful for whom?","In what way?","When?"],
+   a:"University libraries are useful for students who live in crowded dormitories because they offer a quiet place to study during exam periods."},
+  {v:"Learning English is hard.", q:["Which part of English?","Hard for whom?","Why?","In what situation?"],
+   a:"Speaking English can be hard for many Turkish learners because they rarely have a chance to practise it outside the classroom."},
+  {v:"Online courses are popular.", q:["What kind of online courses?","Popular with whom?","Why?","Compared with what?"],
+   a:"Short online coding courses are popular with university students because they are cheaper and more flexible than traditional classes."},
+  {v:"Some students cheat.", q:["Which students?","How do they cheat?","Why do they do it?","When?"],
+   a:"Some students copy their classmates' homework when they have too many assignments and not enough time to finish them."},
+  {v:"Reading is good for children.", q:["What kind of reading?","Which children?","In what way is it good?","How often?"],
+   a:"Reading storybooks with parents every evening can improve young children's vocabulary and imagination."},
+  {v:"Classrooms need to change.", q:["Which classrooms?","What should change?","Why?","What would be the result?"],
+   a:"Language classrooms should have fewer students so that teachers can give each learner more speaking time and personal feedback."},
+  {v:"Uniforms are a good idea.", q:["Which uniforms?","For whom?","Why are they a good idea?","Are there any disadvantages?"],
+   a:"School uniforms can be a good idea for secondary schools because students don't feel pressure to wear expensive clothes, although some students find them uncomfortable."},
+  {v:"School is boring.", steps:[["For whom?","Some teenagers."],["What exactly?","Long lessons with no activities."],["What result?","They lose interest in learning."]],
+   a:"Long lessons with no activities can make school boring for some teenagers, so they may lose interest in learning."},
+  {v:"Students need skills.", steps:[["Which students?","University graduates."],["What skills?","Communication and teamwork skills."],["Why?","Most employers look for them."]],
+   a:"University graduates need good communication and teamwork skills because most employers look for these skills in job interviews."},
+  {v:"Grades are not everything.", steps:[["For whom?","Job applicants."],["What else matters?","Work experience and personality."],["When?","In job interviews."]],
+   a:"In job interviews, employers often care about applicants' work experience and personality as much as their university grades."},
+  {v:"Lessons should be fun.", steps:[["Which lessons?","Grammar lessons."],["How?","With games and pair activities."],["Why?","Students remember the rules better."]],
+   a:"Grammar lessons can be more fun when teachers use games and pair activities, and students often remember the rules better this way."},
+  {v:"Education should be free.", steps:[["Which education?","University education."],["For whom?","Students from low-income families."],["Why?","So they have the same chances."]],
+   a:"University education should be free for students from low-income families so that they have the same chances as everyone else."}
+]},
+{name:"Technology & Media", items:[
+  {v:"Smartphones are useful.", q:["Useful for whom?","Which features?","In what way?","In what situation?"],
+   a:"Smartphones are useful for tourists because map apps can help them find their way in a city they don't know."},
+  {v:"Video games are bad.", q:["When?","Bad for whom?","In what way?","What is the result?"],
+   a:"Playing video games late at night can harm teenagers' sleep, so they may find it hard to concentrate at school the next day."},
+  {v:"The news is negative.", q:["Which news?","Negative in what way?","How does it affect people?","Who is affected most?"],
+   a:"TV news programmes often focus on crimes and disasters, which can make some viewers feel anxious and hopeless about the world."},
+  {v:"Online shopping is risky.", q:["Which kind of online shopping?","Risky for whom?","What can go wrong?","How can it happen?"],
+   a:"Shopping on unknown websites can be risky for older people because fake shops may steal their bank card details."},
+  {v:"Robots will take jobs.", q:["Which robots?","Which jobs?","When?","What will happen to the workers?"],
+   a:"Factory robots may replace many workers on production lines in the next ten years, so these workers will need to learn new skills."},
+  {v:"Apps help students.", q:["Which apps?","Which students?","How do they help?","In what situation?"],
+   a:"Vocabulary apps can help language learners review new words for a few minutes a day while they are travelling on the bus."},
+  {v:"Influencers affect young people.", q:["Which influencers?","Which young people?","What do they affect?","Positive or negative?"],
+   a:"Fashion influencers on Instagram can affect teenagers' spending habits by encouraging them to buy expensive clothes they don't really need."},
+  {v:"Computers cause health problems.", q:["What kind of computer use?","Which health problems?","For whom?","How can it happen?"],
+   a:"Sitting in front of a computer for many hours without a break can cause back pain and eye problems for office workers."},
+  {v:"Messaging apps changed communication.", q:["Which messaging apps?","What changed?","For whom?","Positive or negative?"],
+   a:"Messaging apps such as WhatsApp have made it easier for families who live in different cities to stay in touch every day."},
+  {v:"Artificial intelligence is helpful.", q:["What kind of AI tools?","Helpful for whom?","In what way?","Are there any risks?"],
+   a:"AI chatbots can help university students understand difficult topics quickly, but students should still check the information carefully."},
+  {v:"Passwords are important.", steps:[["For whom?","Internet users."],["What exactly?","Strong, different passwords for each account."],["Why?","Hackers can't easily steal their information."]],
+   a:"Internet users should create strong, different passwords for each account so that hackers cannot easily steal their personal information."},
+  {v:"Screens are everywhere.", steps:[["Where?","In homes, schools and restaurants."],["Who is affected?","Young children."],["What result?","Less time for outdoor play."]],
+   a:"Because screens are everywhere in homes, schools and restaurants, many young children spend less time playing outside."},
+  {v:"Technology makes people lazy.", steps:[["Which technology?","Food delivery apps and online shopping."],["Who?","Some city residents."],["What result?","They walk much less than before."]],
+   a:"Food delivery apps and online shopping can make some city residents lazy because they no longer need to walk to shops or restaurants."},
+  {v:"Technology is difficult for some people.", steps:[["For whom?","Many elderly people."],["What exactly?","Online banking and hospital appointment apps."],["Why?","The screens and steps are confusing."]],
+   a:"Online banking and hospital appointment apps can be difficult for many elderly people because the screens and steps are confusing."},
+  {v:"The internet is dangerous.", steps:[["For whom?","Young children."],["What danger?","Talking to strangers in online games."],["When?","When parents don't check their activity."]],
+   a:"The internet can be dangerous for young children who talk to strangers in online games when their parents don't check what they are doing."}
+]},
+{name:"Health & Lifestyle", items:[
+  {v:"Fast food is unhealthy.", q:["What kind of fast food?","Unhealthy for whom?","Why?","How often?"],
+   a:"Eating burgers and fries several times a week can increase the risk of heart disease because they contain a lot of fat and salt."},
+  {v:"Noise affects health.", q:["What kind of noise?","Whose health?","How?","Where?"],
+   a:"Constant traffic noise near busy roads can affect residents' health by causing sleep problems and headaches."},
+  {v:"Stress makes people ill.", q:["What kind of stress?","Which people?","What illnesses?","How does it happen?"],
+   a:"Long-term stress at work can weaken people's immune system, so they may catch colds and other infections more easily."},
+  {v:"Water is important.", q:["How much water?","Important for whom?","Why?","In what situation?"],
+   a:"Drinking enough water is especially important for athletes who train outdoors in hot weather because they lose a lot of water through sweat."},
+  {v:"Sugar is harmful.", q:["What kind of sugar?","Harmful for whom?","In what way?","How much?"],
+   a:"Drinking sugary fizzy drinks every day can damage children's teeth and lead to weight gain."},
+  {v:"Doctors are busy.", q:["Which doctors?","Busy in what way?","Why?","What is the result for patients?"],
+   a:"Doctors in crowded state hospitals often see dozens of patients a day, so they can spend only a few minutes with each person."},
+  {v:"Sport builds character.", q:["Which sports?","For whom?","What qualities does it build?","How?"],
+   a:"Team sports like football and basketball can teach children discipline and cooperation because they have to follow rules and work with others."},
+  {v:"Mental health matters.", q:["Whose mental health?","Why does it matter?","What can happen without support?","Where?"],
+   a:"University students' mental health matters because stress and anxiety without support can affect their grades and relationships."},
+  {v:"Breakfast is necessary.", q:["What kind of breakfast?","For whom?","Why?","What happens without it?"],
+   a:"A healthy breakfast is necessary for schoolchildren because it gives them energy and helps them concentrate in morning lessons."},
+  {v:"Smoking is a bad habit.", q:["Bad for whom?","In what way?","What are the effects?","Why do people continue?"],
+   a:"Smoking is a bad habit that can cause serious lung diseases, but many smokers find it difficult to stop because nicotine is addictive."},
+  {v:"Summer is dangerous.", steps:[["For whom?","Elderly people and babies."],["What exactly?","Very hot days."],["Why?","Their bodies can't cool down easily."]],
+   a:"Very hot summer days can be dangerous for elderly people and babies because their bodies cannot cool down easily."},
+  {v:"People should sleep more.", steps:[["Who?","Teenagers."],["How much?","At least eight hours a night."],["Why?","To grow well and concentrate at school."]],
+   a:"Teenagers should sleep at least eight hours a night because they need enough rest to grow well and concentrate at school."},
+  {v:"Cooking is a useful skill.", steps:[["For whom?","Young adults who live alone."],["Why?","They can eat healthier and cheaper meals."],["Compared with what?","Ordering food every day."]],
+   a:"Cooking is a useful skill for young adults who live alone because they can eat healthier and cheaper meals than when they order food every day."},
+  {v:"Medicine can be dangerous.", steps:[["What kind of medicine?","Antibiotics."],["When?","When people take them without a doctor's advice."],["Why?","They may stop working in the future."]],
+   a:"Taking antibiotics without a doctor's advice can be dangerous because they may stop working when people really need them."},
+  {v:"Check-ups are important.", steps:[["What kind of check-ups?","Yearly health check-ups."],["For whom?","Adults over forty."],["Why?","Doctors can find problems early."]],
+   a:"Yearly health check-ups are important for adults over forty because doctors can find serious problems at an early stage."}
+]},
+{name:"Work & Money", items:[
+  {v:"Some jobs pay well.", q:["Which jobs?","How well?","Why?","What do the workers need?"],
+   a:"Software engineers often earn high salaries because many companies need their skills."},
+  {v:"Saving money is difficult.", q:["Difficult for whom?","Why?","In what situation?","What could help?"],
+   a:"Saving money can be difficult for university students who have to pay rent and buy books with a small budget."},
+  {v:"Bosses can be unfair.", q:["Which bosses?","Unfair in what way?","To whom?","What is the result?"],
+   a:"Some managers can be unfair to new employees by giving them the most difficult tasks without enough training."},
+  {v:"Internships are valuable.", q:["What kind of internships?","Valuable for whom?","In what way?","When?"],
+   a:"Summer internships at big companies can be valuable for engineering students because they can use their knowledge in real projects."},
+  {v:"Prices are high.", q:["Prices of what?","High for whom?","Where?","What is the result?"],
+   a:"Rent prices in big cities are very high for young workers, so many of them have to share a flat or live with their parents."},
+  {v:"Meetings waste time.", q:["Which meetings?","For whom?","Why?","What could be better?"],
+   a:"Long weekly meetings without a clear plan can waste employees' time when the same information could be shared in a short email."},
+  {v:"Credit cards are dangerous.", q:["Dangerous for whom?","In what way?","How does it happen?","What is the result?"],
+   a:"Credit cards can be dangerous for young people who don't plan their spending because they may buy too much and get into debt."},
+  {v:"Some people work too much.", q:["Which people?","How much?","Why?","What effect does it have?"],
+   a:"Many young doctors work more than sixty hours a week, which can leave them exhausted and harm their family life."},
+  {v:"A good CV is important.", q:["Important for whom?","What makes it good?","Why?","When?"],
+   a:"A clear and well-organised CV is important for new graduates because employers often spend less than a minute reading each one."},
+  {v:"Small businesses have problems.", q:["Which small businesses?","What problems?","Why?","Compared with what?"],
+   a:"Small family shops often struggle to compete with big supermarket chains because they cannot offer such low prices."},
+  {v:"Money doesn't bring happiness.", steps:[["Who?","Some rich people."],["What exactly?","They have little time for family and friends."],["What result?","They feel lonely."]],
+   a:"Some rich people feel lonely because their busy careers leave them little time for their family and friends."},
+  {v:"Workers need breaks.", steps:[["Which workers?","Factory workers."],["How often?","Every two hours."],["Why?","To avoid tiredness and accidents."]],
+   a:"Factory workers need a short break every two hours to avoid tiredness and serious accidents."},
+  {v:"Shopping can be addictive.", steps:[["What kind of shopping?","Online shopping."],["For whom?","Some young adults."],["Why?","Buying things quickly makes them feel good for a short time."]],
+   a:"Online shopping can be addictive for some young adults because buying things quickly makes them feel good for a short time."},
+  {v:"Jobs are changing.", steps:[["Which jobs?","Office jobs."],["How?","More people work from home."],["Since when?","Since the COVID-19 pandemic."]],
+   a:"Since the COVID-19 pandemic, many office jobs have changed because more people now work from home for part of the week."},
+  {v:"Pocket money teaches children.", steps:[["Which children?","Primary school children."],["What do they learn?","How to plan and save money."],["How?","By buying small things with their own money."]],
+   a:"Weekly pocket money can teach primary school children how to plan and save money because they buy small things with their own money."}
+]},
+{name:"City & Environment", items:[
+  {v:"Plastic is a problem.", q:["What kind of plastic?","A problem for what?","Why?","Where?"],
+   a:"Single-use plastic bags are a serious problem for sea animals because many bags end up in the ocean and animals eat them."},
+  {v:"Parks are necessary.", q:["Which parks?","Necessary for whom?","Why?","What can people do there?"],
+   a:"Green parks are necessary in crowded cities because they give families a safe place to relax and children a place to play."},
+  {v:"The weather is changing.", q:["Where?","How is it changing?","Why is it a problem?","What are the effects?"],
+   a:"Summers in Türkiye are becoming hotter and drier, which increases the risk of forest fires and water shortages."},
+  {v:"Recycling is easy.", q:["Recycling what?","Easy for whom?","How?","Where?"],
+   a:"Recycling paper and glass is easy for people who live in apartment blocks with separate recycling bins at the entrance."},
+  {v:"Traffic is terrible.", q:["Where?","When?","Why?","What is the result?"],
+   a:"Traffic on the main roads into the city centre is terrible during rush hour, so a short journey can take more than an hour."},
+  {v:"Animals need protection.", q:["Which animals?","Protection from what?","Why?","Who should protect them?"],
+   a:"Sea turtles on Türkiye's Mediterranean beaches need protection because hotels and tourists can damage the places where they lay their eggs."},
+  {v:"Cities are noisy.", q:["Which cities?","Noisy because of what?","When?","How does it affect people?"],
+   a:"Big cities can be very noisy at night because of traffic and building work, which makes it hard for residents to sleep."},
+  {v:"Saving energy is important.", q:["What kind of energy?","Who should save it?","How?","What is the benefit?"],
+   a:"Families can save electricity by turning off lights and devices they are not using, which also lowers their monthly bills."},
+  {v:"New buildings should change.", q:["Which buildings?","What should change?","Why?","What will be the result?"],
+   a:"New apartment buildings should use solar panels so that they produce part of their own energy and reduce air pollution."},
+  {v:"Water is running out.", q:["Where?","When?","Who is affected?","What can people do?"],
+   a:"In dry summers, the water level in the dams of some big cities falls quickly, so residents need to use less water at home."},
+  {v:"Streets are dirty.", steps:[["Which streets?","Streets near markets."],["When?","After the weekly market."],["Why?","Some people leave rubbish everywhere."]],
+   a:"Streets near markets are often dirty after the weekly market because some people leave their rubbish everywhere."},
+  {v:"Cars cause pollution.", steps:[["Which cars?","Old diesel cars."],["What pollution?","Air pollution."],["Where?","In city centres."]],
+   a:"Old diesel cars cause serious air pollution in city centres, especially when traffic is heavy."},
+  {v:"Nature is good for people.", steps:[["What kind of nature?","Forests and beaches."],["Good for whom?","Stressed city workers."],["How?","It helps them relax at weekends."]],
+   a:"Spending time in forests or on beaches at weekends can help stressed city workers relax and feel more energetic."},
+  {v:"People waste food.", steps:[["Who?","Many families and restaurants."],["How?","They throw away leftover food."],["What result?","Money and resources are lost."]],
+   a:"Many families and restaurants throw away leftover food every day, which wastes both money and natural resources."},
+  {v:"Cycling should be easier.", steps:[["Where?","In big cities."],["For whom?","Students and workers."],["How?","More safe bike lanes."]],
+   a:"Cities should build more safe bike lanes so that students and workers can cycle to school and work more easily."}
+]},
+{name:"Family & Relationships", items:[
+  {v:"Parents are strict.", q:["Which parents?","Strict about what?","Why?","How do children feel?"],
+   a:"Some parents are strict about their teenagers' screen time because they worry that phones will affect their children's grades."},
+  {v:"Brothers and sisters fight.", q:["Which siblings?","What do they fight about?","When?","Why?"],
+   a:"Young brothers and sisters often argue about toys and the TV remote, especially when they are bored at home during long holidays."},
+  {v:"Grandparents are helpful.", q:["Helpful to whom?","In what way?","When?","Why?"],
+   a:"Grandparents can be very helpful to working parents by looking after the children after school."},
+  {v:"Moving house is difficult.", q:["Difficult for whom?","What exactly is hard?","Why?","How can families make it easier?"],
+   a:"Moving to a new city can be difficult for young children because they have to leave their friends and start at a new school."},
+  {v:"Weddings are expensive.", q:["Which weddings?","Expensive for whom?","Why?","What do people spend money on?"],
+   a:"Traditional weddings in Türkiye can be very expensive for young couples because they have to pay for a big hall, dinner and music for hundreds of guests."},
+  {v:"Families spend less time together.", q:["Which families?","Compared with when?","Why?","What is the effect?"],
+   a:"Many families today spend less time together at dinner than in the past because parents work late and children are busy with their phones."},
+  {v:"Neighbours are important.", q:["Which neighbours?","Important for whom?","In what way?","In what situation?"],
+   a:"Good neighbours can be very important for elderly people who live alone because they can help them in an emergency."},
+  {v:"Children copy adults.", q:["Which children?","What do they copy?","Whom do they copy?","What is the result?"],
+   a:"Young children often copy their parents' eating habits, so families who eat vegetables together can help children learn to like them."},
+  {v:"Arguments damage relationships.", q:["What kind of arguments?","Between whom?","How?","What can help?"],
+   a:"Frequent arguments about money can damage relationships between couples unless they learn to talk calmly and plan their budget together."},
+  {v:"Pets make people happy.", q:["Which pets?","Which people?","How?","Why?"],
+   a:"Dogs can make elderly people who live alone happier because they give them company and a reason to go for walks every day."},
+  {v:"Teenagers don't listen.", steps:[["To whom?","To their parents."],["About what?","Advice on studying and friends."],["Why?","They want more independence."]],
+   a:"Some teenagers don't listen to their parents' advice about studying and friends because they want more independence."},
+  {v:"Love is not enough.", steps:[["For whom?","Married couples."],["What else is needed?","Respect and good communication."],["When?","During difficult times."]],
+   a:"Love alone is not enough for married couples because they also need respect and good communication during difficult times."},
+  {v:"Children need attention.", steps:[["Which children?","Children of busy parents."],["What kind?","Time to talk and play together."],["Why?","They feel loved and safe."]],
+   a:"Children of busy parents need time to talk and play with them every day so that they feel loved and safe."},
+  {v:"Holidays bring families together.", steps:[["Which holidays?","Religious holidays like Bayram."],["Who?","Relatives from different cities."],["How?","They visit each other and eat together."]],
+   a:"Religious holidays like Bayram bring families together because relatives from different cities visit each other and share meals."},
+  {v:"Online friends are different.", steps:[["Different from what?","Real-life friends."],["How?","They are harder to trust."],["Why?","People can hide who they are online."]],
+   a:"Online friends can be harder to trust than real-life friends because people can easily hide who they really are on the internet."}
+]},
+{name:"Travel & Culture", items:[
+  {v:"Tourism helps the economy.", q:["What kind of tourism?","Which places?","How does it help?","Who benefits?"],
+   a:"Beach tourism helps the economy of coastal towns like Bodrum because hotels, restaurants and shops create jobs for local people."},
+  {v:"Flights are expensive.", q:["Which flights?","Expensive for whom?","When?","Why?"],
+   a:"International flights are very expensive for families during summer holidays because many people want to travel at the same time."},
+  {v:"Festivals are fun.", q:["Which festivals?","Fun for whom?","What can people do there?","When?"],
+   a:"Summer music festivals are fun for young people because they can listen to their favourite bands and meet new friends outdoors."},
+  {v:"Museums are boring.", q:["Which museums?","Boring for whom?","Why?","What could make them better?"],
+   a:"Traditional history museums can be boring for children because they can only look at objects behind glass."},
+  {v:"Learning about cultures is important.", q:["Which cultures?","Important for whom?","Why?","How can people learn?"],
+   a:"Learning about other cultures is important for students who plan to study abroad because it helps them understand local customs and avoid misunderstandings."},
+  {v:"Tourists cause problems.", q:["Which tourists?","What problems?","Where?","When?"],
+   a:"Large numbers of tourists can cause traffic and rubbish problems in small seaside towns during the busy summer months."},
+  {v:"Traditional food is disappearing.", q:["Which traditional food?","Where?","Why?","What can be done?"],
+   a:"Some traditional village dishes are disappearing because young people prefer fast food and older cooks don't teach their recipes to others."},
+  {v:"Camping is a good experience.", q:["For whom?","Where?","Why?","What can people learn?"],
+   a:"Camping in the mountains can be a good experience for teenagers because they learn to live without phones and solve simple problems together."},
+  {v:"Languages open doors.", q:["Which languages?","For whom?","What doors?","How?"],
+   a:"Speaking a second language like English can give graduates more job opportunities in international companies."},
+  {v:"Holidays are relaxing.", q:["What kind of holidays?","Relaxing for whom?","Why?","Where?"],
+   a:"A quiet holiday in a mountain village can be relaxing for busy city workers because there is no traffic or noise."},
+  {v:"Hotels are crowded.", steps:[["Which hotels?","All-inclusive hotels in Antalya."],["When?","In July and August."],["What result?","Long queues at the restaurants and pools."]],
+   a:"All-inclusive hotels in Antalya are very crowded in July and August, so guests often wait in long queues at the restaurants."},
+  {v:"Culture shock is real.", steps:[["For whom?","International students."],["What exactly?","Different food, weather and customs."],["When?","In their first few months."]],
+   a:"International students can experience culture shock in their first few months because the food, weather and customs are very different."},
+  {v:"Souvenirs are a waste of money.", steps:[["Which souvenirs?","Cheap fridge magnets and key rings."],["Why?","People rarely use them."],["What is better?","Local food or handmade products."]],
+   a:"Cheap fridge magnets and key rings can be a waste of money because people rarely use them, so local food or handmade products are a better choice."},
+  {v:"Old buildings should be protected.", steps:[["Which buildings?","Historic houses in old city centres."],["Why?","They show the city's history."],["How?","With strict building rules."]],
+   a:"Historic houses in old city centres should be protected with strict building rules because they show the history of the city."},
+  {v:"Public transport is confusing.", steps:[["Where?","In big foreign cities."],["For whom?","First-time visitors."],["Why?","Signs and ticket machines are only in the local language."]],
+   a:"Public transport in big foreign cities can be confusing for first-time visitors when signs and ticket machines are only in the local language."}
+]},
+{name:"Society & Daily Life", items:[
+  {v:"Life is expensive.", q:["Which part of life?","Expensive for whom?","Where?","Why?"],
+   a:"Daily life in big cities has become very expensive for students because food, transport and rent prices have risen quickly."},
+  {v:"People are always in a hurry.", q:["Which people?","Where?","Why?","What is the result?"],
+   a:"Commuters in big cities are always in a hurry in the mornings because they don't want to be late for work, so they rarely talk to each other."},
+  {v:"Volunteering is rewarding.", q:["What kind of volunteering?","Rewarding for whom?","In what way?","Where?"],
+   a:"Volunteering at an animal shelter can be rewarding for teenagers because it teaches them responsibility and makes them feel useful."},
+  {v:"Rules are necessary.", q:["Which rules?","Necessary for whom?","Why?","Where?"],
+   a:"Clear traffic rules are necessary for drivers and pedestrians because they help prevent accidents at busy crossroads."},
+  {v:"Some people are rude.", q:["Which people?","Rude in what way?","Where?","Why is it a problem?"],
+   a:"Some passengers are rude on public transport when they play loud music or don't give their seats to elderly people."},
+  {v:"Weekends are short.", q:["Short for whom?","Why?","What do people do?","What is the result?"],
+   a:"Weekends feel short for working parents because they spend most of Saturday doing housework and shopping."},
+  {v:"Queues are annoying.", q:["Which queues?","Annoying for whom?","Why?","What could help?"],
+   a:"Long queues at bank branches can be annoying for customers who have only a short lunch break, so online appointments could help."},
+  {v:"Young people are different today.", q:["Different from whom?","In what way?","Why?","Positive or negative?"],
+   a:"Many young people today care more about travelling and new experiences than buying a house, unlike their parents' generation."},
+  {v:"Shopping malls are popular.", q:["Which shopping malls?","Popular with whom?","Why?","When?"],
+   a:"Large shopping malls are popular with families on rainy weekends because they offer shops, restaurants and cinemas in one place."},
+  {v:"Good manners matter.", q:["Which manners?","Where?","Why do they matter?","For whom?"],
+   a:"Simple good manners, like saying 'please' and 'thank you', matter in the workplace because they help colleagues build positive relationships."},
+  {v:"People are lonely.", steps:[["Who?","Many people who move to a new city."],["Why?","They don't know anyone there."],["When?","In their first year."]],
+   a:"Many people who move to a new city feel lonely in their first year because they don't know anyone there."},
+  {v:"Coffee shops are everywhere.", steps:[["Where?","In university neighbourhoods."],["Why?","Students use them as study places."],["What result?","Cafés stay open until late."]],
+   a:"Coffee shops are everywhere in university neighbourhoods because many students use them as places to study until late at night."},
+  {v:"Children grow up fast.", steps:[["Which children?","Children in cities today."],["How?","They get phones and social media accounts early."],["What result?","Less time for simple childhood games."]],
+   a:"Children in cities today grow up fast because they get phones and social media accounts at an early age, so they spend less time on simple childhood games."},
+  {v:"Public places should be accessible.", steps:[["Which places?","Metro stations and old public buildings."],["For whom?","People in wheelchairs and parents with baby strollers."],["How?","With lifts and ramps."]],
+   a:"Metro stations and old public buildings should have lifts and ramps so that people in wheelchairs and parents with baby strollers can use them easily."},
+  {v:"Daily routines are important.", steps:[["For whom?","University students."],["What exactly?","A fixed time to sleep, study and exercise."],["Why?","They feel more organised and less stressed."]],
+   a:"Having a fixed daily routine for sleeping, studying and exercising can help university students feel more organised and less stressed."}
+]}
+];
+
+const GUIDED = 10;
+const CHAIN = ["WHO exactly?","WHAT exactly?","HOW / WHY?","WHEN / WHERE?"];
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+const NG = GROUPS.length;
+
+const state = { g:0, idx:Array(NG).fill(0), open:GROUPS.map(() => new Map()), scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("sbu-groups-state") || "null");
+  if(s){
+    if(Number.isInteger(s.g) && s.g >= 0 && s.g < NG) state.g = s.g;
+    if(Array.isArray(s.idx)) state.idx = GROUPS.map((gr,k) => clamp((s.idx[k]|0), 0, gr.items.length - 1));
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("sbu-groups-state", JSON.stringify({g:state.g, idx:state.idx, scale:state.scale})); }catch(e){}
+}
+function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const $ = id => document.getElementById(id);
+const bodyEl = $("body"), stripEl = $("strip"), tabsEl = $("tabs"), revealBtn = $("reveal"), prevBtn = $("prev"), nextBtn = $("next");
+
+function items(){ return GROUPS[state.g].items; }
+function cur(){ return state.idx[state.g]; }
+function stepsTotal(i){ const it = items()[i]; return it.steps ? it.steps.length + 1 : 1; }
+function openCount(i){ return state.open[state.g].get(i) || 0; }
+
+function words(text, animate){
+  const html = text.split(" ").map((w,k) => `<span class="w" style="--i:${k}">${esc(w)}</span>`).join(" ");
+  return `<p class="sentence${animate ? "" : " still"}">${html}</p>`;
+}
+
+function buildTabs(){
+  tabsEl.innerHTML = GROUPS.map((gr,k) =>
+    `<button class="tab" role="tab" type="button" data-g="${k}" aria-selected="false"><span class="n">${k+1}</span><span class="tl">Group ${k+1}<small>${esc(gr.name)}</small></span></button>`).join("");
+}
+function renderTabs(){
+  tabsEl.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", +b.dataset.g === state.g ? "true" : "false"));
+}
+function buildStrip(){
+  const n = items().length;
+  const mk = (from, to) => { let h = ""; for(let i = from; i < to; i++) h += `<button class="num" type="button" data-i="${i}" aria-label="Sentence ${i+1}">${i+1}</button>`; return h; };
+  stripEl.innerHTML =
+    `<div class="group"><span class="glabel">With questions</span>${mk(0, GUIDED)}</div>` +
+    `<div class="group"><span class="glabel">On your own</span>${mk(GUIDED, n)}</div>`;
+}
+function updateStrip(){
+  stripEl.querySelectorAll(".num").forEach(b => {
+    const i = +b.dataset.i;
+    b.setAttribute("aria-current", i === cur() ? "true" : "false");
+    b.classList.toggle("done", openCount(i) > 0);
+  });
+}
+
+function renderCard(animateStep){
+  const gi = state.g, i = cur(), n = items().length, it = items()[i], open = openCount(i), total = stepsTotal(i);
+  const head = instr => `<div class="head"><span class="count">Group ${gi+1} · No. ${i+1}<small> / ${n}</small></span><p class="instr">${instr}</p></div>`;
+  const vague = `<div class="vague-wrap"><span class="tag">Vague</span><p class="vague">${esc(it.v)}</p></div>`;
+  let h = "", slot = "";
+
+  if(!it.steps){
+    const qs = it.q.map((q,k) => `<li class="q c${(k+2)%5}">${esc(q)}</li>`).join("");
+    h = head("Make it more specific. Answer the questions with your group, then write one clear sentence.")
+      + vague + `<ul class="qs">${qs}</ul>`;
+    slot = open
+      ? `<span class="slot-label">Possible answer</span>${words(it.a, animateStep === 1)}`
+      : `<p class="hint">Group work first. The possible answer is hidden.</p>`;
+    revealBtn.textContent = open ? "Hide answer" : "Show possible answer";
+  }else{
+    const chain = CHAIN.map((c,k) =>
+      `<li>${k ? '<span class="arr" aria-hidden="true">→</span>' : ""}<span class="step c${[0,1,2,4][k]}">${esc(c)}</span></li>`).join("");
+    h = head("Make this vague statement clear and specific. Ask yourself:")
+      + `<ol class="chain">${chain}</ol>` + vague;
+    const m = it.steps, shown = Math.min(open, m.length);
+    if(open === 0){
+      slot = `<p class="hint">Try it with your group first, then see the model one step at a time.</p>`;
+    }else{
+      const lis = m.slice(0, shown).map((s,k) =>
+        `<li class="${animateStep === k+1 ? "in" : ""}"><span class="k">${esc(s[0])}</span><span>${esc(s[1])}</span></li>`).join("");
+      slot = `<span class="slot-label">Model</span><ul class="steps">${lis}</ul>`
+        + (open > m.length ? `<div class="final">${words(it.a, animateStep === total)}</div>` : "");
+    }
+    revealBtn.textContent = open === 0 ? "Show model"
+      : open < m.length ? "Next step"
+      : open === m.length ? "Show the sentence"
+      : "Hide model";
+  }
+  bodyEl.innerHTML = h + `<div class="slot${open ? " open" : ""}" aria-live="polite">${slot}</div>`;
+  prevBtn.disabled = i === 0;
+  nextBtn.disabled = i === n - 1;
+}
+
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+function render(animateStep){ renderTabs(); updateStrip(); renderCard(animateStep); save(); }
+
+function go(d){
+  const n = items().length, i = clamp(cur() + d, 0, n - 1);
+  if(i === cur()) return;
+  state.idx[state.g] = i;
+  render(0);
+}
+function reveal(){
+  const i = cur(), total = stepsTotal(i), o = openCount(i);
+  const next = o >= total ? 0 : o + 1;
+  if(next) state.open[state.g].set(i, next); else state.open[state.g].delete(i);
+  render(next);
+}
+function setGroup(g){
+  if(g === state.g) return;
+  state.g = g; buildStrip(); render(0);
+}
+
+tabsEl.addEventListener("click", e => { const b = e.target.closest(".tab"); if(b) setGroup(+b.dataset.g); });
+prevBtn.addEventListener("click", () => go(-1));
+nextBtn.addEventListener("click", () => go(1));
+revealBtn.addEventListener("click", reveal);
+stripEl.addEventListener("click", e => {
+  const b = e.target.closest(".num"); if(!b) return;
+  state.idx[state.g] = +b.dataset.i; render(0);
+});
+
+$("smaller").addEventListener("click", () => { const k = SCALES.indexOf(state.scale); state.scale = SCALES[Math.max(0, k-1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { const k = SCALES.indexOf(state.scale); state.scale = SCALES[Math.min(SCALES.length-1, k+1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+document.addEventListener("keydown", e => {
+  if(qrDlg.open) return;
+  if(e.altKey || e.ctrlKey || e.metaKey) return;
+  const onControl = e.target.closest && e.target.closest("button, input, textarea, select");
+  if(e.key === "ArrowRight"){ go(1); e.preventDefault(); }
+  else if(e.key === "ArrowLeft"){ go(-1); e.preventDefault(); }
+  else if(e.key === " " && e.target !== revealBtn){ reveal(); e.preventDefault(); }
+  else if(e.key === "Enter" && !onControl){ reveal(); e.preventDefault(); }
+});
+
+applyScale();
+buildTabs();
+buildStrip();
+render(0);
+</script>
+</body>
+</html>

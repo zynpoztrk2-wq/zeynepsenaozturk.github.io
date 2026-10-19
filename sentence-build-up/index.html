@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentence Build-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Lexend:wght@400;500;600&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one centred board stage. Title + tools, activity tabs, number strip, then one big card per item:
+   toy-block word tiles (or a vague sentence with question bubbles) above a reveal slot and chunky controls. */
+:root{
+  --bg:#EDF5F0;
+  --dot:#D2E5D9;
+  --surface:#FFFFFF;
+  --ink:#2B2948;
+  --muted:#686689;
+  --line:#DAD7EA;
+  --accent:#F0517B;
+  --accent-deep:#C5385F;
+  --accent-ink:#FFFFFF;
+  --pink:#FFD4E0;  --pink-e:#EFA2B8;
+  --lemon:#FFEEA6; --lemon-e:#DDC255;
+  --sky:#CDE7FF;   --sky-e:#8EBCE5;
+  --peach:#FFDCC3; --peach-e:#E8AA7F;
+  --lilac:#E4DAFF; --lilac-e:#B2A1E5;
+  --good:#23885A;  --good-bg:#E3F6EB; --good-line:#9BD7B7;
+  --font-display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Lexend","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+  --qr-bg:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1B1A2E; --dot:#29283F; --surface:#252440; --ink:#F1EFFF; --muted:#A8A5CA; --line:#3A3858;
+    --accent:#FF7C9E; --accent-deep:#B9446A; --accent-ink:#2A0E1B;
+    --pink:#4B2639; --pink-e:#7B3E5C; --lemon:#453B1C; --lemon-e:#77662E; --sky:#1E3853; --sky-e:#335F88;
+    --peach:#4A2E1E; --peach-e:#7D4F2F; --lilac:#342B5A; --lilac-e:#5A4B93;
+    --good:#74D9A6; --good-bg:#1B3A2C; --good-line:#2F6B4E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1B1A2E; --dot:#29283F; --surface:#252440; --ink:#F1EFFF; --muted:#A8A5CA; --line:#3A3858;
+  --accent:#FF7C9E; --accent-deep:#B9446A; --accent-ink:#2A0E1B;
+  --pink:#4B2639; --pink-e:#7B3E5C; --lemon:#453B1C; --lemon-e:#77662E; --sky:#1E3853; --sky-e:#335F88;
+  --peach:#4A2E1E; --peach-e:#7D4F2F; --lilac:#342B5A; --lilac-e:#5A4B93;
+  --good:#74D9A6; --good-bg:#1B3A2C; --good-line:#2F6B4E;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background-color:var(--bg);
+  background-image:radial-gradient(var(--dot) 1.4px, transparent 1.7px);
+  background-size:24px 24px;
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.5;
+}
+.wrap{
+  max-width:1180px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 36px;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,18px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--sky-e); outline-offset:3px}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:14px; min-width:0}
+.stack{display:grid; grid-template-columns:repeat(2,17px); grid-template-rows:repeat(2,17px); gap:3px; flex:none}
+.stack i{border-radius:5px; border:2px solid}
+.stack i:nth-child(1){grid-area:2/1; background:var(--pink); border-color:var(--pink-e)}
+.stack i:nth-child(2){grid-area:2/2; background:var(--lemon); border-color:var(--lemon-e)}
+.stack i:nth-child(3){grid-area:1/2; background:var(--sky); border-color:var(--sky-e)}
+h1{
+  font-family:var(--font-display); font-weight:800;
+  font-size:clamp(1.9rem,3.4vw,3rem); line-height:1.05; margin:0;
+  letter-spacing:-.01em; text-wrap:balance;
+}
+h1 span{color:var(--accent)}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:2px solid var(--line); border-radius:12px;
+  padding:6px 12px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+
+/* activity tabs */
+.tabs{display:flex; gap:10px; flex-wrap:wrap}
+.tab{
+  display:flex; align-items:center; gap:10px;
+  font:700 clamp(1rem,1.6vw,1.22rem)/1.1 var(--font-display); color:var(--muted);
+  background:var(--surface); border:2px solid var(--line); border-radius:16px;
+  padding:9px 16px 7px 10px; cursor:pointer; box-shadow:0 4px 0 var(--line);
+  text-align:left;
+}
+.tab .n{
+  display:grid; place-items:center; flex:none; width:30px; height:30px; border-radius:9px;
+  background:var(--lilac); border:2px solid var(--lilac-e); color:var(--ink); font-size:1.05rem; padding-top:2px;
+}
+.tab[aria-selected="true"]{color:var(--ink); border-color:var(--ink); box-shadow:0 4px 0 var(--ink)}
+.tab[aria-selected="true"] .n{background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink)}
+
+/* number strip */
+.strip{display:flex; flex-wrap:wrap; gap:8px 22px; align-items:center}
+.group{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.glabel{
+  font:600 .74rem var(--font-body); text-transform:uppercase; letter-spacing:.09em;
+  color:var(--muted); margin-right:4px; white-space:nowrap;
+}
+.num{
+  position:relative; width:37px; height:37px; border-radius:11px;
+  font:600 .92rem var(--font-body); font-variant-numeric:tabular-nums;
+  border:2px solid var(--line); background:var(--surface); color:var(--muted); cursor:pointer;
+}
+.num:hover{border-color:var(--muted); color:var(--ink)}
+.num.done::after{
+  content:""; position:absolute; top:-5px; right:-5px; width:12px; height:12px; border-radius:50%;
+  background:var(--good); border:2px solid var(--surface);
+}
+.num[aria-current="true"]{background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink)}
+
+/* stage card */
+.card{
+  background:var(--surface); border:2px solid var(--line); border-radius:28px;
+  box-shadow:0 8px 0 var(--line);
+  padding:clamp(18px,3vw,40px);
+  display:flex; flex-direction:column; gap:clamp(18px,2.4vw,28px);
+}
+@media (min-width:760px){ .card{min-height:min(64vh,720px)} }
+.body{flex:1; display:flex; flex-direction:column; gap:clamp(16px,2.2vw,26px); min-width:0}
+.head{display:flex; flex-direction:column; gap:6px}
+.count{
+  font:800 calc(clamp(1.15rem,1.9vw,1.5rem)*var(--scale))/1 var(--font-display);
+  font-variant-numeric:tabular-nums; color:var(--accent);
+}
+.count small{color:var(--muted); font-weight:600; font-size:.8em}
+.instr{
+  margin:0; max-width:72ch; color:var(--muted);
+  font-size:calc(clamp(.95rem,1.35vw,1.12rem)*var(--scale)); line-height:1.5;
+}
+
+/* word tiles */
+.tiles{display:flex; flex-wrap:wrap; gap:clamp(12px,1.5vw,18px); align-items:center; padding-bottom:6px}
+.tile{
+  font:500 calc(clamp(1.15rem,2.3vw,1.95rem)*var(--scale))/1.25 var(--font-body);
+  padding:.42em .8em .5em; border-radius:16px; border:2px solid var(--e);
+  background:var(--b); color:var(--ink); box-shadow:0 5px 0 var(--e);
+  transform:rotate(var(--r,0deg)); min-width:0; overflow-wrap:anywhere;
+}
+.c0{--b:var(--pink);  --e:var(--pink-e)}
+.c1{--b:var(--lemon); --e:var(--lemon-e)}
+.c2{--b:var(--sky);   --e:var(--sky-e)}
+.c3{--b:var(--peach); --e:var(--peach-e)}
+.c4{--b:var(--lilac); --e:var(--lilac-e)}
+
+/* vague sentence */
+.vague-wrap{display:flex; flex-direction:column; gap:10px; align-items:flex-start}
+.tag{
+  font:600 .76rem var(--font-body); letter-spacing:.09em; text-transform:uppercase;
+  padding:3px 11px; border-radius:999px; color:var(--ink);
+  background:var(--pink); border:2px solid var(--pink-e);
+}
+.vague{
+  margin:0; font:700 calc(clamp(1.75rem,3.8vw,3.1rem)*var(--scale))/1.18 var(--font-display);
+  text-decoration:underline wavy var(--accent); text-decoration-thickness:2px; text-underline-offset:.2em;
+  text-wrap:balance;
+}
+
+/* guiding questions */
+.qs{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+.q{
+  font:500 calc(clamp(1.05rem,1.8vw,1.42rem)*var(--scale))/1.3 var(--font-body);
+  padding:.6em .9em; border-radius:16px; background:var(--b); border:2px solid var(--e);
+  min-width:0; overflow-wrap:anywhere;
+}
+@media (max-width:620px){ .qs{grid-template-columns:1fr} }
+
+/* WHO → WHAT → HOW/WHY → WHEN/WHERE chain */
+.chain{display:flex; flex-wrap:wrap; align-items:center; gap:10px 8px; list-style:none; margin:0; padding:0 0 6px}
+.chain li{display:flex; align-items:center; gap:8px}
+.chain .step{
+  font:700 calc(clamp(1.05rem,1.9vw,1.5rem)*var(--scale))/1.1 var(--font-display);
+  padding:.4em .8em .3em; border-radius:14px; background:var(--b); border:2px solid var(--e);
+  box-shadow:0 4px 0 var(--e); white-space:nowrap;
+}
+.chain .arr{color:var(--muted); font-size:calc(1.3rem*var(--scale)); line-height:1}
+
+/* reveal slot */
+.slot{
+  border:3px dashed var(--line); border-radius:22px;
+  padding:clamp(16px,2.4vw,28px);
+  min-height:calc(clamp(5rem,9vw,7rem)*var(--scale));
+  display:flex; flex-direction:column; justify-content:center; gap:10px;
+  transition:background-color .25s, border-color .25s;
+}
+.slot.open{border-style:solid; border-color:var(--good-line); background:var(--good-bg)}
+.slot-label{font:600 .76rem var(--font-body); letter-spacing:.09em; text-transform:uppercase; color:var(--good)}
+.hint{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.5vw,1.2rem)*var(--scale))}
+.sentence{
+  margin:0; font:500 calc(clamp(1.3rem,2.7vw,2.25rem)*var(--scale))/1.4 var(--font-body);
+  text-wrap:pretty; overflow-wrap:anywhere;
+}
+.sentence .w{display:inline-block; animation:pop .4s cubic-bezier(.3,1.5,.6,1) both; animation-delay:calc(var(--i)*45ms)}
+.sentence.still .w{animation:none}
+@keyframes pop{from{opacity:0; transform:translateY(.45em) scale(.85)} to{opacity:1; transform:none}}
+
+.steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+.steps li{
+  display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline;
+  font-size:calc(clamp(1.1rem,2vw,1.6rem)*var(--scale)); line-height:1.35;
+}
+.steps .k{font-weight:600; color:var(--muted)}
+.steps .k::after{content:" →"; color:var(--muted)}
+.steps li.in{animation:slide .35s ease-out both}
+@keyframes slide{from{opacity:0; transform:translateX(-12px)} to{opacity:1; transform:none}}
+.final{margin-top:6px}
+
+/* controls */
+.controls{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1.05rem,1.6vw,1.28rem)*var(--scale))/1 var(--font-display);
+  border-radius:16px; padding:.62em 1.1em .5em; min-height:54px; cursor:pointer;
+  border:2px solid var(--line); background:var(--surface); color:var(--ink);
+  box-shadow:0 5px 0 var(--line); transition:transform .08s, box-shadow .08s;
+}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn:active:not(:disabled){transform:translateY(4px); box-shadow:0 1px 0 var(--line)}
+.btn:disabled{opacity:.38; cursor:default}
+.btn.main{
+  flex:0 1 420px; background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink);
+  box-shadow:0 5px 0 var(--accent-deep);
+}
+.btn.main:hover:not(:disabled){border-color:var(--accent-deep); filter:brightness(1.04)}
+.btn.main:active:not(:disabled){box-shadow:0 1px 0 var(--accent-deep)}
+@media (max-width:560px){
+  .btn.main{order:-1; flex-basis:100%}
+  .btn.side{flex:1}
+}
+.keys{margin:0; text-align:center; color:var(--muted); font-size:.82rem}
+.keys kbd{
+  font:600 .78rem var(--font-body); padding:1px 7px; border-radius:6px;
+  border:1.5px solid var(--line); background:var(--surface); box-shadow:0 2px 0 var(--line);
+}
+@media (hover:none){ .keys{display:none} }
+
+/* QR panel */
+.tool.qr-open{background:var(--accent); border-color:var(--accent-deep); color:var(--accent-ink)}
+#qrDlg{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(500px, calc(100% - 24px)); max-width:none; max-height:calc(100% - 24px); overflow:visible;
+}
+#qrDlg::backdrop{background:rgba(30,28,60,.55)}
+.qrpanel{
+  background:var(--surface); border:2px solid var(--line); border-radius:28px; box-shadow:0 8px 0 var(--line);
+  padding:clamp(20px,3.4vw,34px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.5rem,3vw,2.1rem)/1.1 var(--font-display); text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted)}
+.qrbox{
+  width:min(320px, 60vmin, 100%); padding:14px; border-radius:20px; background:var(--qr-bg);
+  border:3px solid var(--sky-e); box-shadow:0 5px 0 var(--sky-e);
+}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{margin:0; font-size:.88rem; color:var(--muted); overflow-wrap:anywhere; -webkit-user-select:all; user-select:all}
+.qrbtns{display:flex; flex-wrap:wrap; gap:12px; justify-content:center; width:100%; padding-bottom:6px}
+.qrbtns .btn{flex:1 1 150px}
+
+@media (prefers-reduced-motion:reduce){
+  .sentence .w, .steps li.in{animation:none}
+  .btn, .slot{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="stack" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Sentence <span>Build-Up</span></h1>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Activities">
+    <button class="tab" role="tab" id="tab0" type="button" aria-selected="true"><span class="n">1</span>Core Sentence Build-Up</button>
+    <button class="tab" role="tab" id="tab1" type="button" aria-selected="false"><span class="n">2</span>Add Specific Information</button>
+  </nav>
+
+  <div class="strip" id="strip" aria-label="Jump to item"></div>
+
+  <main class="card" id="card">
+    <div class="body" id="body"></div>
+    <div class="controls">
+      <button class="btn side" id="prev" type="button">← Previous</button>
+      <button class="btn main" id="reveal" type="button">Show sentence</button>
+      <button class="btn side" id="next" type="button">Next →</button>
+    </div>
+  </main>
+  <p class="keys"><kbd>←</kbd> <kbd>→</kbd> move &nbsp;·&nbsp; <kbd>Space</kbd> reveal</p>
+</div>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open Sentence Build-Up</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens Sentence Build-Up"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM12 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM19 4h1v1h-1zM20 4h1v1h-1zM21 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM14 5h1v1h-1zM16 5h1v1h-1zM23 5h1v1h-1zM24 5h1v1h-1zM26 5h1v1h-1zM30 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM15 6h1v1h-1zM16 6h1v1h-1zM17 6h1v1h-1zM18 6h1v1h-1zM23 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM29 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM13 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM21 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM29 7h1v1h-1zM31 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM12 8h1v1h-1zM13 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM23 8h1v1h-1zM29 8h1v1h-1zM30 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM14 9h1v1h-1zM15 9h1v1h-1zM20 9h1v1h-1zM27 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM32 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM13 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM24 11h1v1h-1zM26 11h1v1h-1zM28 11h1v1h-1zM29 11h1v1h-1zM32 11h1v1h-1zM4 12h1v1h-1zM7 12h1v1h-1zM8 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM11 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM14 12h1v1h-1zM15 12h1v1h-1zM17 12h1v1h-1zM18 12h1v1h-1zM19 12h1v1h-1zM22 12h1v1h-1zM24 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM30 12h1v1h-1zM31 12h1v1h-1zM32 12h1v1h-1zM33 12h1v1h-1zM36 12h1v1h-1zM38 12h1v1h-1zM39 12h1v1h-1zM40 12h1v1h-1zM5 13h1v1h-1zM6 13h1v1h-1zM8 13h1v1h-1zM9 13h1v1h-1zM15 13h1v1h-1zM16 13h1v1h-1zM17 13h1v1h-1zM20 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM25 13h1v1h-1zM26 13h1v1h-1zM27 13h1v1h-1zM29 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM35 13h1v1h-1zM36 13h1v1h-1zM37 13h1v1h-1zM38 13h1v1h-1zM39 13h1v1h-1zM5 14h1v1h-1zM8 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM15 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM21 14h1v1h-1zM22 14h1v1h-1zM25 14h1v1h-1zM27 14h1v1h-1zM29 14h1v1h-1zM30 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM33 14h1v1h-1zM35 14h1v1h-1zM36 14h1v1h-1zM37 14h1v1h-1zM40 14h1v1h-1zM4 15h1v1h-1zM5 15h1v1h-1zM6 15h1v1h-1zM7 15h1v1h-1zM9 15h1v1h-1zM11 15h1v1h-1zM13 15h1v1h-1zM16 15h1v1h-1zM17 15h1v1h-1zM20 15h1v1h-1zM21 15h1v1h-1zM24 15h1v1h-1zM26 15h1v1h-1zM28 15h1v1h-1zM30 15h1v1h-1zM32 15h1v1h-1zM33 15h1v1h-1zM36 15h1v1h-1zM37 15h1v1h-1zM38 15h1v1h-1zM39 15h1v1h-1zM40 15h1v1h-1zM4 16h1v1h-1zM5 16h1v1h-1zM7 16h1v1h-1zM8 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM13 16h1v1h-1zM15 16h1v1h-1zM18 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM23 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM30 16h1v1h-1zM34 16h1v1h-1zM40 16h1v1h-1zM8 17h1v1h-1zM13 17h1v1h-1zM16 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM29 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM33 17h1v1h-1zM36 17h1v1h-1zM37 17h1v1h-1zM39 17h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM7 18h1v1h-1zM8 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM12 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM20 18h1v1h-1zM22 18h1v1h-1zM23 18h1v1h-1zM24 18h1v1h-1zM26 18h1v1h-1zM31 18h1v1h-1zM32 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM36 18h1v1h-1zM37 18h1v1h-1zM38 18h1v1h-1zM39 18h1v1h-1zM40 18h1v1h-1zM5 19h1v1h-1zM6 19h1v1h-1zM7 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM13 19h1v1h-1zM14 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM18 19h1v1h-1zM19 19h1v1h-1zM22 19h1v1h-1zM23 19h1v1h-1zM26 19h1v1h-1zM27 19h1v1h-1zM31 19h1v1h-1zM32 19h1v1h-1zM34 19h1v1h-1zM35 19h1v1h-1zM37 19h1v1h-1zM38 19h1v1h-1zM6 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM18 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM26 20h1v1h-1zM27 20h1v1h-1zM28 20h1v1h-1zM29 20h1v1h-1zM34 20h1v1h-1zM38 20h1v1h-1zM39 20h1v1h-1zM5 21h1v1h-1zM6 21h1v1h-1zM12 21h1v1h-1zM13 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM17 21h1v1h-1zM18 21h1v1h-1zM22 21h1v1h-1zM23 21h1v1h-1zM24 21h1v1h-1zM31 21h1v1h-1zM33 21h1v1h-1zM35 21h1v1h-1zM37 21h1v1h-1zM38 21h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM12 22h1v1h-1zM16 22h1v1h-1zM17 22h1v1h-1zM18 22h1v1h-1zM20 22h1v1h-1zM23 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM28 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM33 22h1v1h-1zM38 22h1v1h-1zM40 22h1v1h-1zM5 23h1v1h-1zM6 23h1v1h-1zM8 23h1v1h-1zM12 23h1v1h-1zM14 23h1v1h-1zM15 23h1v1h-1zM17 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM22 23h1v1h-1zM23 23h1v1h-1zM26 23h1v1h-1zM27 23h1v1h-1zM29 23h1v1h-1zM30 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM33 23h1v1h-1zM34 23h1v1h-1zM36 23h1v1h-1zM37 23h1v1h-1zM40 23h1v1h-1zM4 24h1v1h-1zM7 24h1v1h-1zM10 24h1v1h-1zM11 24h1v1h-1zM12 24h1v1h-1zM13 24h1v1h-1zM14 24h1v1h-1zM15 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM35 24h1v1h-1zM36 24h1v1h-1zM8 25h1v1h-1zM12 25h1v1h-1zM14 25h1v1h-1zM16 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM26 25h1v1h-1zM27 25h1v1h-1zM30 25h1v1h-1zM31 25h1v1h-1zM36 25h1v1h-1zM38 25h1v1h-1zM39 25h1v1h-1zM6 26h1v1h-1zM7 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM12 26h1v1h-1zM14 26h1v1h-1zM15 26h1v1h-1zM17 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM27 26h1v1h-1zM28 26h1v1h-1zM31 26h1v1h-1zM32 26h1v1h-1zM33 26h1v1h-1zM35 26h1v1h-1zM37 26h1v1h-1zM40 26h1v1h-1zM4 27h1v1h-1zM5 27h1v1h-1zM8 27h1v1h-1zM14 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM30 27h1v1h-1zM31 27h1v1h-1zM33 27h1v1h-1zM34 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM37 27h1v1h-1zM38 27h1v1h-1zM7 28h1v1h-1zM8 28h1v1h-1zM10 28h1v1h-1zM14 28h1v1h-1zM15 28h1v1h-1zM16 28h1v1h-1zM18 28h1v1h-1zM19 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM28 28h1v1h-1zM32 28h1v1h-1zM34 28h1v1h-1zM35 28h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM7 29h1v1h-1zM11 29h1v1h-1zM13 29h1v1h-1zM14 29h1v1h-1zM22 29h1v1h-1zM24 29h1v1h-1zM27 29h1v1h-1zM30 29h1v1h-1zM31 29h1v1h-1zM33 29h1v1h-1zM36 29h1v1h-1zM4 30h1v1h-1zM5 30h1v1h-1zM7 30h1v1h-1zM8 30h1v1h-1zM10 30h1v1h-1zM12 30h1v1h-1zM14 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM17 30h1v1h-1zM18 30h1v1h-1zM19 30h1v1h-1zM23 30h1v1h-1zM26 30h1v1h-1zM29 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM32 30h1v1h-1zM33 30h1v1h-1zM35 30h1v1h-1zM36 30h1v1h-1zM37 30h1v1h-1zM39 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM6 31h1v1h-1zM7 31h1v1h-1zM8 31h1v1h-1zM9 31h1v1h-1zM13 31h1v1h-1zM14 31h1v1h-1zM17 31h1v1h-1zM20 31h1v1h-1zM26 31h1v1h-1zM31 31h1v1h-1zM32 31h1v1h-1zM35 31h1v1h-1zM37 31h1v1h-1zM38 31h1v1h-1zM39 31h1v1h-1zM40 31h1v1h-1zM4 32h1v1h-1zM7 32h1v1h-1zM8 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM11 32h1v1h-1zM12 32h1v1h-1zM14 32h1v1h-1zM17 32h1v1h-1zM18 32h1v1h-1zM19 32h1v1h-1zM24 32h1v1h-1zM27 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM37 32h1v1h-1zM38 32h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM15 33h1v1h-1zM19 33h1v1h-1zM21 33h1v1h-1zM23 33h1v1h-1zM24 33h1v1h-1zM25 33h1v1h-1zM26 33h1v1h-1zM28 33h1v1h-1zM29 33h1v1h-1zM30 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM38 33h1v1h-1zM39 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM12 34h1v1h-1zM13 34h1v1h-1zM17 34h1v1h-1zM19 34h1v1h-1zM21 34h1v1h-1zM22 34h1v1h-1zM23 34h1v1h-1zM25 34h1v1h-1zM26 34h1v1h-1zM27 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM12 35h1v1h-1zM14 35h1v1h-1zM15 35h1v1h-1zM16 35h1v1h-1zM17 35h1v1h-1zM19 35h1v1h-1zM23 35h1v1h-1zM24 35h1v1h-1zM26 35h1v1h-1zM28 35h1v1h-1zM29 35h1v1h-1zM30 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM39 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM12 36h1v1h-1zM13 36h1v1h-1zM14 36h1v1h-1zM15 36h1v1h-1zM18 36h1v1h-1zM19 36h1v1h-1zM20 36h1v1h-1zM22 36h1v1h-1zM28 36h1v1h-1zM30 36h1v1h-1zM31 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM12 37h1v1h-1zM13 37h1v1h-1zM14 37h1v1h-1zM17 37h1v1h-1zM23 37h1v1h-1zM25 37h1v1h-1zM26 37h1v1h-1zM27 37h1v1h-1zM32 37h1v1h-1zM33 37h1v1h-1zM34 37h1v1h-1zM40 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM13 38h1v1h-1zM14 38h1v1h-1zM15 38h1v1h-1zM16 38h1v1h-1zM17 38h1v1h-1zM21 38h1v1h-1zM22 38h1v1h-1zM24 38h1v1h-1zM26 38h1v1h-1zM27 38h1v1h-1zM28 38h1v1h-1zM29 38h1v1h-1zM31 38h1v1h-1zM36 38h1v1h-1zM38 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM16 39h1v1h-1zM18 39h1v1h-1zM19 39h1v1h-1zM21 39h1v1h-1zM22 39h1v1h-1zM24 39h1v1h-1zM26 39h1v1h-1zM27 39h1v1h-1zM30 39h1v1h-1zM34 39h1v1h-1zM36 39h1v1h-1zM38 39h1v1h-1zM39 39h1v1h-1zM40 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM13 40h1v1h-1zM15 40h1v1h-1zM16 40h1v1h-1zM24 40h1v1h-1zM27 40h1v1h-1zM32 40h1v1h-1zM34 40h1v1h-1zM35 40h1v1h-1zM37 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/sentence-build-up/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const A1 = [
+  ["many university students / experience / stress / before important exams","Many university students experience stress before important exams."],
+  ["regular exercise / improve / people's mental health / in several ways","Regular exercise can improve people's mental health in several ways."],
+  ["some employees / prefer / working from home / because / greater flexibility","Some employees prefer working from home because it offers greater flexibility."],
+  ["social media / influence / the way young people / communicate with each other","Social media influences the way young people communicate with each other."],
+  ["living in a large city / provide / more career opportunities / young adults","Living in a large city can provide young adults with more career opportunities."],
+  ["students / sometimes struggle / manage their time / when / have several deadlines","Students sometimes struggle to manage their time when they have several deadlines."],
+  ["learning a foreign language / require / regular practice / outside the classroom","Learning a foreign language requires regular practice outside the classroom."],
+  ["public transportation / reduce / traffic congestion / crowded cities","Public transportation can reduce traffic congestion in crowded cities."],
+  ["many young people / spend / considerable amount of time / social media / every day","Many young people spend a considerable amount of time on social media every day."],
+  ["students / perform better / when / receive / clear feedback / teachers","Students often perform better when they receive clear feedback from their teachers."],
+  ["working part-time / help / university students / develop / important skills","Working part-time can help university students develop important skills."],
+  ["lack of sleep / negatively affect / students' concentration / during lessons","A lack of sleep can negatively affect students' concentration during lessons."],
+  ["people / more likely / maintain healthy habits / when / have regular routine","People are more likely to maintain healthy habits when they have a regular routine."],
+  ["online shopping / become increasingly popular / because / convenience / consumers","Online shopping has become increasingly popular because it offers greater convenience to consumers."],
+  ["some people / find difficult / separate / work life / personal life / when working from home","Some people find it difficult to separate their work life from their personal life when working from home."],
+  ["students / improve / academic performance / by / developing effective study habits","Students can improve their academic performance by developing effective study habits."],
+  ["using smartphones / during class / make / difficult / students / concentrate","Using smartphones during class can make it difficult for students to concentrate."],
+  ["people / choose / live outside city centre / because / lower housing costs","Some people choose to live outside the city centre because housing costs are lower."],
+  ["university education / give / students / opportunity / develop / critical-thinking skills","University education gives students the opportunity to develop their critical-thinking skills."],
+  ["many employees / feel more motivated / when / have / supportive working environment","Many employees feel more motivated when they have a supportive working environment."],
+  ["travelling abroad / allow / people / experience / different cultures / directly","Travelling abroad allows people to experience different cultures directly."],
+  ["students / who / regularly attend classes / more likely / understand course content","Students who regularly attend classes are more likely to understand the course content."],
+  ["although / public transportation / cheaper / driving / some people / prefer / use their own cars","Although public transportation is cheaper than driving, some people prefer to use their own cars."],
+  ["people / become less physically active / if / spend / most of day / sitting","People may become less physically active if they spend most of the day sitting."],
+  ["companies / offer / flexible working hours / help employees / achieve / better work-life balance","Companies can help employees achieve a better work-life balance by offering flexible working hours."],
+  ["students / may lose motivation / if / cannot see / progress / over time","Students may lose motivation if they cannot see their progress over time."],
+  ["although / technology / make communication easier / sometimes reduce / face-to-face interaction","Although technology makes communication easier, it can sometimes reduce face-to-face interaction."],
+  ["people / develop healthier eating habits / by / preparing meals / at home","People can develop healthier eating habits by preparing their meals at home."],
+  ["living alone / teach / young adults / become / more independent","Living alone can teach young adults to become more independent."],
+  ["universities / provide / career services / so that / students / prepare / future employment","Universities provide career services so that students can prepare for future employment."]
+];
+
+const A2 = [
+  {v:"Technology helps people.", q:["What type of technology?","Which people?","How does it help them?","In what situation?"], a:"Online communication tools help university students work together more efficiently on group projects."},
+  {v:"Exercise is good for people.", q:["What kind of exercise?","Which people?","In what way is it good?","How often?"], a:"Regular aerobic exercise can improve both the physical health and mood of adults who have sedentary lifestyles."},
+  {v:"Social media causes problems.", q:["Which social media use?","What kind of problems?","For whom?","Under what circumstances?"], a:"Excessive social media use can cause concentration problems among students who frequently check their phones while studying."},
+  {v:"University is useful.", q:["Useful for whom?","What part of university education?","Useful in what way?","What is the result?"], a:"University education can help young adults develop professional knowledge and skills that may improve their employment opportunities."},
+  {v:"Working is difficult.", q:["What type of work?","Difficult for whom?","Why is it difficult?","In what situation?"], a:"Working part-time can be difficult for university students because they have to balance their job responsibilities with their studies."},
+  {v:"Phones affect students.", q:["What type of phone use?","Which students?","What does it affect?","When does this happen?"], a:"Frequent smartphone use can reduce students' concentration when they repeatedly check notifications during lessons."},
+  {v:"Travelling is beneficial.", q:["Travelling where?","Beneficial for whom?","In what way?","What can people learn?"], a:"Travelling to foreign countries can help young adults become more aware of different cultures and ways of life."},
+  {v:"Online education has advantages.", q:["Which students?","What advantages?","Compared with what?","In what situation?"], a:"Online education can be particularly convenient for working students because they can attend lessons without travelling to campus."},
+  {v:"City life is stressful.", q:["Which aspects of city life?","Stressful for whom?","Why?","Give a specific example."], a:"Living in a crowded city can be stressful for commuters because heavy traffic may significantly increase their daily travel time."},
+  {v:"People need hobbies.", q:["Which people?","What type of hobby?","Why do they need one?","What benefit does it provide?"], a:"Adults with demanding jobs may benefit from relaxing hobbies because such activities can help them reduce stress after work."},
+  {v:"Students have problems with time.", q:["Which students?","What exactly is the problem?","When does it happen?","What causes it?"], a:"University students may have difficulty managing their time when several assignments and exams are scheduled in the same week."},
+  {v:"Eating at home is better.", q:["Better than what?","For whom?","In what way?","Why?"], a:"Preparing meals at home can be healthier than regularly eating fast food because people have greater control over the ingredients they use."},
+  {v:"Public transportation is important.", q:["Important where?","Important for whom?","Why?","What problem can it solve?"], a:"Reliable public transportation is important in large cities because it can reduce traffic congestion and provide affordable travel for residents."},
+  {v:"Friends affect people.", q:["Which people?","In what way?","Positive or negative?","Give a particular situation."], a:"Close friends can influence young adults' lifestyle choices by encouraging them to develop either healthy or unhealthy habits."},
+  {v:"Money causes stress.", q:["For whom?","What financial issue?","What kind of stress?","Under what circumstances?"], a:"Financial difficulties can cause considerable stress for university students who struggle to cover their accommodation and living expenses."},
+  {v:"The internet makes life easier.", q:["Which aspect of life?","For whom?","How?","Give a concrete example."], a:"Online banking makes everyday life easier for working adults by allowing them to complete financial transactions without visiting a bank."},
+  {v:"Some jobs are tiring.", q:["Which jobs?","Tiring in what way?","Why?","For which workers?"], a:"Jobs that require employees to stand for long periods can be physically tiring, particularly for workers who complete long shifts."},
+  {v:"Studying abroad changes people.", q:["Which people?","What changes?","Why does it happen?","Give a specific result."], a:"Studying abroad can make university students more independent because they have to manage daily responsibilities without relying on their families."},
+  {v:"Bad sleep causes problems.", q:["What does “bad sleep” mean?","Problems for whom?","What problems?","When are they noticeable?"], a:"Getting fewer than six hours of sleep can reduce students' concentration and energy levels during morning classes."},
+  {v:"Group work is useful.", q:["Useful for whom?","What type of group work?","Useful in what way?","What skill can it develop?"], a:"Collaborative classroom tasks can help language learners develop their communication skills by requiring them to exchange ideas with their classmates."},
+  {v:"Young people have many problems."},
+  {v:"Technology has changed education."},
+  {v:"Exercise changes people's lives."},
+  {v:"University students need support."},
+  {v:"Living alone has advantages."},
+  {v:"Social media affects relationships."},
+  {v:"Working from home can be difficult."},
+  {v:"People should use their free time well."},
+  {v:"Education affects the future."},
+  {v:"Modern life is stressful.", model:{
+    steps:[["For whom?","Working adults."],["What aspect?","Long working hours."],["What result?","Little time to relax."]],
+    a:"Long working hours can make modern life stressful for adults who have little time to relax after work."
+  }}
+];
+const GUIDED = 20;
+const TILTS = [-1.2, .8, -.5, 1.1, -.9, .6, -.3];
+const CHAIN = ["WHO exactly?","WHAT exactly?","HOW / WHY?","WHEN / WHERE?"];
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+
+const state = { tab:0, idx:[0,0], open:[new Map(), new Map()], scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("sbu-state") || "null");
+  if(s){
+    if(s.tab === 0 || s.tab === 1) state.tab = s.tab;
+    if(Array.isArray(s.idx)) state.idx = [clamp(s.idx[0]|0,0,A1.length-1), clamp(s.idx[1]|0,0,A2.length-1)];
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("sbu-state", JSON.stringify({tab:state.tab, idx:state.idx, scale:state.scale})); }catch(e){}
+}
+function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const $ = id => document.getElementById(id);
+const bodyEl = $("body"), stripEl = $("strip"), revealBtn = $("reveal"), prevBtn = $("prev"), nextBtn = $("next");
+
+function list(){ return state.tab === 0 ? A1 : A2; }
+function cur(){ return state.idx[state.tab]; }
+function stepsTotal(tab, i){
+  if(tab === 0) return 1;
+  const it = A2[i];
+  if(it.model) return it.model.steps.length + 1;
+  return it.a ? 1 : 0;
+}
+function openCount(tab, i){ return state.open[tab].get(i) || 0; }
+
+/* Mixed tile order: fixed per item (same order every time the item is shown),
+   never the original order, and never starting with the original first chunk. */
+function seeded(seed){
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function mixed(parts, i){
+  if(parts.length < 2) return parts;
+  for(let attempt = 0; attempt < 50; attempt++){
+    const rnd = seeded((i + 1) * 7919 + attempt * 104729), a = parts.slice();
+    for(let k = a.length - 1; k > 0; k--){ const j = Math.floor(rnd() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; }
+    if(a[0] !== parts[0] && a.join("|") !== parts.join("|")) return a;
+  }
+  return parts.slice(1).concat(parts[0]);
+}
+
+function words(text, animate){
+  const html = text.split(" ").map((w,k) => `<span class="w" style="--i:${k}">${esc(w)}</span>`).join(" ");
+  return `<p class="sentence${animate ? "" : " still"}">${html}</p>`;
+}
+
+function buildStrip(){
+  const mk = (from, to) => {
+    let h = "";
+    for(let i = from; i < to; i++) h += `<button class="num" type="button" data-i="${i}" aria-label="Item ${i+1}">${i+1}</button>`;
+    return h;
+  };
+  if(state.tab === 0){
+    stripEl.innerHTML = `<div class="group">${mk(0, A1.length)}</div>`;
+  }else{
+    stripEl.innerHTML =
+      `<div class="group"><span class="glabel">With questions</span>${mk(0, GUIDED)}</div>` +
+      `<div class="group"><span class="glabel">On your own</span>${mk(GUIDED, A2.length)}</div>`;
+  }
+}
+function updateStrip(){
+  stripEl.querySelectorAll(".num").forEach(b => {
+    const i = +b.dataset.i;
+    b.setAttribute("aria-current", i === cur() ? "true" : "false");
+    b.classList.toggle("done", openCount(state.tab, i) > 0);
+  });
+}
+
+function renderCard(animateStep){
+  const tab = state.tab, i = cur(), n = list().length, open = openCount(tab, i), total = stepsTotal(tab, i);
+  const head = (instr) => `<div class="head"><span class="count">No. ${i+1}<small> / ${n}</small></span><p class="instr">${instr}</p></div>`;
+  let h = "", slot = "";
+
+  if(tab === 0){
+    const [cue, ans] = A1[i];
+    const tiles = mixed(cue.split("/").map(s => s.trim()).filter(Boolean), i)
+      .map((t,k) =>`<span class="tile c${k%5}" style="--r:${TILTS[(k+i)%TILTS.length]}deg">${esc(t)}</span>`).join("");
+    h = head("Use all the ideas below to make one complete and meaningful sentence. You may change the form of the words and add necessary words.")
+      + `<div class="tiles">${tiles}</div>`;
+    slot = open
+      ? `<span class="slot-label">Sentence</span>${words(ans, animateStep === 1)}`
+      : `<p class="hint">Build your sentence first, then check it here.</p>`;
+    revealBtn.hidden = false;
+    revealBtn.textContent = open ? "Hide sentence" : "Show sentence";
+  }else{
+    const it = A2[i];
+    const vague = `<div class="vague-wrap"><span class="tag">Vague</span><p class="vague">${esc(it.v)}</p></div>`;
+    if(i < GUIDED){
+      const qs = it.q.map((q,k) => `<li class="q c${(k+2)%5}">${esc(q)}</li>`).join("");
+      h = head("Make it more specific. Answer the questions with a partner, then write one clear sentence.")
+        + vague + `<ul class="qs">${qs}</ul>`;
+      slot = open
+        ? `<span class="slot-label">Possible answer</span>${words(it.a, animateStep === 1)}`
+        : `<p class="hint">Pair work first. The possible answer is hidden.</p>`;
+      revealBtn.hidden = false;
+      revealBtn.textContent = open ? "Hide answer" : "Show possible answer";
+    }else{
+      const chain = CHAIN.map((c,k) =>
+        `<li>${k ? '<span class="arr" aria-hidden="true">→</span>' : ""}<span class="step c${[0,1,2,4][k]}">${esc(c)}</span></li>`).join("");
+      h = head("Make these vague statements clear and specific. Ask yourself:")
+        + `<ol class="chain">${chain}</ol>` + vague;
+      if(it.model){
+        const m = it.model, shown = Math.min(open, m.steps.length);
+        if(open === 0){
+          slot = `<p class="hint">Try it yourself first, then see the model one step at a time.</p>`;
+        }else{
+          const lis = m.steps.slice(0, shown).map((s,k) =>
+            `<li class="${animateStep === k+1 ? "in" : ""}"><span class="k">${esc(s[0])}</span><span>${esc(s[1])}</span></li>`).join("");
+          slot = `<span class="slot-label">Model</span><ul class="steps">${lis}</ul>`
+            + (open > m.steps.length ? `<div class="final">${words(m.a, animateStep === total)}</div>` : "");
+        }
+        revealBtn.hidden = false;
+        revealBtn.textContent = open === 0 ? "Show model"
+          : open < m.steps.length ? "Next step"
+          : open === m.steps.length ? "Show the sentence"
+          : "Hide model";
+      }else{
+        slot = `<span class="slot-label">Your turn</span><p class="hint">Write your own specific version, then compare it with your partner.</p>`;
+        revealBtn.hidden = true;
+      }
+    }
+  }
+  bodyEl.innerHTML = h + `<div class="slot${open ? " open" : ""}" aria-live="polite">${slot}</div>`;
+  prevBtn.disabled = i === 0;
+  nextBtn.disabled = i === n - 1;
+}
+
+function renderTabs(){
+  [0,1].forEach(t => $("tab"+t).setAttribute("aria-selected", t === state.tab ? "true" : "false"));
+}
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+
+function render(animateStep){ renderTabs(); updateStrip(); renderCard(animateStep); save(); }
+
+function go(d){
+  const n = list().length, i = clamp(cur() + d, 0, n - 1);
+  if(i === cur()) return;
+  state.idx[state.tab] = i;
+  render(0);
+}
+function reveal(){
+  const tab = state.tab, i = cur(), total = stepsTotal(tab, i);
+  if(!total) return;
+  const o = openCount(tab, i);
+  const next = o >= total ? 0 : o + 1;
+  if(next) state.open[tab].set(i, next); else state.open[tab].delete(i);
+  render(next);
+}
+function setTab(t){
+  if(t === state.tab) return;
+  state.tab = t; buildStrip(); render(0);
+}
+
+$("tab0").addEventListener("click", () => setTab(0));
+$("tab1").addEventListener("click", () => setTab(1));
+prevBtn.addEventListener("click", () => go(-1));
+nextBtn.addEventListener("click", () => go(1));
+revealBtn.addEventListener("click", reveal);
+stripEl.addEventListener("click", e => {
+  const b = e.target.closest(".num"); if(!b) return;
+  state.idx[state.tab] = +b.dataset.i; render(0);
+});
+
+$("smaller").addEventListener("click", () => { const k = SCALES.indexOf(state.scale); state.scale = SCALES[Math.max(0, k-1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { const k = SCALES.indexOf(state.scale); state.scale = SCALES[Math.min(SCALES.length-1, k+1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+document.addEventListener("keydown", e => {
+  if(qrDlg.open) return;
+  if(e.altKey || e.ctrlKey || e.metaKey) return;
+  const onControl = e.target.closest && e.target.closest("button, input, textarea, select");
+  if(e.key === "ArrowRight"){ go(1); e.preventDefault(); }
+  else if(e.key === "ArrowLeft"){ go(-1); e.preventDefault(); }
+  else if(e.key === " " && e.target !== revealBtn){ reveal(); e.preventDefault(); }
+  else if(e.key === "Enter" && !onControl){ reveal(); e.preventDefault(); }
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+applyScale();
+buildStrip();
+render(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Social Issues Speaking Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@500;600;700&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one deck of 21 colour cards on a quiet ground (header, instruction + progress, wrapping grid).
+   Choosing a card opens it large in a dialog; the card flips to a ~1-minute sample answer. */
+:root{
+  --bg:#F5F4F9;
+  --surface:#FFFFFF;
+  --soft:#E9E7F1;
+  --ink:#1E1B2E;
+  --muted:#686480;
+  --line:#DCD9E8;
+  --card-ink:#1E1B2E;
+  --paper:rgba(255,255,255,.72);
+  --accent:#5B3FD6; --accent-ink:#FFFFFF;
+  --k0:#FF8A6B; --k1:#FFC34D; --k2:#3FC4A9; --k3:#6AA6FF; --k4:#A98BF5; --k5:#F27DAE;
+  --good:#1D8A55;
+  --shadow:rgba(30,27,46,.18);
+  --qr-bg:#FFFFFF;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+    --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+  --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html, body{height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.5; overflow:hidden}
+/* App shell: header stays put, the deck scrolls inside its own box, so the page also works in a fixed-size embed (e.g. Canva). */
+.wrap{
+  height:100%; max-width:1240px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 0;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,20px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+
+.k0{--c:var(--k0)} .k1{--c:var(--k1)} .k2{--c:var(--k2)}
+.k3{--c:var(--k3)} .k4{--c:var(--k4)} .k5{--c:var(--k5)}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; min-width:0}
+.mark{display:flex; gap:4px; flex:none}
+.mark i{width:12px; height:28px; border-radius:6px}
+.mark i:nth-child(1){background:var(--k0)} .mark i:nth-child(2){background:var(--k1); height:20px; align-self:flex-end}
+.mark i:nth-child(3){background:var(--k3); height:34px; margin-top:-6px}
+.topic{
+  font:700 .8rem var(--font-body); letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent); border-radius:999px; padding:4px 12px; white-space:nowrap;
+}
+h1{
+  font-family:var(--font-display); font-weight:800; font-optical-sizing:auto;
+  font-size:clamp(1.9rem,3.4vw,2.9rem); line-height:1.05; margin:0; letter-spacing:-.02em; text-wrap:balance;
+}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:1.5px solid var(--line); border-radius:999px;
+  padding:6px 16px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+.tool.hot{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+.row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
+.top, .row{flex:none}
+.instr{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.4vw,1.15rem)*var(--scale)); max-width:75ch}
+.progress{
+  font:600 .9rem var(--font-body); font-variant-numeric:tabular-nums; color:var(--muted);
+  display:flex; align-items:center; gap:10px; white-space:nowrap;
+}
+.meter{width:120px; height:8px; border-radius:99px; background:var(--soft); overflow:hidden}
+.meter i{display:block; height:100%; width:var(--w,0%); background:var(--good); border-radius:99px; transition:width .3s}
+
+/* deck */
+.deck{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr));
+  gap:clamp(14px,1.6vw,20px);
+  align-content:start; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding:8px 8px 24px; margin-inline:-8px;
+  scrollbar-width:thin; scrollbar-color:var(--line) transparent;
+}
+.pick{
+  display:flex; flex-direction:column; gap:12px; text-align:left; min-width:0;
+  padding:16px 16px 18px; border:0; border-radius:20px;
+  background:var(--c); color:var(--card-ink); cursor:pointer;
+  box-shadow:0 1px 2px var(--shadow), 0 14px 24px -18px var(--shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.pick:hover{transform:translateY(-3px); box-shadow:0 2px 4px var(--shadow), 0 20px 30px -18px var(--shadow)}
+.pick:active{transform:translateY(0)}
+.pick .head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.pick .no{font:800 1.9rem/1 var(--font-display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.pick .emo{
+  display:grid; place-items:center; width:38px; height:38px; border-radius:50%;
+  background:var(--paper); font-size:1.2rem; line-height:1; font-family:var(--emoji);
+}
+.pick .pq{font:600 calc(clamp(.96rem,1.2vw,1.06rem)*var(--scale))/1.4 var(--font-body); overflow-wrap:anywhere}
+.stamp{
+  display:none; align-self:flex-start; margin-top:auto;
+  font:700 .76rem var(--font-body); letter-spacing:.06em; text-transform:uppercase; color:var(--good);
+}
+.pick.done{background:var(--soft); color:var(--muted); box-shadow:none}
+.pick.done .emo{background:var(--surface); filter:grayscale(1); opacity:.6}
+.pick.done .stamp{display:block}
+
+/* open card */
+dialog{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(960px, calc(100% - 24px)); max-width:none;
+  max-height:calc(100% - 24px); overflow:visible;
+}
+dialog::backdrop{background:rgba(16,13,30,.6); backdrop-filter:blur(3px)}
+.sheet{
+  display:flex; flex-direction:column; gap:18px;
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+  overflow-y:auto; padding:4px 4px 14px;
+}
+.flip{perspective:1800px}
+.inner{display:grid; transform-style:preserve-3d; transition:transform .65s cubic-bezier(.45,.05,.2,1)}
+.inner.flipped{transform:rotateY(180deg)}
+.face{
+  grid-area:1/1; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  border-radius:28px; box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  padding:clamp(22px,3.8vw,48px); display:flex; flex-direction:column; gap:clamp(14px,2vw,22px); min-width:0;
+}
+.front{background:var(--c); color:var(--card-ink)}
+.back{background:var(--surface); color:var(--ink); transform:rotateY(180deg); border-top:10px solid var(--c)}
+.fhead{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.chip{font:700 .82rem var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:var(--card-ink); opacity:.75}
+.bigemo{
+  display:grid; place-items:center; width:64px; height:64px; border-radius:50%; flex:none;
+  background:var(--paper); font-size:2rem; line-height:1; font-family:var(--emoji);
+}
+.bigq{
+  margin:0; font:700 calc(clamp(1.7rem,3.6vw,2.9rem)*var(--scale))/1.15 var(--font-display);
+  letter-spacing:-.015em; text-wrap:balance; overflow-wrap:anywhere;
+}
+.follow{
+  background:var(--paper); color:var(--card-ink); border-radius:18px;
+  padding:clamp(14px,2vw,22px); display:flex; flex-direction:column; gap:6px;
+}
+.lbl{font:700 .78rem var(--font-body); letter-spacing:.08em; text-transform:uppercase}
+.follow .lbl{opacity:.65}
+.follow p{margin:0; font:600 calc(clamp(1.1rem,2vw,1.55rem)*var(--scale))/1.35 var(--font-body)}
+.backhead{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 16px}
+.backhead .lbl{color:var(--good)}
+.backhead .meta{font:500 .88rem var(--font-body); color:var(--muted); font-variant-numeric:tabular-nums}
+.backq{margin:0; color:var(--muted); font-size:calc(clamp(.98rem,1.4vw,1.12rem)*var(--scale)); font-weight:600}
+.answer{display:flex; flex-direction:column; gap:.8em; max-width:75ch}
+.answer p{margin:0; font-weight:500; font-size:calc(clamp(1.06rem,1.75vw,1.42rem)*var(--scale)); line-height:1.6; text-wrap:pretty}
+
+.bar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1rem,1.45vw,1.15rem)*var(--scale))/1 var(--font-body);
+  border-radius:16px; padding:.8em 1.25em; min-height:54px; cursor:pointer;
+  border:0; background:var(--surface); color:var(--ink);
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.5); transition:transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn.main{flex:0 1 360px; background:var(--accent); color:var(--accent-ink)}
+.timer{
+  font-variant-numeric:tabular-nums; min-width:9.5em; color:var(--card-ink);
+  background:linear-gradient(to right, var(--k1) calc(var(--p,1)*100%), #FFF3D6 0);
+}
+.timer.up{background:var(--k0)}
+@media (max-width:600px){
+  .btn.main{order:-1; flex-basis:100%}
+  .bar .btn:not(.main){flex:1}
+}
+
+/* QR panel */
+#qrDlg{width:min(560px, calc(100% - 24px))}
+.qrpanel{
+  background:var(--surface); color:var(--ink); border-radius:28px;
+  padding:clamp(20px,3.4vw,36px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.4rem,3vw,2rem)/1.15 var(--font-display); letter-spacing:-.015em; text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted); font-size:1rem}
+.qrbox{width:min(440px, 68vmin, 100%); padding:6px; border-radius:16px; background:var(--qr-bg); border:4px solid var(--k3)}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{
+  margin:0; font:600 .9rem var(--font-body); color:var(--muted); overflow-wrap:anywhere;
+  -webkit-user-select:all; user-select:all;
+}
+.qrbtns{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:100%}
+.qrbtns .btn{flex:1 1 160px; box-shadow:none; border:1.5px solid var(--line)}
+.qrbtns .btn.main{border-color:var(--accent)}
+.tool.qr-open{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+/* Short frames (embeds, small laptop screens): tighter chrome so more cards show */
+@media (max-height:700px){
+  .wrap{padding-block:10px 0; gap:8px}
+  h1{font-size:clamp(1.4rem,3vw,2rem)}
+  .mark{transform:scale(.72); transform-origin:left center; margin-right:-8px}
+  .tool{min-height:34px; padding:3px 12px; font-size:.82rem}
+  .instr{font-size:.9rem}
+  .pick{padding:12px 12px 14px; gap:8px; border-radius:16px}
+  .pick .no{font-size:1.5rem}
+  .pick .emo{width:32px; height:32px; font-size:1rem}
+  .face{padding:18px 24px; gap:12px; border-radius:22px}
+  .bigemo{width:48px; height:48px; font-size:1.5rem}
+  .follow{padding:12px 16px}
+  .btn{min-height:44px; padding:.6em 1em}
+  .sheet{gap:12px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .inner, .pick, .btn, .meter i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Speaking Cards</h1>
+      <span class="topic">Social Issues</span>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="random" type="button">Random card</button>
+      <button class="tool" id="reset" type="button">Reset</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <p class="instr">Choose a card and speak for about one minute. Answer all parts of the question, then flip the card to see a sample answer.</p>
+    <span class="progress"><span class="meter"><i id="meter"></i></span><span id="progress"></span></span>
+  </div>
+
+  <main class="deck" id="deck" aria-label="Speaking cards"></main>
+</div>
+
+<dialog id="dlg" aria-label="Speaking card">
+  <div class="sheet">
+    <div class="flip">
+      <div class="inner" id="inner">
+        <section class="face front" id="front"></section>
+        <section class="face back" id="back" aria-hidden="true"></section>
+      </div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="close" type="button">← All cards</button>
+      <button class="btn timer" id="timer" type="button">Start 1:00</button>
+      <button class="btn main" id="flipBtn" type="button" autofocus>Show sample answer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open the cards</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens Social Issues"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM14 4h1v1h-1zM16 4h1v1h-1zM18 4h1v1h-1zM19 4h1v1h-1zM20 4h1v1h-1zM21 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM13 5h1v1h-1zM15 5h1v1h-1zM16 5h1v1h-1zM18 5h1v1h-1zM24 5h1v1h-1zM26 5h1v1h-1zM29 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM13 6h1v1h-1zM14 6h1v1h-1zM15 6h1v1h-1zM16 6h1v1h-1zM19 6h1v1h-1zM25 6h1v1h-1zM28 6h1v1h-1zM32 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM12 7h1v1h-1zM14 7h1v1h-1zM17 7h1v1h-1zM21 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM27 7h1v1h-1zM29 7h1v1h-1zM31 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM13 8h1v1h-1zM14 8h1v1h-1zM15 8h1v1h-1zM18 8h1v1h-1zM20 8h1v1h-1zM21 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM25 8h1v1h-1zM27 8h1v1h-1zM29 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM14 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM21 9h1v1h-1zM25 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM12 11h1v1h-1zM13 11h1v1h-1zM14 11h1v1h-1zM16 11h1v1h-1zM17 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM26 11h1v1h-1zM28 11h1v1h-1zM30 11h1v1h-1zM32 11h1v1h-1zM4 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM15 12h1v1h-1zM18 12h1v1h-1zM20 12h1v1h-1zM23 12h1v1h-1zM26 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM30 12h1v1h-1zM31 12h1v1h-1zM33 12h1v1h-1zM34 12h1v1h-1zM37 12h1v1h-1zM38 12h1v1h-1zM39 12h1v1h-1zM7 13h1v1h-1zM8 13h1v1h-1zM9 13h1v1h-1zM11 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM15 13h1v1h-1zM17 13h1v1h-1zM18 13h1v1h-1zM20 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM25 13h1v1h-1zM27 13h1v1h-1zM29 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM35 13h1v1h-1zM36 13h1v1h-1zM37 13h1v1h-1zM38 13h1v1h-1zM39 13h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM12 14h1v1h-1zM13 14h1v1h-1zM15 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM25 14h1v1h-1zM29 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM35 14h1v1h-1zM37 14h1v1h-1zM39 14h1v1h-1zM40 14h1v1h-1zM4 15h1v1h-1zM6 15h1v1h-1zM9 15h1v1h-1zM16 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM30 15h1v1h-1zM36 15h1v1h-1zM37 15h1v1h-1zM40 15h1v1h-1zM4 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM12 16h1v1h-1zM14 16h1v1h-1zM15 16h1v1h-1zM17 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM28 16h1v1h-1zM30 16h1v1h-1zM34 16h1v1h-1zM40 16h1v1h-1zM4 17h1v1h-1zM7 17h1v1h-1zM8 17h1v1h-1zM11 17h1v1h-1zM13 17h1v1h-1zM14 17h1v1h-1zM15 17h1v1h-1zM18 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM30 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM33 17h1v1h-1zM35 17h1v1h-1zM37 17h1v1h-1zM39 17h1v1h-1zM4 18h1v1h-1zM8 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM14 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM19 18h1v1h-1zM22 18h1v1h-1zM24 18h1v1h-1zM29 18h1v1h-1zM31 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM35 18h1v1h-1zM36 18h1v1h-1zM37 18h1v1h-1zM39 18h1v1h-1zM40 18h1v1h-1zM4 19h1v1h-1zM6 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM12 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM18 19h1v1h-1zM19 19h1v1h-1zM23 19h1v1h-1zM27 19h1v1h-1zM31 19h1v1h-1zM32 19h1v1h-1zM34 19h1v1h-1zM35 19h1v1h-1zM37 19h1v1h-1zM38 19h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM7 20h1v1h-1zM8 20h1v1h-1zM10 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM14 20h1v1h-1zM16 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM26 20h1v1h-1zM28 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM33 20h1v1h-1zM34 20h1v1h-1zM36 20h1v1h-1zM38 20h1v1h-1zM4 21h1v1h-1zM6 21h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM12 21h1v1h-1zM13 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM31 21h1v1h-1zM32 21h1v1h-1zM35 21h1v1h-1zM37 21h1v1h-1zM39 21h1v1h-1zM4 22h1v1h-1zM6 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM12 22h1v1h-1zM13 22h1v1h-1zM14 22h1v1h-1zM15 22h1v1h-1zM20 22h1v1h-1zM23 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM28 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM33 22h1v1h-1zM38 22h1v1h-1zM40 22h1v1h-1zM9 23h1v1h-1zM12 23h1v1h-1zM14 23h1v1h-1zM16 23h1v1h-1zM18 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM22 23h1v1h-1zM26 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM33 23h1v1h-1zM34 23h1v1h-1zM35 23h1v1h-1zM37 23h1v1h-1zM40 23h1v1h-1zM4 24h1v1h-1zM6 24h1v1h-1zM10 24h1v1h-1zM14 24h1v1h-1zM15 24h1v1h-1zM16 24h1v1h-1zM21 24h1v1h-1zM26 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM32 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM38 24h1v1h-1zM4 25h1v1h-1zM7 25h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM12 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM26 25h1v1h-1zM27 25h1v1h-1zM29 25h1v1h-1zM30 25h1v1h-1zM31 25h1v1h-1zM36 25h1v1h-1zM38 25h1v1h-1zM39 25h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM7 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM12 26h1v1h-1zM13 26h1v1h-1zM15 26h1v1h-1zM16 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM21 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM29 26h1v1h-1zM30 26h1v1h-1zM31 26h1v1h-1zM32 26h1v1h-1zM35 26h1v1h-1zM36 26h1v1h-1zM37 26h1v1h-1zM39 26h1v1h-1zM40 26h1v1h-1zM8 27h1v1h-1zM13 27h1v1h-1zM14 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM20 27h1v1h-1zM21 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM26 27h1v1h-1zM27 27h1v1h-1zM30 27h1v1h-1zM31 27h1v1h-1zM32 27h1v1h-1zM34 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM37 27h1v1h-1zM39 27h1v1h-1zM5 28h1v1h-1zM8 28h1v1h-1zM9 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM12 28h1v1h-1zM13 28h1v1h-1zM14 28h1v1h-1zM15 28h1v1h-1zM16 28h1v1h-1zM17 28h1v1h-1zM18 28h1v1h-1zM19 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM28 28h1v1h-1zM32 28h1v1h-1zM34 28h1v1h-1zM35 28h1v1h-1zM4 29h1v1h-1zM5 29h1v1h-1zM7 29h1v1h-1zM9 29h1v1h-1zM11 29h1v1h-1zM14 29h1v1h-1zM15 29h1v1h-1zM16 29h1v1h-1zM17 29h1v1h-1zM22 29h1v1h-1zM27 29h1v1h-1zM29 29h1v1h-1zM31 29h1v1h-1zM33 29h1v1h-1zM35 29h1v1h-1zM4 30h1v1h-1zM7 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM12 30h1v1h-1zM13 30h1v1h-1zM14 30h1v1h-1zM16 30h1v1h-1zM18 30h1v1h-1zM19 30h1v1h-1zM20 30h1v1h-1zM24 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM33 30h1v1h-1zM36 30h1v1h-1zM37 30h1v1h-1zM38 30h1v1h-1zM39 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM6 31h1v1h-1zM7 31h1v1h-1zM12 31h1v1h-1zM16 31h1v1h-1zM17 31h1v1h-1zM20 31h1v1h-1zM23 31h1v1h-1zM26 31h1v1h-1zM28 31h1v1h-1zM31 31h1v1h-1zM32 31h1v1h-1zM35 31h1v1h-1zM37 31h1v1h-1zM38 31h1v1h-1zM39 31h1v1h-1zM40 31h1v1h-1zM4 32h1v1h-1zM7 32h1v1h-1zM8 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM13 32h1v1h-1zM17 32h1v1h-1zM19 32h1v1h-1zM21 32h1v1h-1zM23 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM37 32h1v1h-1zM38 32h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM15 33h1v1h-1zM18 33h1v1h-1zM19 33h1v1h-1zM20 33h1v1h-1zM23 33h1v1h-1zM24 33h1v1h-1zM27 33h1v1h-1zM28 33h1v1h-1zM30 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM13 34h1v1h-1zM14 34h1v1h-1zM16 34h1v1h-1zM19 34h1v1h-1zM21 34h1v1h-1zM22 34h1v1h-1zM23 34h1v1h-1zM25 34h1v1h-1zM27 34h1v1h-1zM30 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM14 35h1v1h-1zM15 35h1v1h-1zM16 35h1v1h-1zM17 35h1v1h-1zM18 35h1v1h-1zM19 35h1v1h-1zM26 35h1v1h-1zM28 35h1v1h-1zM30 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM39 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM16 36h1v1h-1zM17 36h1v1h-1zM19 36h1v1h-1zM22 36h1v1h-1zM23 36h1v1h-1zM26 36h1v1h-1zM28 36h1v1h-1zM29 36h1v1h-1zM30 36h1v1h-1zM31 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM38 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM15 37h1v1h-1zM16 37h1v1h-1zM17 37h1v1h-1zM18 37h1v1h-1zM23 37h1v1h-1zM24 37h1v1h-1zM25 37h1v1h-1zM27 37h1v1h-1zM30 37h1v1h-1zM32 37h1v1h-1zM33 37h1v1h-1zM34 37h1v1h-1zM40 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM22 38h1v1h-1zM24 38h1v1h-1zM26 38h1v1h-1zM29 38h1v1h-1zM30 38h1v1h-1zM31 38h1v1h-1zM33 38h1v1h-1zM38 38h1v1h-1zM39 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM16 39h1v1h-1zM17 39h1v1h-1zM18 39h1v1h-1zM19 39h1v1h-1zM20 39h1v1h-1zM22 39h1v1h-1zM23 39h1v1h-1zM28 39h1v1h-1zM30 39h1v1h-1zM32 39h1v1h-1zM33 39h1v1h-1zM34 39h1v1h-1zM36 39h1v1h-1zM40 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM14 40h1v1h-1zM16 40h1v1h-1zM18 40h1v1h-1zM23 40h1v1h-1zM24 40h1v1h-1zM32 40h1v1h-1zM34 40h1v1h-1zM35 40h1v1h-1zM37 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/social-issues/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const CARDS = [
+  {q:"Do you think it is difficult for young people to find a job in your country?",
+   f:["What about older people?"],
+   a:["Yes, I think it is quite difficult for young people to find a job in Türkiye. Every year, many students finish university, but there aren't enough jobs for all of them. Also, many companies want people with work experience. This is a big problem, because young people can't get experience without a job. For example, my cousin finished university two years ago. She sent her CV to more than fifty companies, and she found a job only last month.",
+      "For older people, it is also hard, but for different reasons. Some companies prefer younger workers because they are cheaper and they learn new technology quickly. So when a person loses their job at fifty, it can be very difficult to find a new one. I think companies should give a chance to both young and older people. Both groups have useful skills."]},
+  {q:"What kinds of crimes do people worry about most in your city?",
+   f:["Why?"],
+   a:["In my city, people worry most about theft. For example, some people steal phones and wallets on crowded buses and in markets. Last year, someone took my friend's phone from her bag on the metro, and she didn't notice. People also worry about burglaries. When families go on holiday in summer, they are afraid that someone will break into their homes.",
+      "Recently, people have also started to worry about online fraud. Some people get fake messages or phone calls. The callers say they are from a bank or the police, and they ask for money or passwords. Older people often believe them. I think people worry about these crimes because they can happen to anyone, and they happen often. So we need to be careful with our things and never share our passwords."]},
+  {q:"If you could change one thing about the education system in your country, what would it be?",
+   f:["Why?"],
+   a:["If I could change one thing, I would change the university entrance exam system. In Türkiye, students spend their last years of high school preparing for one big exam. They study for many hours every day, and they go to private courses at weekends. They don't have time for sport, art or hobbies. I remember my last year of high school very well. I was always tired and stressed.",
+      "I think schools should focus more on practical skills, like communication, problem-solving and teamwork. Students should also have more time to discover what they really like. Instead of one big exam, universities could look at students' grades over several years and their projects. In my opinion, this system would be fairer and less stressful, and students would be happier and more creative."]},
+  {q:"Do you think drinking too much alcohol can cause problems in people's lives?",
+   f:["What kinds of problems?"],
+   a:["Yes, I think drinking too much alcohol can cause serious problems. First, it is bad for people's health. It can damage the liver and the heart, and people can feel tired and unwell. Second, it can cause accidents. When people drink and then drive, they can hurt themselves and other people. We often hear about this kind of accident on the news.",
+      "Alcohol can also cause problems in families and at work. Some people become angry or say things that they don't mean. This can damage their relationships with their partners, children and friends. They may also come to work late or make mistakes, and in the end they can lose their jobs. Money is another problem, because alcohol is quite expensive. So I think people should be careful and know their limits."]},
+  {q:"Why do you think some people find it difficult to maintain a healthy weight?",
+   f:["What could help them?"],
+   a:["I think there are many reasons. First, modern life is very busy. Many people work or study all day, so they don't have time to cook healthy meals. They often eat fast food or ready meals because they are quick and cheap. Second, many people sit for most of the day, at a desk, in a car or in front of a screen. They don't move enough. Stress and lack of sleep can also make it harder, because some people eat more when they are tired or worried.",
+      "Some simple things could help them. For example, people can prepare easy meals at home and take them to work or school. Walking or cycling instead of driving is also helpful. Cities could build more parks and bike lanes, so exercise is easy and free. Small changes are better than very strict diets, because people can continue them for a long time."]},
+  {q:"Do you think people in your country can easily get medical treatment when they need it?",
+   f:["What difficulties might they face?"],
+   a:["In general, I think people in Türkiye can get medical treatment quite easily. There are many state hospitals and family doctors, and most people have health insurance. You can make an appointment online or by phone, and treatment at state hospitals is usually cheap. In an emergency, you can go to the emergency department at any time.",
+      "However, people can face some difficulties. For example, it is sometimes hard to get an appointment with a specialist. You may need to wait for weeks, especially in big cities. State hospitals are often very crowded, so doctors don't have much time for each patient. Private hospitals are faster, but they are very expensive. Also, people in small villages may need to travel to another city for some treatments. This can be tiring and costly, especially for older people."]},
+  {q:"Why do you think many young people prefer living in big cities rather than small towns or villages?",
+   f:[],
+   a:["I think there are several reasons. The most important reason is jobs. In big cities, there are more companies, factories and offices, so young people have more chances to find a job. Salaries are also usually higher. Education is another reason. Most of the big universities are in big cities, and many students stay there after they graduate.",
+      "Big cities also offer more things to do. There are cinemas, concerts, cafés, shopping centres and sports clubs. Young people can meet new people and try new activities. In small towns, life can be quiet and a bit boring for them. For example, my older brother moved to Istanbul after university. Life there is expensive and stressful, but he says he has more opportunities, and he never feels bored."]},
+  {q:"When people face problems such as unemployment or poverty, do you think the government should help them, or should they solve these problems themselves?",
+   f:[],
+   a:["I think both are important, but the government should help people first. Sometimes people lose their jobs because of things they can't control. For example, a factory can close, or the economy can get worse. In these situations, it is very difficult to solve the problem alone. The government can give unemployment money for a short time, and it can help families with food, rent or their children's education.",
+      "However, I don't think government help should be the only solution. People also need to try hard. They can look for new jobs, learn new skills or take free courses. The government can support this, too, for example with free training programmes. In my opinion, the best way is a mix. The government gives help for a short time, and people use this time to become independent again."]},
+  {q:"What kinds of pollution do you notice in your city?",
+   f:["How does pollution affect people's daily lives?"],
+   a:["In my city, I notice three main kinds of pollution. The first one is air pollution. There is a lot of traffic, and in winter some houses still use coal for heating. On some winter days, the air looks grey and smells bad. The second one is noise pollution. Cars, buses and building work make noise from early morning until late at night. I also notice rubbish on the streets and in parks, especially after weekends.",
+      "Pollution affects people's daily lives in many ways. Bad air can cause health problems, like coughing and breathing problems, especially for children and older people. Some people with asthma can't go outside on very polluted days. Noise makes it difficult to sleep and concentrate, so people feel tired and stressed. Rubbish makes the city look dirty, and people don't enjoy walking or spending time outside."]},
+  {q:"What is the biggest problem about living in your city?",
+   f:["What could be done to improve the situation?"],
+   a:["For me, the biggest problem about living in my city is the traffic. Every morning and evening, the roads are full of cars. A journey that takes twenty minutes on a normal day can take more than an hour at rush hour. I take the bus to school, and I am often late because the bus gets stuck in traffic. People waste a lot of time on the roads, and they feel stressed and tired.",
+      "I think a few things could improve the situation. First, the city needs better public transport, for example more metro lines and more buses at busy times. If public transport is fast and comfortable, more people will leave their cars at home. Second, the city could build safe bike lanes. Finally, companies could let their workers start at different times or work from home on some days."]},
+  {q:"What difficulties might elderly people face when living alone?",
+   f:["How can their families or communities help them?"],
+   a:["Elderly people who live alone can face many difficulties. First, they may have health problems. They can forget to take their medicine, or they can fall at home and not be able to call for help. Second, daily tasks can be hard for them, like shopping, carrying heavy bags, cleaning or paying bills online. Loneliness is another big problem. Some elderly people don't talk to anyone for days, and they feel sad and forgotten.",
+      "Families can help in simple ways. They can call or visit them often, help with shopping and go with them to the doctor. My grandmother lives alone, so my mother calls her every evening, and we visit her every weekend. Communities can help, too. Neighbours can check on them, and local councils can offer home care services or social activities for older people."]},
+  {q:"Do you think men and women should share household responsibilities equally?",
+   f:["Why or why not?"],
+   a:["Yes, I think men and women should share household responsibilities equally. Today, in many families, both partners work outside the home. They both come home tired in the evening. So it isn't fair if only one person cooks, cleans, washes the clothes and looks after the children. Sharing the work makes life easier for both people, and they have more time to relax together.",
+      "Also, sharing household jobs is a good example for children. When children see that their father cooks and their mother fixes things, they learn that these jobs are for everyone. In my family, my parents share the housework. My father does the shopping and washes the dishes, and my mother cooks and does the laundry. At weekends, we all clean the house together. I think this makes our family happier."]},
+  {q:"Do you think your city is becoming too crowded?",
+   f:["What problems can this create for people living there?"],
+   a:["Yes, I think my city is becoming too crowded. Every year, many people move here from smaller towns and villages because they want to find jobs or study at university. New apartment buildings appear everywhere, and green areas are getting smaller. The streets, buses and shopping centres are always full of people, especially at weekends.",
+      "This can create many problems. First, rents and house prices go up, because many people want to live in the same area. For example, students like me find it hard to rent a flat near the university. Second, traffic gets worse, and public transport is always full. Hospitals and schools are also very crowded, so people have to wait longer. Finally, life in a crowded city can be stressful, because it is hard to find quiet places to relax."]},
+  {q:"Do you think people who have financial problems are more likely to commit crimes?",
+   f:["Why or why not?"],
+   a:["I think this is a difficult question. In some cases, financial problems can push people towards crime. For example, when a person loses their job and can't feed their children, they may feel desperate. In this situation, some people may steal food or money. Also, people with serious debts sometimes make bad decisions because they are under a lot of stress.",
+      "However, I don't think we can say that poor people commit more crimes in general. Most people with financial problems are honest and hardworking. They work long hours, and they never break the law. Also, some rich people commit crimes too, for example tax fraud. So money problems can be one reason for crime, but they are not the only reason. Education, family and friends are also important."]},
+  {q:"Which social problem do you think needs the most attention in your country?",
+   f:["What could be done about it?"],
+   a:["In my opinion, earthquake safety needs the most attention in Türkiye. Our country is in an earthquake zone, and big earthquakes happen quite often. In 2023, a terrible earthquake hit the south of Türkiye. Many buildings collapsed, and a lot of people lost their homes and their loved ones. Everyone in the country was very sad. This showed us that many buildings are not strong enough.",
+      "I think several things could be done about it. First, experts should check old buildings, and the government should make the weak ones stronger or rebuild them. Second, there should be strict rules for building companies, and someone must check these rules carefully. Also, schools should teach children what to do during an earthquake, and families should prepare an emergency bag at home. These steps can save many lives in the future."]},
+  {q:"Do you think smoking should be banned in more public places?",
+   f:["Why or why not?"],
+   a:["Yes, I think smoking should be banned in more public places. In Türkiye, people can't smoke inside cafés, restaurants or offices. This is a good rule. But people still smoke in many outdoor places, like bus stops, parks, stadiums and outside school and hospital gates. When I wait at a bus stop, I often have to breathe other people's smoke. I don't like it, and it is unhealthy.",
+      "Smoke is dangerous for smokers and also for the people around them. Children, pregnant women and people with breathing problems are especially at risk. Also, when children see adults smoking everywhere, they think it is normal, and they may start smoking, too. Of course, smokers have rights as well. So cities could create special smoking areas away from other people. In this way, everyone can be more comfortable."]},
+  {q:"Have you ever participated in a volunteering activity?",
+   f:["If not, what kind of volunteering would you like to try?"],
+   a:["Yes, I have. Last spring, I joined a beach clean-up with a student club at my university. About thirty students took part. We met early on a Sunday morning and went to a beach near the city. We wore gloves and collected rubbish for about four hours. We found plastic bottles, bags, cigarette ends and even an old shoe! At the end of the day, we had more than forty bags of rubbish.",
+      "It was hard work, but I really enjoyed it. I met new friends, and I felt useful. When we looked at the clean beach, we all felt proud. The experience also changed my habits. Now I always carry a reusable water bottle, and I try to use less plastic. In the future, I would like to try a different kind of volunteering. For example, I want to help children with their English homework."]},
+  {q:"What do you think is the best way to help homeless people?",
+   f:["Should they be offered housing, food, or job opportunities?"],
+   a:["I think homeless people need all three, but in a certain order. First, they need food and a safe place to sleep. Without these basic things, people can't think about the future. In winter, this is especially important, because sleeping outside in the cold can be very dangerous. So cities should open shelters, and they should offer hot meals and warm clothes.",
+      "However, food and a bed are only short-term help. In my opinion, the best long-term solution is housing and job opportunities together. When people have a stable home, it is easier for them to find work and keep it. Job training and help with CVs can also be useful. Some homeless people may need health care or other support, too. With the right help, many of them can start a new life."]},
+  {q:"Do you think men and women have equal opportunities in the workplace?",
+   f:["What challenges might women face?"],
+   a:["I think the situation is better than in the past, but men and women still don't have completely equal opportunities. Today, many women work as doctors, engineers, teachers and managers. However, in many companies, most of the top managers are still men. In some jobs, women also earn less money than men for the same work.",
+      "Women can face several challenges in the workplace. One big challenge is balancing work and family. In many families, women still do most of the housework and childcare, so they have less time and energy for their careers. Some employers don't want to hire young women, because they think these women will have children and leave their jobs. I think companies should offer flexible working hours and childcare support, and they should pay everyone fairly."]},
+  {q:"What can people do to make their neighborhoods safer and reduce crime?",
+   f:[],
+   a:["I think people can do many things to make their neighborhoods safer. First, neighbors should get to know each other. When people know their neighbors, they notice strangers or unusual situations more easily. They can also create a group on a messaging app and share information quickly. For example, in my neighborhood, we have a WhatsApp group. When something strange happens, someone writes a message, and everyone is careful.",
+      "Second, people can make their homes and streets safer. They can lock their doors and windows, put cameras at the building entrance and ask the local council for better street lights. Dark streets are often less safe. Also, young people need activities like sports clubs and youth centers, so they stay away from trouble. Finally, people should always call the police when they see a crime."]},
+  {q:"If you were responsible for creating more job opportunities for young people, what would you do?",
+   f:[],
+   a:["If I were responsible, I would do three main things. First, I would connect universities and companies. Students could do internships during their studies, so they can get real work experience before they graduate. Many companies want experience, and this would help with that problem. Second, I would support companies that hire young people. For example, the government could pay part of a young worker's salary in the first year.",
+      "Third, I would help young people start their own businesses. Many young people have great ideas, but they don't have money or knowledge. I would offer small loans, free business courses and cheap office spaces. I would also open free courses in useful skills, like coding, digital marketing and foreign languages. In my opinion, these steps would give young people more chances and more hope for the future."]}
+];
+
+const EMOJI = ["💼","🚨","🎓","🍷","🥗","🏥","🏙️","🏛️","🏭","🚦",
+               "👵","🧺","👥","⚖️","🌍","🚭","🤝","🏠","👩‍💼","🏘️",
+               "🌱"];
+const NCOL = 6;
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+const TIME = 60;
+
+const state = { done:new Set(), scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("spk-social-v1") || "null");
+  if(s){
+    if(Array.isArray(s.done)) state.done = new Set(s.done.filter(i => Number.isInteger(i) && i >= 0 && i < CARDS.length));
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("spk-social-v1", JSON.stringify({done:[...state.done], scale:state.scale})); }catch(e){}
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const $ = id => document.getElementById(id);
+const deck = $("deck"), dlg = $("dlg"), inner = $("inner"), front = $("front"), back = $("back");
+const flipBtn = $("flipBtn"), timerBtn = $("timer");
+
+/* deck */
+function renderDeck(){
+  deck.innerHTML = CARDS.map((c,i) => `
+    <button class="pick k${i%NCOL}${state.done.has(i) ? " done" : ""}" type="button" data-i="${i}" aria-label="Card ${i+1}: ${esc(c.q)}">
+      <span class="head"><span class="no">${pad(i+1)}</span><span class="emo" aria-hidden="true">${EMOJI[i]}</span></span>
+      <span class="pq">${esc(c.q)}</span>
+      <span class="stamp">✓ Done</span>
+    </button>`).join("");
+  $("progress").textContent = `${state.done.size} of ${CARDS.length} done`;
+  $("meter").style.setProperty("--w", `${state.done.size / CARDS.length * 100}%`);
+}
+deck.addEventListener("click", e => {
+  const b = e.target.closest(".pick"); if(b) openCard(+b.dataset.i);
+});
+
+/* open card */
+let flipped = false;
+function openCard(i){
+  const c = CARDS[i], col = `k${i%NCOL}`;
+  const words = c.a.join(" ").split(/\s+/).length;
+  front.className = `face front ${col}`;
+  back.className = `face back ${col}`;
+  front.innerHTML = `
+    <div class="fhead"><span class="chip">Card ${pad(i+1)} / ${CARDS.length}</span><span class="bigemo" aria-hidden="true">${EMOJI[i]}</span></div>
+    <h2 class="bigq">${esc(c.q)}</h2>
+    ${c.f.length ? `<div class="follow"><span class="lbl">Follow-up</span>${c.f.map(f => `<p>${esc(f)}</p>`).join("")}</div>` : ""}`;
+  back.innerHTML = `
+    <div class="backhead"><span class="lbl">Sample answer</span><span class="meta">${words} words · about 1 minute</span></div>
+    <p class="backq">${esc(c.q)}</p>
+    <div class="answer">${c.a.map(p => `<p>${esc(p)}</p>`).join("")}</div>`;
+  setFlip(false, true);
+  resetTimer();
+  state.done.add(i);
+  save();
+  if(!dlg.open) dlg.showModal();
+  flipBtn.focus();
+  dlg.querySelector(".sheet").scrollTop = 0;
+}
+function setFlip(v, instant){
+  flipped = v;
+  if(instant){ inner.style.transition = "none"; }
+  inner.classList.toggle("flipped", v);
+  if(instant){ void inner.offsetWidth; inner.style.transition = ""; }
+  front.setAttribute("aria-hidden", v ? "true" : "false");
+  back.setAttribute("aria-hidden", v ? "false" : "true");
+  flipBtn.textContent = v ? "Back to question" : "Show sample answer";
+}
+flipBtn.addEventListener("click", () => setFlip(!flipped));
+$("close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("close", () => { stopTimer(); renderDeck(); });
+dlg.addEventListener("click", e => { if(e.target === dlg) dlg.close(); });
+
+/* one-minute timer */
+let left = TIME, tick = null, endAt = 0;
+function fmt(s){ return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function paintTimer(){
+  const secs = Math.ceil(left);
+  timerBtn.style.setProperty("--p", Math.max(0, left / TIME));
+  timerBtn.classList.toggle("up", left <= 0);
+  timerBtn.textContent = left <= 0 ? "Time’s up · Again"
+    : tick ? `Pause ${fmt(secs)}`
+    : left < TIME ? `Resume ${fmt(secs)}` : "Start 1:00";
+}
+function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } }
+function resetTimer(){ stopTimer(); left = TIME; paintTimer(); }
+timerBtn.addEventListener("click", () => {
+  if(left <= 0){ resetTimer(); }
+  if(tick){ left = Math.max(0, (endAt - Date.now()) / 1000); stopTimer(); paintTimer(); return; }
+  endAt = Date.now() + left * 1000;
+  tick = setInterval(() => {
+    left = Math.max(0, (endAt - Date.now()) / 1000);
+    if(left <= 0) stopTimer();
+    paintTimer();
+  }, 200);
+  paintTimer();
+});
+
+/* tools */
+$("random").addEventListener("click", () => {
+  const all = [...CARDS.keys()];
+  const pool = all.filter(i => !state.done.has(i));
+  const from = pool.length ? pool : all;
+  openCard(from[Math.floor(Math.random() * from.length)]);
+});
+let resetArmed = null;
+const resetBtn = $("reset");
+function disarm(){ resetArmed = null; resetBtn.textContent = "Reset"; resetBtn.classList.remove("hot"); }
+resetBtn.addEventListener("click", () => {
+  if(resetArmed){ clearTimeout(resetArmed); disarm(); state.done.clear(); save(); renderDeck(); return; }
+  resetBtn.textContent = "Tap again to clear"; resetBtn.classList.add("hot");
+  resetArmed = setTimeout(disarm, 3000);
+});
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+$("smaller").addEventListener("click", () => { state.scale = SCALES[Math.max(0, SCALES.indexOf(state.scale) - 1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { state.scale = SCALES[Math.min(SCALES.length - 1, SCALES.indexOf(state.scale) + 1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+applyScale();
+renderDeck();
+</script>
+</body>
+</html>

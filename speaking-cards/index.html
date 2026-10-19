@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speaking Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@500;600;700&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one deck of 36 colour cards on a quiet ground (header, instruction + progress, wrapping grid).
+   Choosing a card opens it large in a dialog; the card flips to a ~1-minute sample answer. */
+:root{
+  --bg:#F5F4F9;
+  --surface:#FFFFFF;
+  --soft:#E9E7F1;
+  --ink:#1E1B2E;
+  --muted:#686480;
+  --line:#DCD9E8;
+  --card-ink:#1E1B2E;
+  --paper:rgba(255,255,255,.72);
+  --accent:#5B3FD6; --accent-ink:#FFFFFF;
+  --k0:#FF8A6B; --k1:#FFC34D; --k2:#3FC4A9; --k3:#6AA6FF; --k4:#A98BF5; --k5:#F27DAE;
+  --good:#1D8A55;
+  --shadow:rgba(30,27,46,.18);
+  --qr-bg:#FFFFFF;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+    --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+  --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html, body{height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.5; overflow:hidden}
+/* App shell: header stays put, the deck scrolls inside its own box, so the page also works in a fixed-size embed (e.g. Canva). */
+.wrap{
+  height:100%; max-width:1240px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 0;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,20px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+
+.k0{--c:var(--k0)} .k1{--c:var(--k1)} .k2{--c:var(--k2)}
+.k3{--c:var(--k3)} .k4{--c:var(--k4)} .k5{--c:var(--k5)}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:14px; min-width:0}
+.mark{display:flex; gap:4px; flex:none}
+.mark i{width:12px; height:28px; border-radius:6px}
+.mark i:nth-child(1){background:var(--k0)} .mark i:nth-child(2){background:var(--k1); height:20px; align-self:flex-end}
+.mark i:nth-child(3){background:var(--k3); height:34px; margin-top:-6px}
+h1{
+  font-family:var(--font-display); font-weight:800; font-optical-sizing:auto;
+  font-size:clamp(1.9rem,3.4vw,2.9rem); line-height:1.05; margin:0; letter-spacing:-.02em; text-wrap:balance;
+}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:1.5px solid var(--line); border-radius:999px;
+  padding:6px 16px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+.tool.hot{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+.row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
+.top, .row{flex:none}
+.instr{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.4vw,1.15rem)*var(--scale)); max-width:75ch}
+.progress{
+  font:600 .9rem var(--font-body); font-variant-numeric:tabular-nums; color:var(--muted);
+  display:flex; align-items:center; gap:10px; white-space:nowrap;
+}
+.meter{width:120px; height:8px; border-radius:99px; background:var(--soft); overflow:hidden}
+.meter i{display:block; height:100%; width:var(--w,0%); background:var(--good); border-radius:99px; transition:width .3s}
+
+/* deck */
+.deck{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr));
+  gap:clamp(14px,1.6vw,20px);
+  align-content:start; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding:8px 8px 24px; margin-inline:-8px;
+  scrollbar-width:thin; scrollbar-color:var(--line) transparent;
+}
+.pick{
+  display:flex; flex-direction:column; gap:12px; text-align:left; min-width:0;
+  padding:16px 16px 18px; border:0; border-radius:20px;
+  background:var(--c); color:var(--card-ink); cursor:pointer;
+  box-shadow:0 1px 2px var(--shadow), 0 14px 24px -18px var(--shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.pick:hover{transform:translateY(-3px); box-shadow:0 2px 4px var(--shadow), 0 20px 30px -18px var(--shadow)}
+.pick:active{transform:translateY(0)}
+.pick .head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.pick .no{font:800 1.9rem/1 var(--font-display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.pick .emo{
+  display:grid; place-items:center; width:38px; height:38px; border-radius:50%;
+  background:var(--paper); font-size:1.2rem; line-height:1; font-family:var(--emoji);
+}
+.pick .pq{font:600 calc(clamp(.96rem,1.2vw,1.06rem)*var(--scale))/1.4 var(--font-body); overflow-wrap:anywhere}
+.stamp{
+  display:none; align-self:flex-start; margin-top:auto;
+  font:700 .76rem var(--font-body); letter-spacing:.06em; text-transform:uppercase; color:var(--good);
+}
+.pick.done{background:var(--soft); color:var(--muted); box-shadow:none}
+.pick.done .emo{background:var(--surface); filter:grayscale(1); opacity:.6}
+.pick.done .stamp{display:block}
+
+/* open card */
+dialog{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(960px, calc(100% - 24px)); max-width:none;
+  max-height:calc(100% - 24px); overflow:visible;
+}
+dialog::backdrop{background:rgba(16,13,30,.6); backdrop-filter:blur(3px)}
+.sheet{
+  display:flex; flex-direction:column; gap:18px;
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+  overflow-y:auto; padding:4px 4px 14px;
+}
+.flip{perspective:1800px}
+.inner{display:grid; transform-style:preserve-3d; transition:transform .65s cubic-bezier(.45,.05,.2,1)}
+.inner.flipped{transform:rotateY(180deg)}
+.face{
+  grid-area:1/1; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  border-radius:28px; box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  padding:clamp(22px,3.8vw,48px); display:flex; flex-direction:column; gap:clamp(14px,2vw,22px); min-width:0;
+}
+.front{background:var(--c); color:var(--card-ink)}
+.back{background:var(--surface); color:var(--ink); transform:rotateY(180deg); border-top:10px solid var(--c)}
+.fhead{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.chip{font:700 .82rem var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:var(--card-ink); opacity:.75}
+.bigemo{
+  display:grid; place-items:center; width:64px; height:64px; border-radius:50%; flex:none;
+  background:var(--paper); font-size:2rem; line-height:1; font-family:var(--emoji);
+}
+.bigq{
+  margin:0; font:700 calc(clamp(1.7rem,3.6vw,2.9rem)*var(--scale))/1.15 var(--font-display);
+  letter-spacing:-.015em; text-wrap:balance; overflow-wrap:anywhere;
+}
+.follow{
+  background:var(--paper); color:var(--card-ink); border-radius:18px;
+  padding:clamp(14px,2vw,22px); display:flex; flex-direction:column; gap:6px;
+}
+.lbl{font:700 .78rem var(--font-body); letter-spacing:.08em; text-transform:uppercase}
+.follow .lbl{opacity:.65}
+.follow p{margin:0; font:600 calc(clamp(1.1rem,2vw,1.55rem)*var(--scale))/1.35 var(--font-body)}
+.backhead{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 16px}
+.backhead .lbl{color:var(--good)}
+.backhead .meta{font:500 .88rem var(--font-body); color:var(--muted); font-variant-numeric:tabular-nums}
+.backq{margin:0; color:var(--muted); font-size:calc(clamp(.98rem,1.4vw,1.12rem)*var(--scale)); font-weight:600}
+.answer{display:flex; flex-direction:column; gap:.8em; max-width:75ch}
+.answer p{margin:0; font-weight:500; font-size:calc(clamp(1.06rem,1.75vw,1.42rem)*var(--scale)); line-height:1.6; text-wrap:pretty}
+
+.bar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1rem,1.45vw,1.15rem)*var(--scale))/1 var(--font-body);
+  border-radius:16px; padding:.8em 1.25em; min-height:54px; cursor:pointer;
+  border:0; background:var(--surface); color:var(--ink);
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.5); transition:transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn.main{flex:0 1 360px; background:var(--accent); color:var(--accent-ink)}
+.timer{
+  font-variant-numeric:tabular-nums; min-width:9.5em; color:var(--card-ink);
+  background:linear-gradient(to right, var(--k1) calc(var(--p,1)*100%), #FFF3D6 0);
+}
+.timer.up{background:var(--k0)}
+@media (max-width:600px){
+  .btn.main{order:-1; flex-basis:100%}
+  .bar .btn:not(.main){flex:1}
+}
+
+/* QR panel */
+#qrDlg{width:min(500px, calc(100% - 24px))}
+.qrpanel{
+  background:var(--surface); color:var(--ink); border-radius:28px;
+  padding:clamp(20px,3.4vw,36px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.4rem,3vw,2rem)/1.15 var(--font-display); letter-spacing:-.015em; text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted); font-size:1rem}
+.qrbox{width:min(340px, 62vmin, 100%); padding:14px; border-radius:20px; background:var(--qr-bg); border:4px solid var(--k3)}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{
+  margin:0; font:600 .9rem var(--font-body); color:var(--muted); overflow-wrap:anywhere;
+  -webkit-user-select:all; user-select:all;
+}
+.qrbtns{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:100%}
+.qrbtns .btn{flex:1 1 160px; box-shadow:none; border:1.5px solid var(--line)}
+.qrbtns .btn.main{border-color:var(--accent)}
+.tool.qr-open{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+/* Short frames (embeds, small laptop screens): tighter chrome so more cards show */
+@media (max-height:700px){
+  .wrap{padding-block:10px 0; gap:8px}
+  h1{font-size:clamp(1.4rem,3vw,2rem)}
+  .mark{transform:scale(.72); transform-origin:left center; margin-right:-8px}
+  .tool{min-height:34px; padding:3px 12px; font-size:.82rem}
+  .instr{font-size:.9rem}
+  .pick{padding:12px 12px 14px; gap:8px; border-radius:16px}
+  .pick .no{font-size:1.5rem}
+  .pick .emo{width:32px; height:32px; font-size:1rem}
+  .face{padding:18px 24px; gap:12px; border-radius:22px}
+  .bigemo{width:48px; height:48px; font-size:1.5rem}
+  .follow{padding:12px 16px}
+  .btn{min-height:44px; padding:.6em 1em}
+  .sheet{gap:12px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .inner, .pick, .btn, .meter i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Speaking Cards</h1>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="random" type="button">Random card</button>
+      <button class="tool" id="reset" type="button">Reset</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <p class="instr">Choose a card and speak for about one minute. Answer both questions, then flip the card to see a sample answer.</p>
+    <span class="progress"><span class="meter"><i id="meter"></i></span><span id="progress"></span></span>
+  </div>
+
+  <main class="deck" id="deck" aria-label="Speaking cards"></main>
+</div>
+
+<dialog id="dlg" aria-label="Speaking card">
+  <div class="sheet">
+    <div class="flip">
+      <div class="inner" id="inner">
+        <section class="face front" id="front"></section>
+        <section class="face back" id="back" aria-hidden="true"></section>
+      </div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="close" type="button">← All cards</button>
+      <button class="btn timer" id="timer" type="button">Start 1:00</button>
+      <button class="btn main" id="flipBtn" type="button" autofocus>Show sample answer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open the cards</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens Speaking Cards"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM18 4h1v1h-1zM21 4h1v1h-1zM22 4h1v1h-1zM23 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM14 5h1v1h-1zM16 5h1v1h-1zM17 5h1v1h-1zM19 5h1v1h-1zM23 5h1v1h-1zM26 5h1v1h-1zM29 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM17 6h1v1h-1zM18 6h1v1h-1zM19 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM27 6h1v1h-1zM32 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM12 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM17 7h1v1h-1zM19 7h1v1h-1zM20 7h1v1h-1zM21 7h1v1h-1zM23 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM29 7h1v1h-1zM31 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM13 8h1v1h-1zM15 8h1v1h-1zM17 8h1v1h-1zM18 8h1v1h-1zM20 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM27 8h1v1h-1zM29 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM13 9h1v1h-1zM16 9h1v1h-1zM19 9h1v1h-1zM22 9h1v1h-1zM26 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM12 11h1v1h-1zM13 11h1v1h-1zM14 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM17 11h1v1h-1zM18 11h1v1h-1zM20 11h1v1h-1zM23 11h1v1h-1zM26 11h1v1h-1zM28 11h1v1h-1zM30 11h1v1h-1zM32 11h1v1h-1zM4 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM19 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM26 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM30 12h1v1h-1zM31 12h1v1h-1zM33 12h1v1h-1zM34 12h1v1h-1zM37 12h1v1h-1zM38 12h1v1h-1zM39 12h1v1h-1zM4 13h1v1h-1zM6 13h1v1h-1zM8 13h1v1h-1zM9 13h1v1h-1zM13 13h1v1h-1zM16 13h1v1h-1zM18 13h1v1h-1zM21 13h1v1h-1zM24 13h1v1h-1zM25 13h1v1h-1zM26 13h1v1h-1zM27 13h1v1h-1zM29 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM35 13h1v1h-1zM36 13h1v1h-1zM37 13h1v1h-1zM38 13h1v1h-1zM39 13h1v1h-1zM6 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM13 14h1v1h-1zM15 14h1v1h-1zM18 14h1v1h-1zM22 14h1v1h-1zM25 14h1v1h-1zM28 14h1v1h-1zM29 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM35 14h1v1h-1zM37 14h1v1h-1zM39 14h1v1h-1zM40 14h1v1h-1zM4 15h1v1h-1zM6 15h1v1h-1zM12 15h1v1h-1zM19 15h1v1h-1zM20 15h1v1h-1zM27 15h1v1h-1zM30 15h1v1h-1zM36 15h1v1h-1zM37 15h1v1h-1zM40 15h1v1h-1zM5 16h1v1h-1zM7 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM13 16h1v1h-1zM15 16h1v1h-1zM20 16h1v1h-1zM23 16h1v1h-1zM28 16h1v1h-1zM30 16h1v1h-1zM34 16h1v1h-1zM40 16h1v1h-1zM6 17h1v1h-1zM8 17h1v1h-1zM11 17h1v1h-1zM16 17h1v1h-1zM18 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM30 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM33 17h1v1h-1zM35 17h1v1h-1zM37 17h1v1h-1zM39 17h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM7 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM21 18h1v1h-1zM24 18h1v1h-1zM29 18h1v1h-1zM31 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM35 18h1v1h-1zM36 18h1v1h-1zM37 18h1v1h-1zM39 18h1v1h-1zM40 18h1v1h-1zM4 19h1v1h-1zM7 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM14 19h1v1h-1zM17 19h1v1h-1zM18 19h1v1h-1zM19 19h1v1h-1zM21 19h1v1h-1zM22 19h1v1h-1zM23 19h1v1h-1zM27 19h1v1h-1zM31 19h1v1h-1zM32 19h1v1h-1zM34 19h1v1h-1zM35 19h1v1h-1zM37 19h1v1h-1zM38 19h1v1h-1zM7 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM17 20h1v1h-1zM20 20h1v1h-1zM23 20h1v1h-1zM26 20h1v1h-1zM28 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM33 20h1v1h-1zM34 20h1v1h-1zM36 20h1v1h-1zM38 20h1v1h-1zM4 21h1v1h-1zM5 21h1v1h-1zM7 21h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM15 21h1v1h-1zM17 21h1v1h-1zM21 21h1v1h-1zM22 21h1v1h-1zM27 21h1v1h-1zM30 21h1v1h-1zM31 21h1v1h-1zM32 21h1v1h-1zM35 21h1v1h-1zM37 21h1v1h-1zM39 21h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM12 22h1v1h-1zM14 22h1v1h-1zM15 22h1v1h-1zM18 22h1v1h-1zM19 22h1v1h-1zM23 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM33 22h1v1h-1zM38 22h1v1h-1zM40 22h1v1h-1zM4 23h1v1h-1zM6 23h1v1h-1zM14 23h1v1h-1zM15 23h1v1h-1zM16 23h1v1h-1zM18 23h1v1h-1zM22 23h1v1h-1zM23 23h1v1h-1zM24 23h1v1h-1zM26 23h1v1h-1zM28 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM33 23h1v1h-1zM34 23h1v1h-1zM35 23h1v1h-1zM37 23h1v1h-1zM40 23h1v1h-1zM6 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM12 24h1v1h-1zM15 24h1v1h-1zM16 24h1v1h-1zM18 24h1v1h-1zM19 24h1v1h-1zM21 24h1v1h-1zM23 24h1v1h-1zM26 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM32 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM38 24h1v1h-1zM4 25h1v1h-1zM5 25h1v1h-1zM6 25h1v1h-1zM7 25h1v1h-1zM9 25h1v1h-1zM11 25h1v1h-1zM12 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM26 25h1v1h-1zM27 25h1v1h-1zM30 25h1v1h-1zM31 25h1v1h-1zM36 25h1v1h-1zM38 25h1v1h-1zM39 25h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM6 26h1v1h-1zM7 26h1v1h-1zM9 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM12 26h1v1h-1zM15 26h1v1h-1zM16 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM22 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM28 26h1v1h-1zM31 26h1v1h-1zM32 26h1v1h-1zM35 26h1v1h-1zM36 26h1v1h-1zM37 26h1v1h-1zM39 26h1v1h-1zM40 26h1v1h-1zM4 27h1v1h-1zM7 27h1v1h-1zM11 27h1v1h-1zM14 27h1v1h-1zM15 27h1v1h-1zM17 27h1v1h-1zM20 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM26 27h1v1h-1zM27 27h1v1h-1zM31 27h1v1h-1zM32 27h1v1h-1zM34 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM37 27h1v1h-1zM39 27h1v1h-1zM4 28h1v1h-1zM6 28h1v1h-1zM7 28h1v1h-1zM10 28h1v1h-1zM15 28h1v1h-1zM18 28h1v1h-1zM19 28h1v1h-1zM20 28h1v1h-1zM21 28h1v1h-1zM22 28h1v1h-1zM24 28h1v1h-1zM28 28h1v1h-1zM32 28h1v1h-1zM34 28h1v1h-1zM35 28h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM7 29h1v1h-1zM9 29h1v1h-1zM11 29h1v1h-1zM12 29h1v1h-1zM20 29h1v1h-1zM23 29h1v1h-1zM26 29h1v1h-1zM27 29h1v1h-1zM29 29h1v1h-1zM31 29h1v1h-1zM33 29h1v1h-1zM35 29h1v1h-1zM4 30h1v1h-1zM7 30h1v1h-1zM8 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM12 30h1v1h-1zM13 30h1v1h-1zM14 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM24 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM33 30h1v1h-1zM36 30h1v1h-1zM37 30h1v1h-1zM38 30h1v1h-1zM39 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM6 31h1v1h-1zM8 31h1v1h-1zM9 31h1v1h-1zM11 31h1v1h-1zM12 31h1v1h-1zM19 31h1v1h-1zM23 31h1v1h-1zM24 31h1v1h-1zM26 31h1v1h-1zM27 31h1v1h-1zM28 31h1v1h-1zM31 31h1v1h-1zM32 31h1v1h-1zM35 31h1v1h-1zM37 31h1v1h-1zM38 31h1v1h-1zM4 32h1v1h-1zM8 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM14 32h1v1h-1zM15 32h1v1h-1zM16 32h1v1h-1zM17 32h1v1h-1zM21 32h1v1h-1zM27 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM37 32h1v1h-1zM38 32h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM14 33h1v1h-1zM19 33h1v1h-1zM20 33h1v1h-1zM21 33h1v1h-1zM23 33h1v1h-1zM24 33h1v1h-1zM27 33h1v1h-1zM28 33h1v1h-1zM30 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM13 34h1v1h-1zM14 34h1v1h-1zM16 34h1v1h-1zM17 34h1v1h-1zM18 34h1v1h-1zM19 34h1v1h-1zM23 34h1v1h-1zM26 34h1v1h-1zM27 34h1v1h-1zM29 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM13 35h1v1h-1zM17 35h1v1h-1zM19 35h1v1h-1zM21 35h1v1h-1zM22 35h1v1h-1zM28 35h1v1h-1zM30 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM39 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM15 36h1v1h-1zM18 36h1v1h-1zM19 36h1v1h-1zM20 36h1v1h-1zM23 36h1v1h-1zM24 36h1v1h-1zM26 36h1v1h-1zM28 36h1v1h-1zM29 36h1v1h-1zM30 36h1v1h-1zM31 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM38 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM13 37h1v1h-1zM15 37h1v1h-1zM16 37h1v1h-1zM17 37h1v1h-1zM18 37h1v1h-1zM20 37h1v1h-1zM22 37h1v1h-1zM23 37h1v1h-1zM25 37h1v1h-1zM26 37h1v1h-1zM27 37h1v1h-1zM30 37h1v1h-1zM32 37h1v1h-1zM33 37h1v1h-1zM34 37h1v1h-1zM40 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM14 38h1v1h-1zM17 38h1v1h-1zM19 38h1v1h-1zM20 38h1v1h-1zM22 38h1v1h-1zM26 38h1v1h-1zM29 38h1v1h-1zM30 38h1v1h-1zM31 38h1v1h-1zM33 38h1v1h-1zM38 38h1v1h-1zM39 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM13 39h1v1h-1zM18 39h1v1h-1zM22 39h1v1h-1zM24 39h1v1h-1zM28 39h1v1h-1zM30 39h1v1h-1zM32 39h1v1h-1zM33 39h1v1h-1zM34 39h1v1h-1zM36 39h1v1h-1zM40 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM14 40h1v1h-1zM15 40h1v1h-1zM19 40h1v1h-1zM23 40h1v1h-1zM24 40h1v1h-1zM27 40h1v1h-1zM32 40h1v1h-1zM34 40h1v1h-1zM35 40h1v1h-1zM37 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/speaking-cards/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const CARDS = [
+  {q:"What kind of person are you in your daily life: organised or spontaneous?",
+   f:["Can you give an example from a recent experience?"],
+   a:["I think I am an organised person in my daily life. I usually plan my day the night before. I write my lessons, homework and other plans in a small notebook. This helps me a lot because I don't forget important things.",
+      "For example, last week I had two quizzes and a presentation. I made a simple plan for every day. On Monday and Tuesday, I studied for the quizzes, and on Wednesday, I prepared my slides. Because of this plan, I didn't feel stressed, and I got good grades. But I am not organised all the time. Last Saturday, my friends called me in the morning, and we suddenly decided to go to the seaside. It was a lovely day! So, I am organised on weekdays and a little spontaneous at weekends."]},
+  {q:"Do you think your daily routine has changed in the last few years?",
+   f:["What did you use to do differently?"],
+   a:["Yes, I think my daily routine has changed a lot in the last few years. When I was in high school, I used to get up very early, at about half past six, because my school was far from my house. I used to spend all day at school, and in the evening I studied for the university exam. I didn't have much free time.",
+      "Now I am a university student, so my routine is different. My classes usually start at nine, so I can sleep a little more. I also live in a dormitory now, not with my family. This means I do more things by myself, like washing my clothes and cooking simple meals. I also go to the gym three times a week. I didn't use to do any sport before. My new routine is busier, but I like it more."]},
+  {q:"What is one of the best experiences you have had so far?",
+   f:["When did it happen? Why was it special?"],
+   a:["One of the best experiences I have had so far was my graduation trip after high school. It happened two years ago, in the summer. My classmates and I went to Antalya for five days. We stayed in a small hotel near the beach. Every day, we swam in the sea, played volleyball and ate a lot of ice cream. On the last night, we had a big dinner together and talked about our memories from school.",
+      "It was special for me because it was my first holiday without my family. I felt free and grown up. It was also my last holiday with my school friends before we all went to different cities for university. I still look at the photos from that trip, and they always make me smile."]},
+  {q:"Have you ever made an important decision that changed your life?",
+   f:["What did you decide? Are you happy with your decision now?"],
+   a:["Yes, I have. Two years ago, I decided to study at a university in a different city. My family lives in Konya, but I chose a university in Izmir. It was not an easy decision. My parents were worried because I was going to live alone for the first time. I was also a little scared, but I wanted to be more independent and see a new place.",
+      "At first, life was difficult. I missed my family and my mother's cooking, and I didn't know anyone here. But after a few months, I made new friends and started to enjoy the city. Now I can solve many problems by myself, and I feel more confident. So yes, I am very happy with my decision. I think it was one of the best decisions of my life."]},
+  {q:"What is something you have wanted to do for a long time but haven’t done yet?",
+   f:["Why haven’t you done it?"],
+   a:["I have wanted to learn to play the guitar for a long time. When I was about twelve, my cousin played the guitar at a family dinner, and I loved it. Since then, I have dreamed about playing my favourite songs with my friends. But I haven't started yet.",
+      "There are a few reasons for this. First, a good guitar is quite expensive, and I am a student, so I don't have much money. Second, I am always busy with my lessons and exams, so I feel that I don't have time for a new hobby. Also, I am a little afraid that it will be too difficult for me. But I don't want to wait any longer. My plan is to save some money this year and start online lessons in the summer holiday."]},
+  {q:"Have you ever helped a stranger?",
+   f:["What happened? How did you feel afterwards?"],
+   a:["Yes, I have. Last winter, I was waiting for the bus after school. It was cold and rainy. An old woman was standing next to me with two heavy shopping bags. She looked tired, and she asked me about the bus to the hospital. I checked the app on my phone and told her the bus number. When the bus came, I carried her bags and helped her get on. We sat together, and she told me about her grandchildren. At her stop, I carried her bags again.",
+      "She thanked me many times and said, “You are a very kind young person.” Afterwards, I felt really happy and proud. It was a small thing for me, but it was important for her. That day, I understood that a little help can make a big difference."]},
+  {q:"Do you usually take photos when you travel or go somewhere special?",
+   f:["What is the most memorable photo you have taken?"],
+   a:["Yes, I usually take a lot of photos when I travel or go somewhere special. I like taking photos of nature, food and my friends. Sometimes my phone is full after a trip!",
+      "The most memorable photo I have taken is from Cappadocia. I went there with my family last year. We woke up very early, at five o'clock, to watch the hot air balloons. It was cold, and we were very sleepy. But when the sun came up, the sky was full of colourful balloons. I took a photo of my parents. They were standing together and smiling, and the balloons were behind them. This photo is special for me because my parents look really happy in it. Now it is the background picture on my phone, so I see it every day."]},
+  {q:"Have you ever met a famous person?",
+   f:["If yes, who did you meet and what happened?","If not, who would you like to meet?"],
+   a:["No, I haven't met a famous person yet. But I would really like to meet Aziz Sancar. He is a Turkish scientist, and he won the Nobel Prize in Chemistry in 2015. I read about his life when I was in high school. He was born in a small town in Mardin, and he worked very hard to become a scientist. His story is very inspiring for me.",
+      "If I meet him one day, I want to ask him some questions. For example, how did he stay motivated when his experiments didn't work? What advice can he give to young students like me? I think he is a great example for young people in Türkiye. He shows us that hard work and patience are more important than where you come from."]},
+  {q:"What is a place you have visited more than once?",
+   f:["Why do you keep going there?"],
+   a:["A place I have visited many times is my grandparents' village near the Black Sea. We go there almost every summer. The village is small and very green. There are tea gardens, a river and a lot of tall trees.",
+      "I keep going there for several reasons. First, I love spending time with my grandparents. They are getting older, so I want to see them as much as possible. Second, the village is very quiet and peaceful. In the city, life is noisy and stressful, but there I can relax, read books and sleep well. I also enjoy helping my grandmother in the garden and picking tea leaves with my cousins. The food is delicious, too, because everything is fresh. For me, this village is not just a holiday place. It feels like a second home."]},
+  {q:"What is something you have changed about yourself in recent years?",
+   f:["Why did you make this change?"],
+   a:["In recent years, I have changed my sleeping habits. In the past, I used to stay up very late. I watched series or used social media until two or three in the morning. In the morning, I felt very tired, and I couldn't concentrate in class. My grades started to go down, and I was often in a bad mood.",
+      "Last year, I decided to make a change. Now I put my phone away at eleven o'clock, and I read a book for a few minutes before I sleep. It was difficult in the first two weeks, but now it is normal for me. I made this change because I wanted to feel healthier and do better at school. Now I have more energy during the day, and I feel much happier."]},
+  {q:"Do you think people learn more from success or failure?",
+   f:["Tell us about something you have learned from a failure."],
+   a:["I think people learn more from failure. When we are successful, we feel happy, but we don't usually think about why. When we fail, we think carefully about our mistakes and try to do better next time.",
+      "I learned an important lesson from a failure last year. I had a big exam, but I didn't plan my studying well. I waited until the last three days and tried to study everything at once. I was very tired on the exam day, and I failed the exam. I felt really upset. After that, I changed my study method. Now I study a little every day, and I start at least two weeks before an exam. I also make short notes. Because of that failure, I learned that good planning is more important than studying all night."]},
+  {q:"What is an achievement that you are proud of?",
+   f:["How did you achieve it?"],
+   a:["An achievement that I am proud of is finishing my first ten-kilometre run. Two years ago, I couldn't run for more than five minutes. I got tired very quickly, and I didn't like sport at all.",
+      "Then my friend invited me to a running group in our neighbourhood. At first, we ran only two or three kilometres. We met three times a week, early in the morning. Every month, I ran a little more. Sometimes it was really hard, especially in winter, but the people in the group encouraged me. After about eight months, I joined a ten-kilometre race in my city. I was very nervous, but I finished it in one hour and five minutes. When I crossed the finish line, I felt so proud. I learned that small steps can bring big results."]},
+  {q:"Have you ever worked very hard for something but failed?",
+   f:["What did you do afterwards?"],
+   a:["Yes, I have. In high school, I wanted to join the school basketball team. I practised every day after school for two months. I watched videos online to improve my skills, and I even ran in the mornings to get fitter. On the day of the selection, I was very excited, but I was also very nervous. I made a lot of mistakes, and the coach didn't choose me. I was really disappointed.",
+      "For a few days, I didn't want to play basketball at all. Afterwards, I talked to the coach. He told me that my skills were good, but I needed more experience in real games. So I started to play with a local club at weekends. The next year, I tried again, and this time I got a place on the team."]},
+  {q:"Do you usually give up easily when something becomes difficult?",
+   f:["Can you describe a situation when you didn’t give up?"],
+   a:["To be honest, sometimes I give up easily, especially when something is boring. But when something is important to me, I usually try hard.",
+      "For example, last year I had a lot of problems with speaking English. I could understand my teacher, but when I wanted to speak, I felt nervous and couldn't find the right words. Sometimes I didn't say anything in class. I wanted to stop trying, but I knew that English was important for my future. So I made a plan. I watched short videos in English every day and repeated the sentences. I also practised with a classmate twice a week. It was slow and sometimes frustrating, but I didn't give up. After a few months, I started to speak more in class. I still make mistakes, but now I am not afraid to speak."]},
+  {q:"What is one habit that has had a positive effect on your life?",
+   f:["When did you start it?"],
+   a:["One habit that has had a positive effect on my life is walking every day. I started this habit about a year ago. At that time, I spent most of my day sitting at my desk or looking at my phone. I often had headaches, and I felt tired all the time. My doctor told me to move more, so I decided to walk for thirty minutes every evening.",
+      "At first, I walked alone, but now my roommate sometimes comes with me. We walk in the park near our dormitory and talk about our day. This habit helps me in many ways. I sleep better, and I feel less stressed. I also have more energy for my lessons. It is a very simple habit, but it has made a big difference in my life."]},
+  {q:"Is there a habit you have tried to change but couldn’t?",
+   f:["Why is it difficult to change?"],
+   a:["Yes, there is one habit that I have tried to change many times. I always leave my homework and assignments until the last minute. I know it is a bad habit, and it makes me stressed. For example, last month I had two weeks to write an essay, but I started it the night before the deadline. I stayed up very late, and the essay wasn't very good.",
+      "I have tried different things to change this habit. I made to-do lists, and I used apps on my phone, but they only worked for a short time. I think it is difficult to change because I always find more fun things to do, like watching videos or chatting with friends. I also tell myself that I work better under pressure, but I know this is not really true."]},
+  {q:"Do you think people spend too much time on their phones today?",
+   f:["Has your own phone use changed in recent years?"],
+   a:["Yes, I think people spend too much time on their phones today. When I take the bus or sit in a café, I see that almost everyone is looking at their phone. Sometimes families don't talk at dinner because everyone is busy with their screens.",
+      "My own phone use has changed in recent years. When I started university, I used my phone for about seven hours a day. I checked social media all the time, even during lessons. Then I saw my screen time report, and I was shocked. So I made some rules for myself. Now I don't use my phone during meals, and I turn off notifications when I study. My screen time is about four hours a day now. It is still a lot, but it is better than before."]},
+  {q:"Have you ever taken a break from social media?",
+   f:["Why did you do it, and did it change anything?"],
+   a:["Yes, I have. Last year, before my final exams, I took a break from social media for one month. I did it because I was spending too much time on it, and I couldn't focus on my studies. I also compared myself to other people too much, and this made me feel bad. So I deleted the apps from my phone.",
+      "In the first few days, it was really hard. I wanted to check my phone all the time. But after a week, I started to feel calmer. I had more time to study, read and see my friends in real life. I also slept better. When I came back to social media, I used it less than before. The break helped me understand that I don't need it all the time."]},
+  {q:"Do you think social media shows people’s real lives?",
+   f:["Have you ever seen something online that made you change your opinion about a person?"],
+   a:["No, I don't think social media shows people's real lives. Most people only share their best moments, like holidays, parties and nice meals. They don't usually share their bad days or problems. So when we look at their posts, we think their lives are perfect, but this is not true.",
+      "Yes, I have seen something online that changed my opinion about a person. There was a girl in my class who looked very quiet and serious. I thought she was a bit unfriendly. One day, I saw her account by chance. She shared funny videos and drawings, and she also worked as a volunteer at an animal shelter. I was really surprised. After that, I started to talk to her more, and now we are good friends. I learned that we shouldn't judge people too quickly."]},
+  {q:"What is something you have bought that was more useful than you expected?",
+   f:["Why did you buy it?"],
+   a:["Something I have bought that was more useful than I expected is a small electric kettle. I bought it last year when I moved into my dormitory. I only wanted it to make tea in my room, because the kitchen was far away.",
+      "But it became one of the most useful things I have. I use it every day. In the morning, I make tea or coffee, and at night I make instant soup when I am hungry. During exam weeks, I don't need to go out for hot drinks, so I save time and money. My roommate and my friends also use it a lot. It was very cheap, but it has made my student life much easier. I think simple things are sometimes more useful than expensive things."]},
+  {q:"Have you ever spent money on something that was not worth it?",
+   f:["What was it, and what did you learn from the experience?"],
+   a:["Yes, I have. Last year, I bought a very expensive pair of headphones. I saw an advertisement online, and many famous people were using them. I really wanted them, so I spent almost all my savings on them.",
+      "When the headphones arrived, I was very excited. But after a few weeks, I realised that they were not much better than my old headphones. They were also heavy, and my ears hurt after an hour. In the end, I didn't use them very often. I felt quite silly because that money was enough for many other useful things. From this experience, I learned an important lesson. Now, before I buy something expensive, I read reviews and wait a few days. If I still want it, then I buy it."]},
+  {q:"Do you think people today care too much about appearance?",
+   f:["Has your own style changed over the years?"],
+   a:["Yes, I think many people today care too much about appearance. On social media, we see perfect faces and bodies all the time, so people feel pressure to look the same. Some young people spend a lot of money on clothes and beauty products just to get more likes. Of course, it is normal to want to look nice, but it shouldn't be the most important thing.",
+      "My own style has changed over the years. When I was in high school, I always wore what was popular. I bought trendy clothes because I wanted to look like my friends. Now I care more about comfort. I usually wear jeans, simple T-shirts and trainers. I choose clothes that make me feel relaxed and confident. I think my style shows the real me now."]},
+  {q:"Have you ever worn something because other people liked it, although you didn’t?",
+   f:["How did you feel?"],
+   a:["Yes, I have. Last winter, my aunt bought me a bright orange jacket for my birthday. Everyone in my family said it looked great on me, but I didn't like it at all. The colour was too bright for me, and the style was a bit old-fashioned. But I didn't want to upset my aunt, so I wore it to a family dinner at her house.",
+      "During the dinner, people said nice things about my jacket, but I didn't feel like myself. I kept thinking about my clothes, and I felt uncomfortable all evening. After that, I talked to my aunt honestly and kindly. She wasn't angry, and we changed the jacket for a black one. Now I listen to other people's ideas, but I choose my own clothes."]},
+  {q:"What makes a place feel like home to you?",
+   f:["Have you ever stayed somewhere that immediately felt comfortable?"],
+   a:["For me, a place feels like home when I feel safe and relaxed there. It is not about a big house or expensive furniture. The people are more important. When the people around me are warm and kind, I feel at home. Small things are also important, like a comfortable bed, my favourite blanket and the smell of tea in the kitchen.",
+      "Yes, I have stayed somewhere that immediately felt comfortable. Last summer, I visited my friend's family in Eskişehir for a few days. I was a bit nervous before I went, because I didn't know them well. But from the first minute, her mother was very friendly. She cooked my favourite food, and they asked me a lot of questions about my life. We laughed a lot at dinner. After one day, I felt like a member of the family."]},
+  {q:"Would you prefer to live in the same city for most of your life or experience different places?",
+   f:["Have you ever lived or stayed somewhere very different from your hometown?"],
+   a:["I would prefer to experience different places, at least when I am young. I think living in different cities helps people learn new things, meet different people and become more open-minded. Maybe later, when I have a family, I will choose one city and stay there.",
+      "Yes, I have stayed somewhere very different from my hometown. I grew up in Antalya, and it is hot and sunny there most of the year. But last winter, I stayed in Erzurum for two weeks because my uncle lives there. It was a completely different experience. It was very cold, and there was snow everywhere. I wore three jumpers every day! The food was different, too, and I tried cağ kebabı for the first time. It was difficult at first, but I really enjoyed it, and I want to go back one day."]},
+  {q:"Have you ever visited a place that changed the way you think about something?",
+   f:["What happened there?"],
+   a:["Yes, I have. Two years ago, I visited a village school in eastern Türkiye with a volunteer group from my high school. We took books, notebooks and toys for the children. Before this trip, I didn't think much about how lucky I was. I always complained about small things, like slow internet or a boring lesson.",
+      "In that village, the school was very small, and some classrooms didn't have heating. Some children walked for forty minutes to get to school every morning. But they were so happy and curious. They asked us a lot of questions about the city, and they loved the books. This experience changed the way I think. Now I complain less, and I try to be thankful for what I have. I also want to do more volunteer work in the future."]},
+  {q:"Do you think travelling changes people?",
+   f:["How have your own travel experiences affected you?"],
+   a:["Yes, I believe travelling changes people. When you travel, you see new places and meet people with different lifestyles. You try new food and learn new customs. This helps you understand the world better and become more tolerant. You also learn to solve problems, for example when you miss a bus or get lost.",
+      "My own travel experiences have affected me a lot. When I was younger, I was very shy, and I didn't like talking to strangers. Then, last year, I travelled to Batumi in Georgia with two friends. We had to ask people for directions and order food in English. At first, I was nervous, but after a few days it became easier. Now I am more confident when I talk to new people, and I am more open to new experiences."]},
+  {q:"What is one experience that you think every young person should have at least once?",
+   f:["Have you had this experience yourself?"],
+   a:["I think every young person should live away from their family at least once. When you live alone or with roommates, you have to do everything by yourself. You cook, clean, pay bills and plan your own time. These things teach you responsibility. You also learn to solve problems without calling your parents every time.",
+      "Yes, I have had this experience myself. Last year, I moved to a dormitory for university. In the first month, it was really difficult. I didn't know how to cook, and I sometimes forgot to buy things I needed. But slowly, I learned. Now I can cook a few simple meals, and I manage my money better. I feel more mature and confident now."]},
+  {q:"Do you think school prepares young people well for real life?",
+   f:["What is something useful that you have learned outside school?"],
+   a:["I think school prepares young people for some parts of life, but not all of them. At school, we learn important subjects like maths, science and languages. We also learn discipline and how to work with other people. But school doesn't teach us many practical things. For example, we don't learn how to manage money, pay bills or cook.",
+      "Something useful that I have learned outside school is cooking. My grandmother taught me when I was fifteen. Every Sunday, I helped her in the kitchen, and she showed me how to make simple dishes like lentil soup and pasta. At that time, I didn't think it was very important. But now I live in a dormitory, and cooking helps me save money and eat healthier food."]},
+  {q:"Have you ever had a teacher who changed your attitude towards a subject?",
+   f:["What did that teacher do?"],
+   a:["Yes, I have. When I was in middle school, I hated maths. I thought it was very difficult and boring, and I always got low grades. Then, in seventh grade, we had a new maths teacher, and she was very different from my old teachers.",
+      "She explained everything slowly and used examples from real life, like shopping and football scores. She also used games in class, so the lessons were fun. When I made a mistake, she never got angry. She always said, “Mistakes help us learn.” One day, she stayed after class to help me with a difficult topic. Because of her, I started to like maths, and my grades got much better. I still remember her. I think she was one of the best teachers I have ever had."]},
+  {q:"What makes someone a good student: intelligence, hard work, or discipline?",
+   f:["Has your own attitude towards studying changed?"],
+   a:["I think discipline is the most important thing for a good student. Intelligence is helpful, but it is not enough. Many intelligent students don't study regularly, so they don't get good results. Hard work is also important, but you need discipline to work hard every day, not only before exams. A disciplined student plans their time and does their homework regularly.",
+      "Yes, my attitude towards studying has changed. In high school, I only studied the night before exams. I thought I was clever, so I didn't need to study much. But at university, this didn't work, and I got some low grades in my first term. So I changed my habits. Now I study a little every day, and I have a weekly plan. My grades are much better now."]},
+  {q:"Do you think choosing a career is more difficult for young people today?",
+   f:["Have your own career plans changed over time?"],
+   a:["Yes, I think choosing a career is more difficult for young people today. There are many more jobs now than in the past. Some of them didn't exist twenty years ago, like social media manager or app developer. Technology is also changing very fast, so young people worry that their job will disappear in the future. There is also a lot of pressure from families and society.",
+      "My own career plans have changed over time. When I was a child, I wanted to be a pilot because I loved planes. In high school, I wanted to become a doctor because my parents liked this idea. But now I want to be an engineer because I really enjoy maths and solving problems. I will start my engineering classes next year after prep school. Maybe my plans will change again, but now I feel that this is the right choice for me."]},
+  {q:"Have you ever thought about choosing a completely different career?",
+   f:["What made you consider it?"],
+   a:["Yes, I have. I am going to study business, and my plan is to work in a bank or a big company in the future. But last summer, I started to think about becoming a chef.",
+      "It started when I worked in a small restaurant in my hometown. At first, I only washed dishes and cleaned the tables. Then the chef started to teach me how to prepare some dishes, and I loved it. Time passed very quickly in the kitchen, and I felt really happy when customers enjoyed the food. I started to watch cooking videos every night and try new recipes at home. My friends also said that my food was delicious. I haven't made a decision yet. Maybe I will finish my business degree first and then take a cooking course. Who knows, maybe one day I will open my own restaurant!"]},
+  {q:"What is more important in a job: enjoying the work or earning a good salary?",
+   f:["Have you ever done a job or task you disliked because you had to?"],
+   a:["In my opinion, enjoying the work is more important than earning a good salary. We spend about eight hours a day at work, so if we don't enjoy it, we can feel unhappy and stressed every day. Of course, money is important, because we need to pay our bills and live comfortably. But a good salary cannot make a boring job fun.",
+      "Yes, I have done a job that I disliked because I had to. Two summers ago, I worked in a call centre for two months because I needed money for university. All day, I answered phone calls from angry customers. It was very stressful, and the days were long and boring. I didn't enjoy it at all, but I didn't quit. It taught me to be patient, and it also showed me what kind of job I don't want."]},
+  {q:"Do you think people need difficult experiences to become more mature?",
+   f:["Has a difficult experience ever taught you something important?"],
+   a:["Yes, I think difficult experiences often help people become more mature. When everything is easy, we don't learn much. But when we have problems, we need to think carefully, make decisions and be strong. This helps us grow.",
+      "Yes, a difficult experience has taught me something important. Two years ago, my father lost his job, and our family had money problems for almost a year. I couldn't buy new clothes or go out with my friends very often. At first, I felt sad and a bit angry. But then I saw how hard my parents were trying. My mother started to work part-time, and my father looked for a job every day. So I started to help more at home and spend less money. This experience taught me to be thankful and to support my family in hard times."]},
+  {q:"What is one lesson you have learned in the last few years?",
+   f:["What experience taught you this lesson?"],
+   a:["One important lesson I have learned in the last few years is that it is okay to ask for help. In the past, I always tried to do everything alone. I thought that asking for help was a sign of weakness.",
+      "Last year, I had a very hard time in my English classes. I didn't understand some grammar topics, and my grades were low. But I didn't tell anyone, because I felt embarrassed. I got more and more stressed. Then my friend noticed and told me to talk to our teacher. I was nervous, but I went to her office. She was very kind and explained the topics again. She also gave me extra exercises. After a few weeks, my grades went up. Now I know that asking for help is not a weakness. It is a smart thing to do."]}
+];
+
+const EMOJI = ["🗓️","⏰","🌟","🧭","⏳","🤝","📸","🎤","📍","🦋",
+               "🎯","🏆","💪","🧗","🌱","🔁","📱","📵","🤳","🛍️",
+               "💸","🪞","👕","🏡","🗺️","💡","✈️","🎒","🏫","🍎",
+               "📚","💼","🔀","⚖️","🌈","🔑"];
+const NCOL = 6;
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+const TIME = 60;
+
+const state = { done:new Set(), scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("spk-state-v2") || "null");
+  if(s){
+    if(Array.isArray(s.done)) state.done = new Set(s.done.filter(i => Number.isInteger(i) && i >= 0 && i < CARDS.length));
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("spk-state-v2", JSON.stringify({done:[...state.done], scale:state.scale})); }catch(e){}
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const $ = id => document.getElementById(id);
+const deck = $("deck"), dlg = $("dlg"), inner = $("inner"), front = $("front"), back = $("back");
+const flipBtn = $("flipBtn"), timerBtn = $("timer");
+
+/* deck */
+function renderDeck(){
+  deck.innerHTML = CARDS.map((c,i) => `
+    <button class="pick k${i%NCOL}${state.done.has(i) ? " done" : ""}" type="button" data-i="${i}" aria-label="Card ${i+1}: ${esc(c.q)}">
+      <span class="head"><span class="no">${pad(i+1)}</span><span class="emo" aria-hidden="true">${EMOJI[i]}</span></span>
+      <span class="pq">${esc(c.q)}</span>
+      <span class="stamp">✓ Done</span>
+    </button>`).join("");
+  $("progress").textContent = `${state.done.size} of ${CARDS.length} done`;
+  $("meter").style.setProperty("--w", `${state.done.size / CARDS.length * 100}%`);
+}
+deck.addEventListener("click", e => {
+  const b = e.target.closest(".pick"); if(b) openCard(+b.dataset.i);
+});
+
+/* open card */
+let flipped = false;
+function openCard(i){
+  const c = CARDS[i], col = `k${i%NCOL}`;
+  const words = c.a.join(" ").split(/\s+/).length;
+  front.className = `face front ${col}`;
+  back.className = `face back ${col}`;
+  front.innerHTML = `
+    <div class="fhead"><span class="chip">Card ${pad(i+1)} / ${CARDS.length}</span><span class="bigemo" aria-hidden="true">${EMOJI[i]}</span></div>
+    <h2 class="bigq">${esc(c.q)}</h2>
+    <div class="follow"><span class="lbl">Follow-up</span>${c.f.map(f => `<p>${esc(f)}</p>`).join("")}</div>`;
+  back.innerHTML = `
+    <div class="backhead"><span class="lbl">Sample answer</span><span class="meta">${words} words · about 1 minute</span></div>
+    <p class="backq">${esc(c.q)}</p>
+    <div class="answer">${c.a.map(p => `<p>${esc(p)}</p>`).join("")}</div>`;
+  setFlip(false, true);
+  resetTimer();
+  state.done.add(i);
+  save();
+  if(!dlg.open) dlg.showModal();
+  flipBtn.focus();
+  dlg.querySelector(".sheet").scrollTop = 0;
+}
+function setFlip(v, instant){
+  flipped = v;
+  if(instant){ inner.style.transition = "none"; }
+  inner.classList.toggle("flipped", v);
+  if(instant){ void inner.offsetWidth; inner.style.transition = ""; }
+  front.setAttribute("aria-hidden", v ? "true" : "false");
+  back.setAttribute("aria-hidden", v ? "false" : "true");
+  flipBtn.textContent = v ? "Back to question" : "Show sample answer";
+}
+flipBtn.addEventListener("click", () => setFlip(!flipped));
+$("close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("close", () => { stopTimer(); renderDeck(); });
+dlg.addEventListener("click", e => { if(e.target === dlg) dlg.close(); });
+
+/* one-minute timer */
+let left = TIME, tick = null, endAt = 0;
+function fmt(s){ return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function paintTimer(){
+  const secs = Math.ceil(left);
+  timerBtn.style.setProperty("--p", Math.max(0, left / TIME));
+  timerBtn.classList.toggle("up", left <= 0);
+  timerBtn.textContent = left <= 0 ? "Time’s up · Again"
+    : tick ? `Pause ${fmt(secs)}`
+    : left < TIME ? `Resume ${fmt(secs)}` : "Start 1:00";
+}
+function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } }
+function resetTimer(){ stopTimer(); left = TIME; paintTimer(); }
+timerBtn.addEventListener("click", () => {
+  if(left <= 0){ resetTimer(); }
+  if(tick){ left = Math.max(0, (endAt - Date.now()) / 1000); stopTimer(); paintTimer(); return; }
+  endAt = Date.now() + left * 1000;
+  tick = setInterval(() => {
+    left = Math.max(0, (endAt - Date.now()) / 1000);
+    if(left <= 0) stopTimer();
+    paintTimer();
+  }, 200);
+  paintTimer();
+});
+
+/* tools */
+$("random").addEventListener("click", () => {
+  const all = [...CARDS.keys()];
+  const pool = all.filter(i => !state.done.has(i));
+  const from = pool.length ? pool : all;
+  openCard(from[Math.floor(Math.random() * from.length)]);
+});
+let resetArmed = null;
+const resetBtn = $("reset");
+function disarm(){ resetArmed = null; resetBtn.textContent = "Reset"; resetBtn.classList.remove("hot"); }
+resetBtn.addEventListener("click", () => {
+  if(resetArmed){ clearTimeout(resetArmed); disarm(); state.done.clear(); save(); renderDeck(); return; }
+  resetBtn.textContent = "Tap again to clear"; resetBtn.classList.add("hot");
+  resetArmed = setTimeout(disarm, 3000);
+});
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+$("smaller").addEventListener("click", () => { state.scale = SCALES[Math.max(0, SCALES.indexOf(state.scale) - 1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { state.scale = SCALES[Math.min(SCALES.length - 1, SCALES.indexOf(state.scale) + 1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+applyScale();
+renderDeck();
+</script>
+</body>
+</html>

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prof Environment Speaking Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@500;600;700&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one deck of colour cards on a quiet ground (header, instruction + progress, wrapping grid).
+   Choosing a card opens it large in a dialog; the card flips to a ~1-minute sample answer. */
+:root{
+  --bg:#F5F4F9;
+  --surface:#FFFFFF;
+  --soft:#E9E7F1;
+  --ink:#1E1B2E;
+  --muted:#686480;
+  --line:#DCD9E8;
+  --card-ink:#1E1B2E;
+  --paper:rgba(255,255,255,.72);
+  --accent:#5B3FD6; --accent-ink:#FFFFFF;
+  --k0:#FF8A6B; --k1:#FFC34D; --k2:#3FC4A9; --k3:#6AA6FF; --k4:#A98BF5; --k5:#F27DAE;
+  --good:#1D8A55;
+  --shadow:rgba(30,27,46,.18);
+  --qr-bg:#FFFFFF;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+    --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+  --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html, body{height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.5; overflow:hidden}
+/* App shell: header stays put, the deck scrolls inside its own box, so the page also works in a fixed-size embed (e.g. Canva). */
+.wrap{
+  height:100%; max-width:1240px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 0;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,20px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+
+.k0{--c:var(--k0)} .k1{--c:var(--k1)} .k2{--c:var(--k2)}
+.k3{--c:var(--k3)} .k4{--c:var(--k4)} .k5{--c:var(--k5)}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; min-width:0}
+.mark{display:flex; gap:4px; flex:none}
+.mark i{width:12px; height:28px; border-radius:6px}
+.mark i:nth-child(1){background:var(--k0)} .mark i:nth-child(2){background:var(--k1); height:20px; align-self:flex-end}
+.mark i:nth-child(3){background:var(--k3); height:34px; margin-top:-6px}
+.topic{
+  font:700 .8rem var(--font-body); letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent); border-radius:999px; padding:4px 12px; white-space:nowrap;
+}
+h1{
+  font-family:var(--font-display); font-weight:800; font-optical-sizing:auto;
+  font-size:clamp(1.9rem,3.4vw,2.9rem); line-height:1.05; margin:0; letter-spacing:-.02em; text-wrap:balance;
+}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:1.5px solid var(--line); border-radius:999px;
+  padding:6px 16px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+.tool.hot{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+.row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
+.top, .row{flex:none}
+.instr{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.4vw,1.15rem)*var(--scale)); max-width:75ch}
+.progress{
+  font:600 .9rem var(--font-body); font-variant-numeric:tabular-nums; color:var(--muted);
+  display:flex; align-items:center; gap:10px; white-space:nowrap;
+}
+.meter{width:120px; height:8px; border-radius:99px; background:var(--soft); overflow:hidden}
+.meter i{display:block; height:100%; width:var(--w,0%); background:var(--good); border-radius:99px; transition:width .3s}
+
+/* deck */
+.deck{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr));
+  gap:clamp(14px,1.6vw,20px);
+  align-content:start; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding:8px 8px 24px; margin-inline:-8px;
+  scrollbar-width:thin; scrollbar-color:var(--line) transparent;
+}
+.pick{
+  display:flex; flex-direction:column; gap:12px; text-align:left; min-width:0;
+  padding:16px 16px 18px; border:0; border-radius:20px;
+  background:var(--c); color:var(--card-ink); cursor:pointer;
+  box-shadow:0 1px 2px var(--shadow), 0 14px 24px -18px var(--shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.pick:hover{transform:translateY(-3px); box-shadow:0 2px 4px var(--shadow), 0 20px 30px -18px var(--shadow)}
+.pick:active{transform:translateY(0)}
+.pick .head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.pick .no{font:800 1.9rem/1 var(--font-display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.pick .emo{
+  display:grid; place-items:center; width:38px; height:38px; border-radius:50%;
+  background:var(--paper); font-size:1.2rem; line-height:1; font-family:var(--emoji);
+}
+.pick .pq{font:600 calc(clamp(.96rem,1.2vw,1.06rem)*var(--scale))/1.4 var(--font-body); overflow-wrap:anywhere}
+.stamp{
+  display:none; align-self:flex-start; margin-top:auto;
+  font:700 .76rem var(--font-body); letter-spacing:.06em; text-transform:uppercase; color:var(--good);
+}
+.pick.done{background:var(--soft); color:var(--muted); box-shadow:none}
+.pick.done .emo{background:var(--surface); filter:grayscale(1); opacity:.6}
+.pick.done .stamp{display:block}
+
+/* open card */
+dialog{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(960px, calc(100% - 24px)); max-width:none;
+  max-height:calc(100% - 24px); overflow:visible;
+}
+dialog::backdrop{background:rgba(16,13,30,.6); backdrop-filter:blur(3px)}
+.sheet{
+  display:flex; flex-direction:column; gap:18px;
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+  overflow-y:auto; padding:4px 4px 14px;
+}
+.flip{perspective:1800px}
+.inner{display:grid; transform-style:preserve-3d; transition:transform .65s cubic-bezier(.45,.05,.2,1)}
+.inner.flipped{transform:rotateY(180deg)}
+.face{
+  grid-area:1/1; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  border-radius:28px; box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  padding:clamp(22px,3.8vw,48px); display:flex; flex-direction:column; gap:clamp(14px,2vw,22px); min-width:0;
+}
+.front{background:var(--c); color:var(--card-ink)}
+.face{max-height:calc(100vh - 120px); max-height:calc(100dvh - 120px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin}
+@media (max-width:600px){ .face{max-height:calc(100vh - 200px); max-height:calc(100dvh - 200px)} }
+.back{background:var(--surface); color:var(--ink); transform:rotateY(180deg); border-top:10px solid var(--c)}
+.fhead{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.chip{font:700 .82rem var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:var(--card-ink); opacity:.75}
+.bigemo{
+  display:grid; place-items:center; width:64px; height:64px; border-radius:50%; flex:none;
+  background:var(--paper); font-size:2rem; line-height:1; font-family:var(--emoji);
+}
+.bigq{
+  margin:0; font:700 calc(clamp(1.7rem,3.6vw,2.9rem)*var(--scale))/1.15 var(--font-display);
+  letter-spacing:-.015em; text-wrap:balance; overflow-wrap:anywhere;
+}
+.follow{
+  background:var(--paper); color:var(--card-ink); border-radius:18px;
+  padding:clamp(14px,2vw,22px); display:flex; flex-direction:column; gap:6px;
+}
+.lbl{font:700 .78rem var(--font-body); letter-spacing:.08em; text-transform:uppercase}
+.follow .lbl{opacity:.65}
+.follow p{margin:0; font:600 calc(clamp(1.1rem,2vw,1.55rem)*var(--scale))/1.35 var(--font-body)}
+.backhead{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 16px}
+.backhead .lbl{color:var(--good)}
+.backhead .meta{font:500 .88rem var(--font-body); color:var(--muted); font-variant-numeric:tabular-nums}
+.backq{margin:0; color:var(--muted); font-size:calc(clamp(.98rem,1.4vw,1.12rem)*var(--scale)); font-weight:600}
+.answer{display:flex; flex-direction:column; gap:.8em; max-width:75ch}
+.answer p{margin:0; font-weight:500; font-size:calc(clamp(1.06rem,1.75vw,1.42rem)*var(--scale)); line-height:1.6; text-wrap:pretty}
+
+.bar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1rem,1.45vw,1.15rem)*var(--scale))/1 var(--font-body);
+  border-radius:16px; padding:.8em 1.25em; min-height:54px; cursor:pointer;
+  border:0; background:var(--surface); color:var(--ink);
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.5); transition:transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn.main{flex:0 1 360px; background:var(--accent); color:var(--accent-ink)}
+.timer{
+  font-variant-numeric:tabular-nums; min-width:9.5em; color:var(--card-ink);
+  background:linear-gradient(to right, var(--k1) calc(var(--p,1)*100%), #FFF3D6 0);
+}
+.timer.up{background:var(--k0)}
+@media (max-width:600px){
+  .btn.main{order:-1; flex-basis:100%}
+  .bar .btn:not(.main){flex:1}
+}
+
+/* QR panel */
+#qrDlg{width:min(560px, calc(100% - 24px))}
+.qrpanel{
+  background:var(--surface); color:var(--ink); border-radius:28px;
+  padding:clamp(20px,3.4vw,36px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.4rem,3vw,2rem)/1.15 var(--font-display); letter-spacing:-.015em; text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted); font-size:1rem}
+.qrbox{width:min(440px, 68vmin, 100%); padding:6px; border-radius:16px; background:var(--qr-bg); border:4px solid var(--k3)}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{
+  margin:0; font:600 .9rem var(--font-body); color:var(--muted); overflow-wrap:anywhere;
+  -webkit-user-select:all; user-select:all;
+}
+.qrbtns{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:100%}
+.qrbtns .btn{flex:1 1 160px; box-shadow:none; border:1.5px solid var(--line)}
+.qrbtns .btn.main{border-color:var(--accent)}
+.tool.qr-open{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+/* Short frames (embeds, small laptop screens): tighter chrome so more cards show */
+@media (max-height:700px){
+  .wrap{padding-block:10px 0; gap:8px}
+  h1{font-size:clamp(1.4rem,3vw,2rem)}
+  .mark{transform:scale(.72); transform-origin:left center; margin-right:-8px}
+  .tool{min-height:34px; padding:3px 12px; font-size:.82rem}
+  .instr{font-size:.9rem}
+  .pick{padding:12px 12px 14px; gap:8px; border-radius:16px}
+  .pick .no{font-size:1.5rem}
+  .pick .emo{width:32px; height:32px; font-size:1rem}
+  .face{padding:18px 24px; gap:12px; border-radius:22px}
+  .bigemo{width:48px; height:48px; font-size:1.5rem}
+  .follow{padding:12px 16px}
+  .btn{min-height:44px; padding:.6em 1em}
+  .sheet{gap:12px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .inner, .pick, .btn, .meter i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Speaking Cards</h1>
+      <span class="topic">Environment · Prof</span>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="random" type="button">Random card</button>
+      <button class="tool" id="reset" type="button">Reset</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <p class="instr">Choose a card and speak for about one minute. Answer all parts of the question, then flip the card to see a sample answer.</p>
+    <span class="progress"><span class="meter"><i id="meter"></i></span><span id="progress"></span></span>
+  </div>
+
+  <main class="deck" id="deck" aria-label="Speaking cards"></main>
+</div>
+
+<dialog id="dlg" aria-label="Speaking card">
+  <div class="sheet">
+    <div class="flip">
+      <div class="inner" id="inner">
+        <section class="face front" id="front"></section>
+        <section class="face back" id="back" aria-hidden="true"></section>
+      </div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="close" type="button">← All cards</button>
+      <button class="btn timer" id="timer" type="button">Start 1:00</button>
+      <button class="btn main" id="flipBtn" type="button" autofocus>Show sample answer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open the cards</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens Environment · Prof"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM14 4h1v1h-1zM17 4h1v1h-1zM19 4h1v1h-1zM20 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM26 4h1v1h-1zM27 4h1v1h-1zM30 4h1v1h-1zM31 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM13 5h1v1h-1zM14 5h1v1h-1zM15 5h1v1h-1zM16 5h1v1h-1zM18 5h1v1h-1zM20 5h1v1h-1zM21 5h1v1h-1zM22 5h1v1h-1zM24 5h1v1h-1zM25 5h1v1h-1zM27 5h1v1h-1zM28 5h1v1h-1zM29 5h1v1h-1zM31 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM13 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM21 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM31 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM20 7h1v1h-1zM22 7h1v1h-1zM26 7h1v1h-1zM28 7h1v1h-1zM30 7h1v1h-1zM32 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM15 8h1v1h-1zM17 8h1v1h-1zM18 8h1v1h-1zM27 8h1v1h-1zM30 8h1v1h-1zM31 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM12 9h1v1h-1zM13 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM23 9h1v1h-1zM24 9h1v1h-1zM25 9h1v1h-1zM26 9h1v1h-1zM28 9h1v1h-1zM31 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM14 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM19 11h1v1h-1zM21 11h1v1h-1zM23 11h1v1h-1zM25 11h1v1h-1zM27 11h1v1h-1zM30 11h1v1h-1zM31 11h1v1h-1zM4 12h1v1h-1zM7 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM25 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM30 12h1v1h-1zM32 12h1v1h-1zM33 12h1v1h-1zM35 12h1v1h-1zM4 13h1v1h-1zM5 13h1v1h-1zM6 13h1v1h-1zM9 13h1v1h-1zM11 13h1v1h-1zM12 13h1v1h-1zM14 13h1v1h-1zM15 13h1v1h-1zM17 13h1v1h-1zM19 13h1v1h-1zM20 13h1v1h-1zM28 13h1v1h-1zM32 13h1v1h-1zM34 13h1v1h-1zM40 13h1v1h-1zM5 14h1v1h-1zM8 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM12 14h1v1h-1zM15 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM28 14h1v1h-1zM30 14h1v1h-1zM32 14h1v1h-1zM36 14h1v1h-1zM39 14h1v1h-1zM40 14h1v1h-1zM6 15h1v1h-1zM7 15h1v1h-1zM16 15h1v1h-1zM20 15h1v1h-1zM22 15h1v1h-1zM25 15h1v1h-1zM27 15h1v1h-1zM28 15h1v1h-1zM29 15h1v1h-1zM31 15h1v1h-1zM34 15h1v1h-1zM35 15h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM13 16h1v1h-1zM14 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM21 16h1v1h-1zM25 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM29 16h1v1h-1zM30 16h1v1h-1zM31 16h1v1h-1zM33 16h1v1h-1zM34 16h1v1h-1zM35 16h1v1h-1zM37 16h1v1h-1zM39 16h1v1h-1zM40 16h1v1h-1zM5 17h1v1h-1zM9 17h1v1h-1zM14 17h1v1h-1zM15 17h1v1h-1zM17 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM28 17h1v1h-1zM30 17h1v1h-1zM34 17h1v1h-1zM35 17h1v1h-1zM38 17h1v1h-1zM40 17h1v1h-1zM4 18h1v1h-1zM5 18h1v1h-1zM7 18h1v1h-1zM8 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM15 18h1v1h-1zM17 18h1v1h-1zM20 18h1v1h-1zM24 18h1v1h-1zM25 18h1v1h-1zM27 18h1v1h-1zM30 18h1v1h-1zM32 18h1v1h-1zM34 18h1v1h-1zM35 18h1v1h-1zM36 18h1v1h-1zM38 18h1v1h-1zM40 18h1v1h-1zM4 19h1v1h-1zM7 19h1v1h-1zM8 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM17 19h1v1h-1zM18 19h1v1h-1zM20 19h1v1h-1zM24 19h1v1h-1zM25 19h1v1h-1zM28 19h1v1h-1zM29 19h1v1h-1zM30 19h1v1h-1zM33 19h1v1h-1zM36 19h1v1h-1zM39 19h1v1h-1zM40 19h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM7 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM13 20h1v1h-1zM14 20h1v1h-1zM16 20h1v1h-1zM19 20h1v1h-1zM20 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM26 20h1v1h-1zM28 20h1v1h-1zM31 20h1v1h-1zM33 20h1v1h-1zM34 20h1v1h-1zM35 20h1v1h-1zM37 20h1v1h-1zM38 20h1v1h-1zM4 21h1v1h-1zM5 21h1v1h-1zM6 21h1v1h-1zM7 21h1v1h-1zM9 21h1v1h-1zM11 21h1v1h-1zM12 21h1v1h-1zM13 21h1v1h-1zM16 21h1v1h-1zM17 21h1v1h-1zM19 21h1v1h-1zM21 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM29 21h1v1h-1zM30 21h1v1h-1zM32 21h1v1h-1zM34 21h1v1h-1zM36 21h1v1h-1zM39 21h1v1h-1zM40 21h1v1h-1zM4 22h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM10 22h1v1h-1zM12 22h1v1h-1zM13 22h1v1h-1zM16 22h1v1h-1zM17 22h1v1h-1zM18 22h1v1h-1zM21 22h1v1h-1zM29 22h1v1h-1zM30 22h1v1h-1zM32 22h1v1h-1zM35 22h1v1h-1zM37 22h1v1h-1zM38 22h1v1h-1zM39 22h1v1h-1zM40 22h1v1h-1zM5 23h1v1h-1zM6 23h1v1h-1zM9 23h1v1h-1zM12 23h1v1h-1zM13 23h1v1h-1zM14 23h1v1h-1zM15 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM21 23h1v1h-1zM23 23h1v1h-1zM24 23h1v1h-1zM25 23h1v1h-1zM28 23h1v1h-1zM35 23h1v1h-1zM38 23h1v1h-1zM39 23h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM8 24h1v1h-1zM10 24h1v1h-1zM13 24h1v1h-1zM15 24h1v1h-1zM16 24h1v1h-1zM20 24h1v1h-1zM23 24h1v1h-1zM25 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM31 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM37 24h1v1h-1zM39 24h1v1h-1zM11 25h1v1h-1zM14 25h1v1h-1zM16 25h1v1h-1zM18 25h1v1h-1zM20 25h1v1h-1zM21 25h1v1h-1zM25 25h1v1h-1zM28 25h1v1h-1zM32 25h1v1h-1zM33 25h1v1h-1zM34 25h1v1h-1zM35 25h1v1h-1zM37 25h1v1h-1zM40 25h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM12 26h1v1h-1zM13 26h1v1h-1zM14 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM20 26h1v1h-1zM22 26h1v1h-1zM23 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM32 26h1v1h-1zM39 26h1v1h-1zM40 26h1v1h-1zM6 27h1v1h-1zM8 27h1v1h-1zM13 27h1v1h-1zM14 27h1v1h-1zM15 27h1v1h-1zM18 27h1v1h-1zM19 27h1v1h-1zM20 27h1v1h-1zM22 27h1v1h-1zM25 27h1v1h-1zM27 27h1v1h-1zM28 27h1v1h-1zM29 27h1v1h-1zM30 27h1v1h-1zM32 27h1v1h-1zM39 27h1v1h-1zM40 27h1v1h-1zM4 28h1v1h-1zM5 28h1v1h-1zM7 28h1v1h-1zM8 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM13 28h1v1h-1zM14 28h1v1h-1zM15 28h1v1h-1zM16 28h1v1h-1zM20 28h1v1h-1zM22 28h1v1h-1zM23 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM26 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM31 28h1v1h-1zM32 28h1v1h-1zM33 28h1v1h-1zM34 28h1v1h-1zM37 28h1v1h-1zM39 28h1v1h-1zM5 29h1v1h-1zM8 29h1v1h-1zM13 29h1v1h-1zM14 29h1v1h-1zM15 29h1v1h-1zM16 29h1v1h-1zM17 29h1v1h-1zM18 29h1v1h-1zM19 29h1v1h-1zM21 29h1v1h-1zM22 29h1v1h-1zM23 29h1v1h-1zM24 29h1v1h-1zM25 29h1v1h-1zM26 29h1v1h-1zM28 29h1v1h-1zM29 29h1v1h-1zM30 29h1v1h-1zM32 29h1v1h-1zM34 29h1v1h-1zM35 29h1v1h-1zM37 29h1v1h-1zM38 29h1v1h-1zM39 29h1v1h-1zM40 29h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM7 30h1v1h-1zM8 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM12 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM19 30h1v1h-1zM20 30h1v1h-1zM21 30h1v1h-1zM25 30h1v1h-1zM26 30h1v1h-1zM27 30h1v1h-1zM28 30h1v1h-1zM30 30h1v1h-1zM32 30h1v1h-1zM36 30h1v1h-1zM40 30h1v1h-1zM5 31h1v1h-1zM7 31h1v1h-1zM9 31h1v1h-1zM12 31h1v1h-1zM14 31h1v1h-1zM15 31h1v1h-1zM16 31h1v1h-1zM18 31h1v1h-1zM20 31h1v1h-1zM21 31h1v1h-1zM22 31h1v1h-1zM25 31h1v1h-1zM29 31h1v1h-1zM30 31h1v1h-1zM33 31h1v1h-1zM34 31h1v1h-1zM36 31h1v1h-1zM39 31h1v1h-1zM4 32h1v1h-1zM5 32h1v1h-1zM7 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM15 32h1v1h-1zM17 32h1v1h-1zM19 32h1v1h-1zM21 32h1v1h-1zM23 32h1v1h-1zM24 32h1v1h-1zM25 32h1v1h-1zM28 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM38 32h1v1h-1zM39 32h1v1h-1zM12 33h1v1h-1zM14 33h1v1h-1zM15 33h1v1h-1zM16 33h1v1h-1zM17 33h1v1h-1zM20 33h1v1h-1zM21 33h1v1h-1zM22 33h1v1h-1zM27 33h1v1h-1zM29 33h1v1h-1zM31 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM37 33h1v1h-1zM40 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM13 34h1v1h-1zM18 34h1v1h-1zM21 34h1v1h-1zM29 34h1v1h-1zM31 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM37 34h1v1h-1zM39 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM12 35h1v1h-1zM15 35h1v1h-1zM18 35h1v1h-1zM20 35h1v1h-1zM25 35h1v1h-1zM27 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM37 35h1v1h-1zM38 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM13 36h1v1h-1zM14 36h1v1h-1zM15 36h1v1h-1zM17 36h1v1h-1zM18 36h1v1h-1zM21 36h1v1h-1zM23 36h1v1h-1zM24 36h1v1h-1zM25 36h1v1h-1zM27 36h1v1h-1zM29 36h1v1h-1zM30 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM37 36h1v1h-1zM39 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM12 37h1v1h-1zM13 37h1v1h-1zM14 37h1v1h-1zM15 37h1v1h-1zM19 37h1v1h-1zM21 37h1v1h-1zM24 37h1v1h-1zM26 37h1v1h-1zM28 37h1v1h-1zM29 37h1v1h-1zM31 37h1v1h-1zM35 37h1v1h-1zM36 37h1v1h-1zM37 37h1v1h-1zM38 37h1v1h-1zM39 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM13 38h1v1h-1zM14 38h1v1h-1zM16 38h1v1h-1zM20 38h1v1h-1zM22 38h1v1h-1zM23 38h1v1h-1zM24 38h1v1h-1zM25 38h1v1h-1zM26 38h1v1h-1zM33 38h1v1h-1zM35 38h1v1h-1zM36 38h1v1h-1zM37 38h1v1h-1zM38 38h1v1h-1zM39 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM13 39h1v1h-1zM16 39h1v1h-1zM18 39h1v1h-1zM19 39h1v1h-1zM23 39h1v1h-1zM24 39h1v1h-1zM25 39h1v1h-1zM29 39h1v1h-1zM31 39h1v1h-1zM32 39h1v1h-1zM33 39h1v1h-1zM35 39h1v1h-1zM37 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM13 40h1v1h-1zM15 40h1v1h-1zM21 40h1v1h-1zM24 40h1v1h-1zM25 40h1v1h-1zM27 40h1v1h-1zM29 40h1v1h-1zM31 40h1v1h-1zM32 40h1v1h-1zM33 40h1v1h-1zM34 40h1v1h-1zM39 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/environment-prof/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const CARDS = [
+  {q:"Do you think people have become more environmentally conscious in recent years?",
+   f:["Why or why not?"],
+   a:["Yes, I think most people have become more environmentally conscious, although there's still a big gap between what people know and what they actually do. Ten years ago, topics like climate change and plastic pollution were rarely discussed in everyday conversation. Now, they appear on the news, on social media and even in school textbooks.",
+      "There are a few reasons for this change. First, people can see the effects with their own eyes, such as hotter summers, forest fires and droughts. Second, social media has made environmental problems more visible, for instance through videos of sea animals trapped in plastic. Finally, some rules have encouraged new habits. In Türkiye, for example, plastic bags are no longer free, and many people now carry their own. However, awareness doesn't always lead to action, so there is still a long way to go."]},
+  {q:"Have you made any changes to your daily habits to protect the environment?",
+   f:["What encouraged you to make these changes?"],
+   a:["Yes, I've made a few small changes, although I admit I could do more. First, I always carry a refillable water bottle and a cloth bag in my backpack, so I rarely buy plastic bottles or bags anymore. Second, I've started separating paper and plastic at home and taking them to the recycling bins near my building. I also try to switch off lights and chargers when I'm not using them.",
+      "A few things encouraged me. The main one was a documentary about plastic in the oceans, which really shocked me and made me feel personally responsible. My younger sister also had a big influence. She learned about recycling at school and kept reminding everyone at home, so we all became more careful. Finally, saving money was a motivation too, because using less electricity and buying fewer bottles really adds up over time."]},
+  {q:"Why do you think some people are more careful about saving energy and natural resources than others?",
+   f:[],
+   a:["I think there are several reasons, and the first one is probably upbringing. People who grew up in families where wasting things was seen as wrong tend to keep those habits as adults. For example, my grandparents grew up with very little money, so they still turn off every light and never waste food. Younger generations who have always had plenty may not think about it in the same way.",
+      "Education and awareness also play a role. People who understand how energy is produced and what impact it has on the environment are usually more careful. Money is another important factor. When electricity and water bills are high, people naturally try to use less. Finally, personality matters too. Some people are simply more organised and responsible in general, and this shows in how they use resources. So it's usually a combination of background, knowledge, cost and character."]},
+  {q:"How can living in a polluted environment affect people's health and quality of life?",
+   f:[],
+   a:["Living in a polluted environment can affect people both physically and mentally. The most obvious effect is on physical health. Air pollution, for instance, can cause breathing problems like asthma and bronchitis, and over many years it can increase the risk of heart disease. Children and elderly people are especially vulnerable. Polluted water can also lead to stomach illnesses and other infections.",
+      "Pollution also reduces quality of life in less obvious ways. In cities with heavy smog, people may avoid exercising outside or letting their children play in parks. Noise pollution from traffic and construction can make it difficult to sleep and concentrate, which increases stress. Even seeing dirty streets and polluted rivers every day can make people feel unhappy about where they live. In the end, pollution doesn't just make people ill; it also limits how they live their daily lives."]},
+  {q:"Do you think recycling has become a common habit in your country?",
+   f:["What might explain this?"],
+   a:["I'd say recycling has become more common in Türkiye, but it isn't a daily habit for everyone yet. In schools, universities, shopping centres and offices, you now see separate bins for paper, plastic and glass almost everywhere. National campaigns like the Zero Waste project have also made recycling much more visible in recent years.",
+      "However, at home, many people still throw everything into the same bin. One reason is that some neighbourhoods don't have recycling bins nearby, so it isn't convenient. Another is that people aren't sure whether their separated waste is actually recycled, so they don't see the point. Also, older generations didn't grow up with this habit. On the other hand, young people who learned about recycling at school are usually more careful. So I believe it's slowly becoming a habit, mainly through education, but better facilities are still needed."]},
+  {q:"Some people believe recycling is not enough to solve environmental problems.",
+   f:["Do you agree? Why?"],
+   a:["Yes, I agree. Recycling is useful, but it can't solve environmental problems on its own. One reason is that only a small part of what we throw away is actually recycled. Many types of plastic, for example, are difficult or expensive to recycle, so they still end up in landfills or in the sea. Recycling also uses energy and water, so it isn't completely clean.",
+      "More importantly, many of the biggest environmental problems have little to do with recycling. Climate change is mainly caused by burning fossil fuels for energy, transport and industry. Deforestation and water shortages also need different solutions. In my opinion, reducing what we consume is much more effective than recycling it afterwards. Using one refillable bottle, for instance, is better than recycling hundreds of plastic ones. So recycling should be seen as one small part of a much bigger solution."]},
+  {q:"Do you think countries should invest more in renewable energy, even if it is expensive at first?",
+   f:["Why or why not?"],
+   a:["Yes, I strongly believe they should. Although building solar farms, wind turbines and new power networks requires a lot of money at the beginning, I think it's a smart long-term investment. Once these systems are built, sunlight and wind are free, so energy costs can become lower and more stable over time.",
+      "Another important reason is energy independence. Countries like Türkiye import a large share of their oil and gas, which makes them vulnerable to price changes and international crises. Producing more energy at home from renewable sources would make them more secure. Of course, the environmental benefits are also huge, because renewable energy produces far less air pollution and carbon emissions. Türkiye has plenty of sunshine and strong winds in many regions, so it has great potential. In my view, the cost of not investing would be much higher in the end."]},
+  {q:"To what extent do you think human activities are responsible for climate change?",
+   f:[],
+   a:["I think human activities are mainly responsible for the climate change we are seeing today. Of course, the Earth's climate has always changed naturally over very long periods. However, scientists agree that the rapid warming of the last hundred years or so cannot be explained by natural causes alone.",
+      "The main cause is the burning of fossil fuels such as coal, oil and gas for electricity, transport and industry. This releases large amounts of carbon dioxide, which traps heat in the atmosphere. Cutting down forests makes the problem worse, because trees absorb carbon dioxide. Farming, especially raising large numbers of cattle, also produces greenhouse gases. Since the Industrial Revolution, these activities have grown enormously, and global temperatures have risen at the same time. So humans are the main cause, which also means we have the power to slow it down."]},
+  {q:"Do you think people take global warming more seriously today than they did in the past?",
+   f:["Why?"],
+   a:["Yes, I think people take it much more seriously today, although not everyone does. Twenty or thirty years ago, global warming seemed like a distant problem that only scientists talked about, something that might affect future generations. Many people didn't really believe in it or simply didn't care.",
+      "Today, the situation is different, mainly because people can feel the effects in their own lives. Heatwaves are longer and more frequent, forest fires have become more common, and many regions have experienced serious droughts and floods. When people see these events on the news or experience them personally, it becomes hard to ignore the problem. In addition, young people have become very active, organising climate protests and sharing information online. However, taking something seriously is not the same as acting on it, and many people still find it hard to change their lifestyles."]},
+  {q:"Have you noticed any changes in the weather or seasons in recent years?",
+   f:["How have these changes affected your daily life?"],
+   a:["Yes, definitely. The most noticeable change for me is that summers have become much hotter and longer. When I was a child, the really hot days were mainly in July and August, but now it can be extremely hot from June until late September. Winters also seem shorter and milder, with less snow than before. Sometimes it feels like we jump straight from winter to summer without a proper spring.",
+      "These changes have affected my daily life in several ways. In summer, I avoid going out in the middle of the day, and I find it harder to sleep at night. Our electricity bills are also higher because we use fans and air conditioning more. Last summer, there were water cuts in our area because of drought, so we had to be careful with water. I also miss the snowy winters of my childhood, when we used to build snowmen every year."]},
+  {q:"How do you think climate change might affect the way people live in the next 20 or 30 years?",
+   f:[],
+   a:["I think climate change will affect people's lives in many ways over the next few decades. First, our homes and cities will probably have to adapt to extreme heat. Buildings may need better insulation and cooling systems, and cities may plant more trees and create more shade. People might also change their daily routines, for example by working earlier in the morning and resting during the hottest hours.",
+      "Second, water and food could become more expensive. If droughts become more frequent, some regions may face water shortages, and farmers may struggle to grow certain crops. This could change what we eat and how much we pay for it. Third, some people may be forced to move, because coastal areas could face flooding and very hot regions might become difficult to live in. Finally, I expect electric cars and renewable energy to become normal parts of everyday life."]},
+  {q:"Which environmental problem do you think should receive the most attention today?",
+   f:["Explain your reasons."],
+   a:["In my opinion, climate change should receive the most attention, because it is connected to almost every other environmental problem. Rising temperatures make droughts, forest fires and floods more frequent and more severe. They also threaten animal species, damage farming and put pressure on water resources. In other words, if we don't deal with climate change, many other problems will get worse at the same time.",
+      "Another reason is that climate change affects everyone, but it hits poorer countries and communities the hardest. People who don't have the money to rebuild their homes or move to safer areas suffer the most. Finally, it's a problem with a time limit. Every year that we delay action, the situation becomes more difficult and more expensive to fix. Of course, problems like plastic pollution are also serious, but solving climate change would help us make progress on many other issues as well."]},
+  {q:"Do you think individual lifestyle changes can make a significant difference in reducing carbon emissions?",
+   f:["Why or why not?"],
+   a:["I think individual changes can make some difference, but on their own, they are not enough. On the positive side, if millions of people use public transport, eat less meat, fly less and save electricity, the total effect can be quite significant. Individual choices also send a message to companies. When more customers demand environmentally friendly products, businesses start to produce them.",
+      "However, a large share of carbon emissions comes from energy production, heavy industry and large companies. An individual can't decide how their country produces electricity or how a factory operates. For example, even if I switch off every light at home, my electricity may still come from a coal power plant. That's why I believe the biggest changes need to come from governments and companies, through laws, investment and new technology. Individual actions are important, but they work best when they are combined with these larger changes."]},
+  {q:"Why do you think air pollution is a bigger problem in some cities than in others?",
+   f:[],
+   a:["I think there are several reasons, and some of them are related to geography. Cities that are located in valleys or surrounded by mountains often have worse air pollution, because the polluted air gets trapped and cannot easily escape, especially on cold winter days with little wind. Coastal cities, on the other hand, usually benefit from sea winds that carry the pollution away.",
+      "Human factors are also very important. Cities with a lot of heavy industry, such as factories and power plants, naturally have more polluted air. The type of heating people use makes a big difference too. In some Turkish cities, many homes still burn coal in winter, which causes thick smog. Traffic is another major cause, so crowded cities with poor public transport tend to suffer more. Finally, some cities simply have stricter rules than others. So it's a mix of location, industry, heating, traffic and local policies."]},
+  {q:"How do you think water pollution affects people's lives, even if they do not live near polluted rivers or seas?",
+   f:[],
+   a:["Water pollution can affect people far away from the source in several indirect ways. The first is through food. Farmers often use river water to grow fruit and vegetables, so harmful chemicals in the water can end up in the food we buy in supermarkets. The same is true for fish. Fish from polluted seas may contain dangerous substances, such as mercury or tiny pieces of plastic, and people in cities hundreds of kilometres away eat them.",
+      "Second, water pollution affects drinking water supplies. Cities often get their water from rivers, lakes or underground sources that may be far away. If those sources become polluted, cleaning the water becomes more difficult and expensive, which can increase water bills for everyone. Finally, polluted coasts lose tourists, and fishing communities lose their income, which can affect a country's whole economy. So nobody is completely protected from water pollution."]},
+  {q:"What might happen to the natural environment if more animal species lose their habitats?",
+   f:[],
+   a:["If more animal species lose their habitats, the natural environment could become seriously unbalanced. In nature, every species has a role, so when one species disappears, it can affect many others that depend on it. For example, if bees lose the flowers and fields they need, fewer plants will be pollinated. This could reduce the amount of fruit and vegetables, which would affect both wild animals and people.",
+      "Habitat loss can also cause a chain reaction. If predators such as wolves disappear from a forest, the number of animals they hunt, like deer, may increase too much. These animals can then eat too many young trees and plants, which damages the whole forest. In addition, animals that lose their homes often move closer to towns and farms, which can lead to conflicts with humans. In the long term, we might lose a huge variety of species, and once a species is extinct, it can never come back."]},
+  {q:"Do you think governments are doing enough to protect the environment?",
+   f:["What should they do differently?"],
+   a:["In general, I don't think governments are doing enough, although many have taken some positive steps. For example, many countries have introduced recycling programmes, charges for plastic bags and targets for renewable energy. However, these steps often move too slowly compared with the size of the problem, and in many places short-term economic interests still come before the environment.",
+      "I think governments should do a few things differently. First, they should invest much more in renewable energy and public transport, so that people have real, affordable alternatives to fossil fuels and private cars. Second, environmental laws need to be stronger and, more importantly, properly enforced. Companies that pollute rivers or the air should face serious fines. Third, governments should protect forests and natural areas from uncontrolled construction. Finally, environmental education should be a bigger part of the school curriculum, because long-term change starts with young people."]},
+  {q:"Why do you think some people continue to waste materials even though they know recycling is important?",
+   f:[],
+   a:["I think the main reason is convenience. Separating waste takes time and effort, and when people are busy or tired, they often choose the easiest option and put everything in one bin. This is especially true if the recycling bins are far from their home or if there isn't enough space in the kitchen for several bins.",
+      "Another reason is that people don't see the direct results of their actions. If you throw a plastic bottle in the wrong bin, nothing happens to you personally, so it's easy to think that one bottle doesn't matter. Some people are also doubtful about the system. They believe that even if they separate their waste, it will all be mixed together later, so they don't see the point. Finally, habits are hard to change. People who have been throwing everything away for decades find it difficult to start a new routine, even if they know it's right."]},
+  {q:"What do you think makes some countries more successful at protecting the environment than others?",
+   f:[],
+   a:["I think there are several factors, and the first is money. Wealthier countries can afford to invest in clean energy, modern recycling facilities and good public transport. Poorer countries often have more urgent priorities, such as creating jobs and reducing poverty, so environmental protection may come second.",
+      "However, money isn't everything. Strong laws and good enforcement are just as important. In some countries, the rules exist on paper, but companies can break them without serious consequences. Successful countries usually have clear rules and actually punish those who break them. Education and culture also play a big role. In countries like Sweden or Denmark, children learn about the environment from a young age, and caring for nature is seen as part of being a good citizen. Finally, countries that plan for twenty or thirty years ahead, rather than focusing only on short-term results, tend to achieve more."]},
+  {q:"How might people's lives change if renewable energy became the main source of electricity in the future?",
+   f:[],
+   a:["I think people's lives could change in several positive ways. The most obvious change would be cleaner air. If we stopped burning coal and gas to produce electricity, cities would have much less smog, and fewer people would suffer from breathing problems and other health issues.",
+      "Energy costs could also become more stable. At the moment, electricity prices often go up when oil and gas prices rise because of international crises. With solar and wind power, the fuel is free, so after the initial investment, prices could be lower and more predictable. Many homes might even produce their own electricity with solar panels on the roof and sell the extra energy. However, there would also be challenges, such as storing energy for times when there is no sun or wind, so countries would need better batteries and smarter power networks."]},
+  {q:"Do you think people use more plastic than they actually need?",
+   f:["How could this habit be changed?"],
+   a:["Yes, I'm sure most of us use far more plastic than we really need. Just think about a normal day. We buy water in plastic bottles, get coffee with a plastic lid, and buy fruit and vegetables that are often wrapped in plastic, even though they have their own natural skin. When we order food online, it usually comes with plastic boxes, bags and cutlery that we use only once.",
+      "I think this habit could be changed in a few ways. First, governments could make single-use plastic more expensive or ban some products completely, as they did with free plastic bags, which has clearly worked in Türkiye. Second, supermarkets could offer more products without packaging and let customers bring their own containers. Third, companies could be required to use reusable packaging. Finally, education is important. When people understand how long plastic stays in nature, they are more likely to change."]},
+  {q:"Who do you think has a greater responsibility for reducing greenhouse gas emissions: governments, large companies, or individuals?",
+   f:["Why?"],
+   a:["In my opinion, governments have the greatest responsibility, followed closely by large companies. Governments have the power to make laws that affect millions of people at once. They decide how a country produces its energy, how much it invests in public transport and what rules companies must follow. A single government decision, such as closing coal power plants, can reduce emissions more than millions of individual actions.",
+      "Large companies also have a huge responsibility, because a large share of emissions comes from industry, energy production and transport. They have the money and technology to change how they operate, so they should lead the way instead of waiting to be forced. Individuals still matter, of course. Our choices can put pressure on companies and governments. But I think it's unfair to put most of the responsibility on ordinary people when the biggest decisions are made at higher levels."]},
+  {q:"Some people believe protecting endangered animals is less important than solving problems affecting humans.",
+   f:["Do you agree or disagree?"],
+   a:["I disagree, because I don't think these two goals are really separate. I understand why some people feel this way. When people are suffering from poverty, hunger or war, spending money on saving a rare bird or turtle can seem like a luxury. Human problems are urgent, and governments have limited budgets.",
+      "However, protecting animals is often also about protecting humans. Every species is part of an ecosystem, and when species disappear, the whole system becomes weaker. For example, bees and other insects pollinate many of the crops we eat, so losing them would directly affect our food supply. Forests that are home to endangered animals also clean our air and protect our water sources. In addition, many people's jobs depend on nature, for example in tourism and fishing. So, in the long term, protecting endangered animals is one of the ways we protect ourselves."]},
+  {q:"Do you think modern technology has helped people save energy, or has it made them consume more?",
+   f:["Explain your opinion."],
+   a:["I think it has done both, but overall, it has probably made us consume more. On the one hand, technology has made many things more efficient. LED light bulbs use much less electricity than old ones, and modern fridges and washing machines are far more efficient than those from twenty years ago. Smart thermostats can even turn the heating off automatically when nobody is at home.",
+      "On the other hand, we now own many more devices than before. Almost everyone has a smartphone, a laptop, maybe a tablet and a smart TV, and we charge them every day. Streaming videos and using online services also requires huge data centres, which use enormous amounts of electricity. So even though each device is more efficient, we use so many of them, for so many hours, that our total energy use has increased. Technology helps us save energy only if we use it wisely."]},
+  {q:"What challenges might countries face if they try to reduce their dependence on fossil fuels?",
+   f:[],
+   a:["Countries could face several serious challenges. The first is cost. Building wind farms, solar plants and new electricity networks requires huge investments, and not every country can afford them, especially developing countries with many other urgent needs.",
+      "The second challenge is reliability. Solar and wind energy depend on the weather, so countries need ways to store energy for times when there is no sun or wind, and large storage systems are still expensive. Another major challenge is jobs. In regions where many people work in coal mines or in the oil and gas industry, reducing fossil fuels could lead to unemployment. Governments would need to retrain these workers and create new jobs in those areas. Finally, there may be public resistance, because people are used to cheap fuel and may not want to change their cars or heating systems. So the change has to be gradual and well planned."]},
+  {q:"How could water pollution affect future generations if no serious action is taken today?",
+   f:[],
+   a:["If no serious action is taken, future generations could face very serious problems. The most worrying one is a shortage of clean drinking water. Fresh water is already limited, and if more rivers, lakes and underground water sources become polluted, there will be even less safe water available. This could make water much more expensive and even lead to conflicts between regions or countries.",
+      "Health would be another major concern. People could be exposed to harmful chemicals and microplastics through their drinking water and food, which might increase the risk of various diseases over time. Food production could also suffer, because farmers need clean water for crops and animals. In addition, the seas could lose many fish species, which would affect both nature and the millions of people who depend on fishing for their income. In short, our children and grandchildren could pay a very high price for the pollution we cause today."]},
+  {q:"Do you think environmental education at school can influence people's behaviour later in life?",
+   f:["Why or why not?"],
+   a:["Yes, I strongly believe it can. Habits that children learn at a young age often stay with them for the rest of their lives. If students learn to separate their waste, save water and respect nature at school, these actions become normal for them, not something they have to think about. As adults, they are much more likely to continue these habits without any special effort.",
+      "Environmental education also helps people understand why these actions matter. When students learn about climate change and pollution, they are more likely to make responsible choices later, for example when they shop or choose a career. Children can also influence their families. My younger brother learned about recycling at school, and now he reminds everyone at home to use the right bins. However, I think education works best when it's practical, with activities like planting trees or cleaning a beach, rather than just memorising facts from a textbook."]},
+  {q:"What might happen to cities in the future if people continue to produce increasing amounts of waste?",
+   f:[],
+   a:["If waste continues to increase, cities could face some very serious problems. First, they would simply run out of space. Landfills are already full in many places, and opening new ones is difficult, because nobody wants to live next to a rubbish dump. Cities might have to transport their waste further away, which would be expensive and create more pollution from trucks.",
+      "Second, there would be health and environmental risks. Landfills can release harmful gases like methane, which contributes to climate change, and chemicals can leak into the soil and underground water. If rubbish isn't collected regularly, streets could become dirty and attract rats and insects, which spread diseases. Rubbish would also end up in rivers and the sea. Finally, the cost of managing waste would rise, which would mean higher taxes for residents. So cities would become less healthy, less pleasant and more expensive places to live."]}
+];
+
+const EMOJI = ["🌍","👣","💡","😷","♻️","🗑️","☀️","🏭","🌡️","🌦️",
+               "🔮","❗","🚲","🌫️","💧","🐝","🏛️","🚮","🏆","🔌",
+               "🥤","⚖️","🐢","📱","⛽","🌊","🏫","🏙️"];
+
+const NCOL = 6;
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+const TIME = 60;
+
+const state = { done:new Set(), scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("spk-env-prof") || "null");
+  if(s){
+    if(Array.isArray(s.done)) state.done = new Set(s.done.filter(i => Number.isInteger(i) && i >= 0 && i < CARDS.length));
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("spk-env-prof", JSON.stringify({done:[...state.done], scale:state.scale})); }catch(e){}
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const $ = id => document.getElementById(id);
+const deck = $("deck"), dlg = $("dlg"), inner = $("inner"), front = $("front"), back = $("back");
+const flipBtn = $("flipBtn"), timerBtn = $("timer");
+
+/* deck */
+function renderDeck(){
+  deck.innerHTML = CARDS.map((c,i) => `
+    <button class="pick k${i%NCOL}${state.done.has(i) ? " done" : ""}" type="button" data-i="${i}" aria-label="Card ${i+1}: ${esc(c.q)}">
+      <span class="head"><span class="no">${pad(i+1)}</span><span class="emo" aria-hidden="true">${EMOJI[i]}</span></span>
+      <span class="pq">${esc(c.q)}</span>
+      <span class="stamp">✓ Done</span>
+    </button>`).join("");
+  $("progress").textContent = `${state.done.size} of ${CARDS.length} done`;
+  $("meter").style.setProperty("--w", `${state.done.size / CARDS.length * 100}%`);
+}
+deck.addEventListener("click", e => {
+  const b = e.target.closest(".pick"); if(b) openCard(+b.dataset.i);
+});
+
+/* open card */
+let flipped = false;
+function openCard(i){
+  const c = CARDS[i], col = `k${i%NCOL}`;
+  const words = c.a.join(" ").split(/\s+/).length;
+  front.className = `face front ${col}`;
+  back.className = `face back ${col}`;
+  front.innerHTML = `
+    <div class="fhead"><span class="chip">Card ${pad(i+1)} / ${CARDS.length}</span><span class="bigemo" aria-hidden="true">${EMOJI[i]}</span></div>
+    <h2 class="bigq">${esc(c.q)}</h2>
+    ${c.f.length ? `<div class="follow"><span class="lbl">Follow-up</span>${c.f.map(f => `<p>${esc(f)}</p>`).join("")}</div>` : ""}`;
+  back.innerHTML = `
+    <div class="backhead"><span class="lbl">Sample answer</span><span class="meta">${words} words · about 1 minute</span></div>
+    <p class="backq">${esc(c.q)}</p>
+    <div class="answer">${c.a.map(p => `<p>${esc(p)}</p>`).join("")}</div>`;
+  setFlip(false, true);
+  resetTimer();
+  state.done.add(i);
+  save();
+  if(!dlg.open) dlg.showModal();
+  flipBtn.focus();
+  dlg.querySelector(".sheet").scrollTop = 0;
+}
+function setFlip(v, instant){
+  flipped = v;
+  if(instant){ inner.style.transition = "none"; }
+  inner.classList.toggle("flipped", v);
+  if(instant){ void inner.offsetWidth; inner.style.transition = ""; }
+  front.setAttribute("aria-hidden", v ? "true" : "false");
+  back.setAttribute("aria-hidden", v ? "false" : "true");
+  flipBtn.textContent = v ? "Back to question" : "Show sample answer";
+}
+flipBtn.addEventListener("click", () => setFlip(!flipped));
+$("close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("close", () => { stopTimer(); renderDeck(); });
+dlg.addEventListener("click", e => { if(e.target === dlg) dlg.close(); });
+
+/* one-minute timer */
+let left = TIME, tick = null, endAt = 0;
+function fmt(s){ return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function paintTimer(){
+  const secs = Math.ceil(left);
+  timerBtn.style.setProperty("--p", Math.max(0, left / TIME));
+  timerBtn.classList.toggle("up", left <= 0);
+  timerBtn.textContent = left <= 0 ? "Time’s up · Again"
+    : tick ? `Pause ${fmt(secs)}`
+    : left < TIME ? `Resume ${fmt(secs)}` : "Start 1:00";
+}
+function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } }
+function resetTimer(){ stopTimer(); left = TIME; paintTimer(); }
+timerBtn.addEventListener("click", () => {
+  if(left <= 0){ resetTimer(); }
+  if(tick){ left = Math.max(0, (endAt - Date.now()) / 1000); stopTimer(); paintTimer(); return; }
+  endAt = Date.now() + left * 1000;
+  tick = setInterval(() => {
+    left = Math.max(0, (endAt - Date.now()) / 1000);
+    if(left <= 0) stopTimer();
+    paintTimer();
+  }, 200);
+  paintTimer();
+});
+
+/* tools */
+$("random").addEventListener("click", () => {
+  const all = [...CARDS.keys()];
+  const pool = all.filter(i => !state.done.has(i));
+  const from = pool.length ? pool : all;
+  openCard(from[Math.floor(Math.random() * from.length)]);
+});
+let resetArmed = null;
+const resetBtn = $("reset");
+function disarm(){ resetArmed = null; resetBtn.textContent = "Reset"; resetBtn.classList.remove("hot"); }
+resetBtn.addEventListener("click", () => {
+  if(resetArmed){ clearTimeout(resetArmed); disarm(); state.done.clear(); save(); renderDeck(); return; }
+  resetBtn.textContent = "Tap again to clear"; resetBtn.classList.add("hot");
+  resetArmed = setTimeout(disarm, 3000);
+});
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+$("smaller").addEventListener("click", () => { state.scale = SCALES[Math.max(0, SCALES.indexOf(state.scale) - 1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { state.scale = SCALES[Math.min(SCALES.length - 1, SCALES.indexOf(state.scale) + 1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+applyScale();
+renderDeck();
+</script>
+</body>
+</html>
