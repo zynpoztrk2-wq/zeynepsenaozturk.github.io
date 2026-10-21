@@ -230,32 +230,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-of
 .task{margin:0;font-weight:600;color:var(--muted)}
 .task b{color:var(--ink)}
 
-/* answer box + automatic check */
-.write{display:flex;flex-direction:column;gap:10px}
-.write textarea{
-  width:100%;min-height:78px;resize:vertical;border-radius:14px;padding:12px 14px;
-  border:2.5px solid color-mix(in srgb, var(--c) 55%, var(--line));background:var(--surface);color:var(--ink);
-  font:500 17px/1.45 var(--f-body);
-}
-.write textarea::placeholder{color:var(--muted)}
-.write textarea:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent)}
-.mine{
-  align-self:flex-start;border:0;border-radius:14px;padding:11px 20px;font-weight:800;font-size:16px;
-  background:var(--c);color:var(--on);box-shadow:inset 0 -4px 0 rgba(0,0,0,.2);
-}
-.mine:active{transform:translateY(2px);box-shadow:inset 0 -1px 0 rgba(0,0,0,.2)}
-.verdict{border-radius:16px;padding:12px 16px;border:2.5px solid var(--vc);background:color-mix(in srgb, var(--vc) 12%, var(--surface));animation:slide .25s ease}
-.verdict.is-good{--vc:var(--ok)}
-.verdict.is-bad{--vc:var(--oops)}
-.verdict.is-empty{--vc:var(--line)}
-.verdict h4{margin:0 0 4px;font-family:var(--f-display);font-weight:400;font-size:26px;line-height:1.1;color:var(--vc)}
-.verdict.is-empty h4{color:var(--muted)}
-.verdict ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-weight:600}
-.verdict ul.tips{margin-top:6px;font-weight:500;color:var(--muted)}
-.verdict small{display:block;margin-top:8px;color:var(--muted);font-size:13px;font-weight:500}
-.ok.suggest,.oops.suggest{outline:4px solid var(--ink);outline-offset:3px;animation:nudge .5s ease 2}
-@keyframes nudge{50%{transform:translateY(-4px)}}
-
 .info{display:grid;gap:12px;background:var(--surface-2);border:2px solid var(--line);border-radius:18px;padding:14px 16px}
 .info h3,.answers h3{margin:0 0 4px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .info p{margin:0}
@@ -390,16 +364,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-of
         <div class="slot slot-topic" lang="en"><span class="lbl">Topic</span><span class="topic" id="m-topic"></span></div>
       </div>
       <p class="task">Make a sentence about <b id="m-topic2"></b> using this linker.</p>
-      <div class="write">
-        <label class="lbl" for="m-answer">Your sentence</label>
-        <textarea id="m-answer" rows="2" placeholder="Type your sentence here…" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" enterkeyhint="go"></textarea>
-        <button class="mine" id="m-mine" type="button">Check my sentence</button>
-        <div class="verdict" id="m-verdict" hidden aria-live="polite"></div>
-      </div>
       <section class="info" id="m-info" aria-label="Watch out">
         <div id="m-tip-row"><h3>Watch out</h3><div id="m-tip"></div></div>
       </section>
-      <button class="check" id="m-check" type="button">Show possible answers</button>
+      <button class="check" id="m-check" type="button">Check · show possible answers</button>
       <section class="answers" id="m-answers" hidden aria-live="polite">
         <h3>Possible answers</h3>
         <ol id="m-ex"></ol>
@@ -717,189 +685,6 @@ const CARDS = [
  ex:["[[All in all]], living abroad is difficult at first but very rewarding.","[[All in all]], the advantages of studying abroad outweigh the disadvantages."]}
 ];
 
-/* ---------- sentence checker ----------
-   Rule-based: checks that the linker is there and used in the right form
-   (what follows it, punctuation, typical B2 mistakes). It does not judge every word of grammar. */
-const PRON = "i|you|he|she|we|they";
-const PRONSET = new Set(PRON.split("|"));
-const AUX = new Set("do does did is are was were can could will would should shall has have had may might must".split(" "));
-const BASE = new Set(("be have do go make see eat get take learn buy keep give improve reduce save spend write live find meet try pay stay " +
-  "enjoy earn become build protect increase create provide develop teach bring feel know think relax drive ride speak listen understand " +
-  "choose grow visit play watch read show tell send stop start leave lose win spend").split(" "));
-const ING_OK = new Set("bring sing ring swing sting cling fling string wring spring".split(" "));
-const FINITE = "is|are|was|were|has|have|had|can|could|will|would|does|did|don't|doesn't|didn't|isn't|aren't|wasn't|weren't|prefer|prefers|likes|wants|thinks|spends|makes|gets|feels";
-const E = m => ({t:"err", m}), T = m => ({t:"tip", m});
-const R = {
-  /* sentence connectors: comma after them, no comma splice before them */
-  comma(phrase, label, opt = {}){
-    return s => {
-      const out = [];
-      const start = new RegExp("(?:^|[.!?;:]\\s*)(?:" + phrase + ")\\b\\s*(.)?", "g");
-      let m;
-      while ((m = start.exec(s))){ if (m[1] !== ","){ out.push((opt.soft ? T : E)(`Put a comma after “${label}”.`)); break; } }
-      if (opt.splice && new RegExp(",\\s*(?:" + phrase + ")\\b(?!\\s*,)").test(s))
-        out.push(E(`Don't join two sentences with a comma before “${label}”. Use a full stop (or a semicolon) before it and a comma after it.`));
-      else if (opt.mid && new RegExp("[a-z0-9]\\s+(?:" + phrase + ")\\b(?!\\s*,)").test(s))
-        out.push(E(`Start a new sentence with “${label}” (or put a semicolon before it), and put a comma after it.`));
-      return out;
-    };
-  },
-  /* prepositions: no subject + verb after them */
-  clause(phrase, msg, nounVerb){
-    const parts = ["(?:" + PRON + ")\\b", "there (?:is|are|was|were)\\b", "(?:it|this|that) (?:is|was|has|had|will|can|does|did)\\b"];
-    if (nounVerb) parts.push("(?:[a-z']+\\s+){1,2}(?:" + FINITE + ")\\b");
-    const re = new RegExp("\\b(?:" + phrase + ")\\s+(?:" + parts.join("|") + ")");
-    return s => re.test(s) ? [E(msg)] : [];
-  },
-  /* prepositions: noun or -ing, not a base verb */
-  ing(phrase, msg, startOnly){
-    return s => {
-      const re = new RegExp((startOnly ? "(?:^|[.!?;]\\s*)" : "\\b") + "(?:" + phrase + ")\\s+([a-z']+)", "g");
-      let m;
-      while ((m = re.exec(s))) if (BASE.has(m[1]) || PRONSET.has(m[1])) return [E(msg)];
-      return [];
-    };
-  },
-  /* condition words take the present, not will */
-  will(phrase, label){
-    const re = new RegExp("\\b(?:" + phrase + ")\\s+(?:[a-z']+\\s+){0,2}(?:will|won't|[a-z]+'ll)\\b");
-    return s => re.test(s) ? [E(`Use the present tense after “${label}”, not “will”.`)] : [];
-  },
-  has(re, msg, soft){ return s => re.test(s) ? [(soft ? T : E)(msg)] : []; },
-  isThat(s){
-    if (/\bis because\b/.test(s)) return [E("Use “is that”, not “is because”: “… reason why … is that …”.")];
-    return /\b(?:is|are|was) that\b/.test(s) ? [] : [E("Finish the pattern with “… is that + clause”.")];
-  }
-};
-const use = label => `Use “${label}” in your sentence.`;
-const CHECKS = {
-  r1:{need:[[/\bone (?:major|main) reason\b/, "Start with “One major reason why …” (or “One major reason for …”)."]], rules:[R.isThat]},
-  r2:{need:[[/\banother reasons?\b/, use("Another reason")]], rules:[R.has(/\banother reasons\b/, "“Another” takes a singular noun: “another reason”."), R.isThat]},
-  r3:{need:[[/\bthe (?:main|most important|major) reason\b/, use("The main reason")]], rules:[R.isThat]},
-  r4:{need:[[/\bone of the (?:main|most important|major) reasons?\b/, use("One of the main reasons why")]], rules:[
-      R.has(/\bone of the (?:main|most important|major) reason\b/, "Use the plural after “one of the”: “one of the main reasons”."),
-      R.has(/\breasons? (?:why|for)\b[^.!?]*\bare that\b/, "The subject is “one”, so use “is that”, not “are that”."), R.isThat]},
-  r5:{need:[[/\bthis is (?:mainly |partly |probably |simply |also )?because\b/, "Use “This is because …” to explain the sentence before it."]],
-      rules:[R.clause("because of", "After “because of”, use a noun. With subject + verb, use “because”.", true)]},
-  r6:{need:[[/\b(?:first of all|firstly)\b/, use("First of all / Firstly")]], rules:[
-      R.has(/\bat first\b/, "“At first” means “in the beginning (but later it changed)”. To list your first point, use “First of all” or “Firstly”."),
-      R.comma("first of all|firstly", "First of all / Firstly")]},
-  r7:{need:[[/\bto begin with\b/, use("To begin with")]], rules:[R.comma("to begin with", "To begin with")]},
-  r8:{need:[[/\b(?:finally|lastly)\b/, use("Finally / Lastly")]], rules:[
-      R.has(/\bin the end\b/, "“In the end” means “eventually”. For the last point in a list, use “Finally” or “Lastly”."),
-      R.comma("finally|lastly", "Finally / Lastly", {soft:true})]},
-  r9:{need:[[/\blast but not least\b/, use("Last but not least")]], rules:[R.comma("last but not least", "Last but not least")]},
-
-  a1:{need:[[/\bin addition\b(?! to\b)/, "Use “In addition,” followed by a full clause."]], rules:[R.comma("in addition(?! to\\b)", "In addition", {splice:true})]},
-  a2:{need:[[/\bin addition to\b/, use("In addition to")]], rules:[R.ing("in addition to", "After “in addition to”, use a noun or an -ing verb, e.g. “In addition to visiting museums, …”.")]},
-  a3:{need:[[/\bfurthermore\b/, use("Furthermore")]], rules:[R.comma("furthermore", "Furthermore", {splice:true, mid:true})]},
-  a4:{need:[[/\bmoreover\b/, use("Moreover")]], rules:[R.comma("moreover", "Moreover", {splice:true, mid:true})]},
-  a5:{need:[[/\bwhat(?:'s| is) more\b/, use("What is more")]], rules:[R.comma("what(?:'s| is) more", "What is more", {splice:true})]},
-  a6:{need:[[/\bbesides\b/, use("Besides")]], rules:[
-      R.has(/\bbeside\b/, "“Beside” means “next to”. To add a point, use “besides”."),
-      R.ing("besides", "After “besides”, use a noun or an -ing verb, e.g. “Besides being loyal, …”.")]},
-  a7:{need:[[/\bas well as\b/, use("As well as")]], rules:[R.ing("as well as", "At the start of a sentence, use a noun or an -ing verb after “As well as”, e.g. “As well as keeping you fit, …”.", true)]},
-  a8:{need:[[/\bnot only\b/, use("Not only … but also")], [/\bbut\b/, "Complete the pair: “not only … but (also) …”."]], rules:[
-      s => { const m = /(?:^|[.!?;]\s*)not only\s+([a-z']+)/.exec(s); return m && !AUX.has(m[1]) ? [E("At the start of a sentence, “Not only” needs question word order: “Not only does music relax us, but …”.")] : []; }]},
-  a9:{need:[[/\bapart from\b/, use("Apart from")]], rules:[
-      R.ing("apart from", "After “apart from”, use a noun or an -ing verb, e.g. “Apart from improving your vocabulary, …”."),
-      R.clause("apart from", "After “apart from”, use a noun or an -ing verb, not subject + verb.")]},
-
-  c1:{need:[[/\bhowever\b/, use("However")]], rules:[R.comma("however", "However", {splice:true, mid:true})]},
-  c2:{need:[[/\bon the other hand\b/, use("On the other hand")]], rules:[R.comma("on the other hand", "On the other hand", {splice:true})]},
-  c3:{need:[[/\bnevertheless\b/, use("Nevertheless")]], rules:[R.comma("nevertheless", "Nevertheless", {splice:true, mid:true})]},
-  c4:{need:[[/\b(?:although|even though|though)\b/, use("Although / Even though")]], rules:[
-      R.has(/\b(?:although|even though)\b[^.!?;]*\bbut\b/, "Don't use “but” in the same sentence as “although / even though”.")]},
-  c5:{need:[[/\bdespite\b/, use("Despite")]], rules:[
-      R.has(/\bdespite of\b/, "Say “despite”, not “despite of”."),
-      R.clause("despite", "After “despite”, use a noun, an -ing verb or “the fact that” + clause.", true)]},
-  c6:{need:[[/\bin spite of\b/, use("In spite of")]], rules:[
-      R.has(/\bin spite (?!of\b)/, "Don't forget “of”: “in spite of”."),
-      R.clause("in spite of", "After “in spite of”, use a noun, an -ing verb or “the fact that” + clause.", true)]},
-  c7:{need:[[/\bwhereas\b/, use("Whereas")]], rules:[R.has(/[a-z]\s+whereas\b/, "Put a comma before “whereas”.", true)]},
-  c8:{need:[[/\bwhile\b/, use("While")]], rules:[]},
-  c9:{need:[[/\bon the contrary\b/, use("On the contrary")]], rules:[
-      R.comma("on the contrary", "On the contrary", {splice:true}),
-      s => { const i = s.indexOf("on the contrary"); if (i < 0) return [];
-             return /\b(?:not|never|no|nobody|nothing|none|hardly)\b|n't\b/.test(s.slice(0, i)) ? [] :
-               [E("“On the contrary” rejects a negative idea. Write a negative sentence first, e.g. “Ads are not harmless. On the contrary, …”.")]; }]},
-
-  k1:{need:[[/\bbecause\b/, use("Because / Because of")]], rules:[R.clause("because of", "After “because of”, use a noun. With subject + verb, use “because”.", true)]},
-  k2:{need:[[/\bdue to\b/, use("Due to")]], rules:[R.clause("due to", "After “due to”, use a noun or “the fact that” + clause.", true)]},
-  k3:{need:[[/\bowing to\b/, use("Owing to")]], rules:[R.clause("owing to", "After “owing to”, use a noun, an -ing verb or “the fact that” + clause.", true)]},
-  k4:{need:[[/\bon account of\b/, use("On account of")]], rules:[R.clause("on account of", "After “on account of”, use a noun or an -ing verb.", true)]},
-  k5:{need:[[/\b(?:since|as)\b/, use("Since / As")]], rules:[]},
-
-  s1:{need:[[/\btherefore\b/, use("Therefore")]], rules:[R.comma("therefore", "Therefore", {splice:true})]},
-  s2:{need:[[/\bas a result\b/, use("As a result")]], rules:[
-      R.comma("as a result(?! of\\b)", "As a result", {splice:true}),
-      R.clause("as a result of", "After “as a result of”, use a noun or an -ing verb.", true)]},
-  s3:{need:[[/\bconsequently\b/, use("Consequently")]], rules:[R.comma("consequently", "Consequently", {splice:true})]},
-  s4:{need:[[/\b(?:thus|hence)\b/, use("Thus / Hence")]], rules:[R.comma("thus", "Thus", {soft:true})]},
-
-  p1:{need:[[/\b(?:in order|so as) (?:not )?to\b/, use("In order to / So as to")]], rules:[
-      s => { const m = /\b(?:in order|so as) (?:not )?to ([a-z]+ing)\b/.exec(s);
-             return m && !ING_OK.has(m[1]) ? [E("Use the base verb after “in order to / so as to”: “in order to analyse”, not the -ing form.")] : []; }]},
-  p2:{need:[[/\bso that\b/, use("So that")]], rules:[
-      s => /\bso that\b/.test(s) && !/\bso that\s+(?:[a-z']+\s+){1,3}(?:can|could|will|would|may|might|won't|wouldn't|can't|couldn't|cannot)\b/.test(s)
-           ? [T("“So that” usually takes a modal: “so that students can practise”.")] : []]},
-
-  d1:{need:[[/\b(?:provided|providing)\b/, use("Provided (that) / Providing")]], rules:[R.will("provided that|provided|providing", "provided (that)")]},
-  d2:{need:[[/\bas long as\b/, use("As long as")]], rules:[R.will("as long as", "as long as")]},
-  d3:{need:[[/\bunless\b/, use("Unless")]], rules:[
-      R.has(/\bunless\s+(?:[a-z']+\s+){0,2}(?:don't|doesn't|didn't|do not|does not|did not|not|never|can't|cannot|won't|isn't|aren't)\b/,
-            "“Unless” already means “if … not”. Don't add another negative."),
-      R.will("unless", "unless")]},
-  d4:{need:[[/\beven if\b/, use("Even if")]], rules:[]},
-  d5:{need:[[/\bin case\b/, use("In case")]], rules:[R.will("in case", "in case")]},
-
-  e1:{need:[[/\bfor (?:example|instance)\b/, use("For example / For instance")]], rules:[R.comma("for (?:example|instance)", "For example / For instance")]},
-  e2:{need:[[/\bsuch as\b/, use("Such as")]], rules:[R.clause("such as", "After “such as”, use nouns or -ing words, not a full clause.")]},
-  e3:{need:[[/\bin other words\b/, use("In other words")]], rules:[R.comma("in other words", "In other words")]},
-  e4:{need:[[/\b(?:in conclusion|to sum up)\b/, use("In conclusion / To sum up")]], rules:[R.comma("in conclusion|to sum up", "In conclusion / To sum up")]},
-  e5:{need:[[/\ball in all\b/, use("All in all")]], rules:[R.comma("all in all", "All in all")]}
-};
-
-function checkSentence(id, raw){
-  const text = String(raw || "").replace(/[’‘`´]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
-  if (!text) return {empty:true, ok:false, errs:[], tips:[]};
-  const s = text.toLowerCase();
-  const k = CHECKS[id] || {need:[], rules:[]};
-  const errs = [], tips = [];
-  const words = text.split(" ").filter(w => /[a-z]/i.test(w)).length;
-  for (const fn of k.rules) for (const r of fn(s)) (r.t === "err" ? errs : tips).push(r.m);
-  if (!errs.length) for (const [re, msg] of k.need) if (!re.test(s)) errs.push(msg);
-  if (words < 5) errs.unshift("Write a full sentence (at least 5 words).");
-  if (!/[.!?]["')]?$/.test(text)) tips.push("End your sentence with a full stop.");
-  return {empty:false, ok: !errs.length, errs: [...new Set(errs)], tips: [...new Set(tips)]};
-}
-/* ---------- end checker ---------- */
-
-function runCheck(){
-  if (!openId) return;
-  const res = checkSentence(openId, $("m-answer").value);
-  const v = $("m-verdict");
-  const list = (arr, cls) => arr.length ? `<ul${cls ? ` class="${cls}"` : ""}>${arr.map(m => `<li>${esc(m)}</li>`).join("")}</ul>` : "";
-  if (res.empty){
-    v.className = "verdict is-empty";
-    v.innerHTML = `<h4>Write your sentence first</h4>`;
-    v.hidden = false;
-    $("m-answer").focus();
-    return;
-  }
-  v.className = "verdict " + (res.ok ? "is-good" : "is-bad");
-  v.innerHTML = res.ok
-    ? `<h4>Correct!</h4><p style="margin:0;font-weight:600">The linker is used correctly.</p>${list(res.tips, "tips")}<small>The check looks at how the linker is used. Your teacher has the final say.</small>`
-    : `<h4>Not quite</h4>${list(res.errs)}${list(res.tips, "tips")}<small>Fix it and check again, or compare with the possible answers.</small>`;
-  v.hidden = false;
-  if (!state.done[openId]){
-    $("m-ok").classList.toggle("suggest", res.ok);
-    $("m-oops").classList.toggle("suggest", !res.ok);
-  }
-  setReveal(true, false);
-  requestAnimationFrame(() => v.scrollIntoView({block:"nearest", behavior: reduceMotion ? "auto" : "smooth"}));
-}
-
 const byId = Object.fromEntries(CARDS.map(c => [c.id, c]));
 const KEY = "linkers-b2-board-v1";
 const $ = s => document.getElementById(s);
@@ -1019,10 +804,6 @@ function openCard(id, tile){
   $("m-ex").innerHTML = c.ex.map(e => `<li>${exHTML(e)}</li>`).join("");
 
   const review = !!d;
-  $("m-answer").value = review && d.answer ? d.answer : "";
-  $("m-verdict").hidden = true;
-  $("m-ok").classList.remove("suggest");
-  $("m-oops").classList.remove("suggest");
   setReveal(review);
   $("m-play").hidden = review;
   $("m-review").hidden = !review;
@@ -1040,7 +821,7 @@ function openCard(id, tile){
 function setReveal(on, scroll){
   $("m-answers").hidden = !on;
   $("m-info").hidden = !hasTip || (state.info === "check" && !on);
-  $("m-check").textContent = on ? "Hide possible answers" : "Show possible answers";
+  $("m-check").textContent = on ? "Hide possible answers" : "Check · show possible answers";
   $("m-check").setAttribute("aria-expanded", String(on));
   if (on && scroll){
     /* bring the answers into view inside the card (they sit below the info box) */
@@ -1061,8 +842,7 @@ function nextTurn(){ state.cur = (state.cur + 1) % state.teams.length; }
 function score(ok){
   if (!openId) return;
   const c = byId[openId];
-  const answer = $("m-answer").value.trim().slice(0, 400);
-  state.done[openId] = {ok, team: state.cur, pts: ok ? c.pts : 0, answer};
+  state.done[openId] = {ok, team: state.cur, pts: ok ? c.pts : 0};
   if (ok){
     state.teams[state.cur].score += c.pts;
     const r = $("m-ok").getBoundingClientRect();
@@ -1142,8 +922,6 @@ function showNewGame(){
 $("m-close").addEventListener("click", closeCard);
 $("overlay").addEventListener("click", e => { if (e.target === $("overlay")) closeCard(); });
 $("m-check").addEventListener("click", () => setReveal($("m-answers").hidden, true));
-$("m-mine").addEventListener("click", runCheck);
-$("m-answer").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); runCheck(); } });
 $("m-ok").addEventListener("click", () => score(true));
 $("m-oops").addEventListener("click", () => score(false));
 $("m-undo").addEventListener("click", undo);
