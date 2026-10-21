@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linkers B2 Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700;800&family=Lilita+One&display=swap">
+<style>
+/* Layout: toy-block game board. Rainbow wordmark, team score chips, a colour legend that filters, an 8-column grid of closed tiles; a tile opens into a big index card. */
+:root{
+  --bg:#F2F4FB;
+  --bg-dot:#D9DEF1;
+  --surface:#FFFFFF;
+  --surface-2:#F6F7FD;
+  --ink:#1B1633;
+  --muted:#5D5A7A;
+  --line:#DEE0EF;
+  --edge:#1B1633;
+  --scrim:rgba(27,22,51,.55);
+
+  --red:#E63946; --orange:#FF8A1F; --yellow:#FFC83A; --lime:#7CC84B;
+  --teal:#0FA597; --blue:#2F7BEA; --violet:#8A5CF5; --pink:#EE4497;
+  --on-dark:#FFFFFF; --on-light:#1B1633;
+  --ok:#1E9A53; --oops:#E0473C;
+
+  --f-display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"DM Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14122A; --bg-dot:#272452; --surface:#221F3F; --surface-2:#1A1834;
+    --ink:#F4F2FF; --muted:#ADA9CF; --line:#3A3662; --edge:#0B0920; --scrim:rgba(6,4,18,.72);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14122A; --bg-dot:#272452; --surface:#221F3F; --surface-2:#1A1834;
+  --ink:#F4F2FF; --muted:#ADA9CF; --line:#3A3662; --edge:#0B0920; --scrim:rgba(6,4,18,.72);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+img{max-width:100%}
+[hidden]{display:none !important}
+html,body{min-height:100%}
+body{
+  background-color:var(--bg);
+  background-image:radial-gradient(var(--bg-dot) 1.6px, transparent 1.8px);
+  background-size:22px 22px;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:16px;
+  line-height:1.5;
+}
+body.modal-open{overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+.page{
+  max-width:1180px;margin:0 auto;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:22px 48px;
+  display:flex;flex-direction:column;gap:18px;
+}
+
+/* ---------- header ---------- */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 24px}
+.brand{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-width:0}
+.logo{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(44px,7.5vw,78px);line-height:.9;letter-spacing:.01em;display:flex}
+.logo span{display:inline-block;text-shadow:0 5px 0 var(--edge);transition:transform .2s}
+.logo span:nth-child(odd){transform:rotate(-4deg)}
+.logo span:nth-child(even){transform:translateY(4px) rotate(3deg)}
+.logo span:nth-child(1){color:var(--red)}
+.logo span:nth-child(2){color:var(--orange)}
+.logo span:nth-child(3){color:var(--yellow)}
+.logo span:nth-child(4){color:var(--lime)}
+.logo span:nth-child(5){color:var(--teal)}
+.logo span:nth-child(6){color:var(--blue)}
+.logo span:nth-child(7){color:var(--violet)}
+.logo:hover span{transform:translateY(-3px) rotate(0)}
+.badge-b2{
+  font-family:var(--f-display);font-size:26px;line-height:1;
+  background:var(--pink);color:var(--on-dark);
+  padding:10px 14px 8px;border-radius:14px;transform:rotate(6deg);
+  box-shadow:0 4px 0 var(--edge);
+}
+.how{margin:6px 0 0;color:var(--muted);font-weight:500;max-width:60ch}
+.how b{color:var(--ink)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;align-items:center;gap:4px;background:var(--surface);border:2px solid var(--line);border-radius:999px;padding:4px}
+.seg-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:0 6px 0 10px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.btn{border:2px solid var(--ink);background:var(--surface);border-radius:999px;padding:8px 16px;font-weight:800;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.confirm{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.confirm .yes{background:var(--oops);border-color:var(--oops);color:var(--on-dark);box-shadow:0 3px 0 var(--edge)}
+
+/* ---------- teams ---------- */
+.teams-wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.teams{display:flex;flex-wrap:wrap;gap:12px;flex:1 1 auto;min-width:0}
+.team{
+  position:relative;display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:3px solid var(--line);border-radius:18px;
+  padding:8px 10px 8px 8px;min-width:0;flex:0 1 230px;
+  transition:border-color .2s, transform .2s;
+}
+.team.is-turn{border-color:var(--tc);transform:translateY(-2px);box-shadow:0 5px 0 var(--tc)}
+.t-turn{
+  flex:none;width:42px;height:42px;border-radius:12px;border:0;
+  background:var(--tc);color:var(--ton);font-family:var(--f-display);font-size:22px;line-height:1;
+}
+.t-name{
+  flex:1 1 auto;min-width:0;width:100%;border:0;background:transparent;color:var(--ink);
+  font:700 16px/1.2 var(--f-body);padding:4px 2px;border-bottom:2px dashed transparent;
+}
+.t-name:hover{border-bottom-color:var(--line)}
+.t-score{display:flex;align-items:center;gap:2px}
+.t-score output{font-family:var(--f-display);font-size:30px;line-height:1;min-width:2.2ch;text-align:center;font-variant-numeric:tabular-nums}
+.t-score button{border:0;background:var(--surface-2);width:24px;height:24px;border-radius:8px;font-weight:800;color:var(--muted);line-height:1}
+.turn-tag{
+  position:absolute;top:-11px;left:12px;background:var(--tc);color:var(--ton);
+  font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:999px;
+}
+.team-count{display:flex;align-items:center;gap:6px;background:var(--surface);border:3px dashed var(--line);border-radius:18px;padding:8px 12px;font-weight:700;color:var(--muted);font-size:14px}
+.team-count button{width:30px;height:30px;border-radius:10px;border:2px solid var(--line);background:var(--surface-2);font-weight:800;color:var(--ink)}
+.team-count b{font-family:var(--f-display);font-weight:400;font-size:22px;color:var(--ink);min-width:1ch;text-align:center}
+
+/* ---------- legend / filter ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;border:2px solid var(--line);background:var(--surface);
+  border-radius:999px;padding:6px 8px 6px 12px;font-weight:700;font-size:14px;
+}
+.chip .dot{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}
+.chip .n{font-variant-numeric:tabular-nums;font-size:12px;font-weight:800;background:var(--surface-2);color:var(--muted);border-radius:999px;padding:1px 8px}
+.chip.on{background:var(--c);border-color:var(--c);color:var(--on)}
+.chip.on .dot{background:var(--on)}
+.chip.on .n{background:rgba(255,255,255,.28);color:inherit}
+
+/* ---------- board ---------- */
+.board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px}
+.tile{
+  position:relative;aspect-ratio:5/4;max-width:100%;border:0;border-radius:16px;
+  background:var(--c);color:var(--on);
+  box-shadow:inset 0 -7px 0 rgba(0,0,0,.22), inset 0 3px 0 rgba(255,255,255,.28);
+  display:grid;place-items:center;padding:8px;overflow:hidden;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.tile::after{ /* toy-brick shine */
+  content:"";position:absolute;top:9px;left:10px;width:22%;height:9%;border-radius:999px;background:rgba(255,255,255,.35);
+}
+.tile:hover{transform:translateY(-4px) rotate(-1.5deg)}
+.tile:active{transform:translateY(2px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.22)}
+.t-num{font-family:var(--f-display);font-size:clamp(28px,4.2vw,46px);line-height:1;text-shadow:0 3px 0 rgba(0,0,0,.18);font-variant-numeric:tabular-nums}
+.tile.done{
+  background:var(--surface);color:var(--ink);border:3px dashed var(--c);
+  box-shadow:none;place-items:stretch;padding:8px 8px 6px;
+  display:flex;flex-direction:column;justify-content:space-between;gap:4px;text-align:left;
+}
+.tile.done::after{display:none}
+.tile.done:hover{transform:none;background:var(--surface-2)}
+.t-small{font-family:var(--f-display);font-size:16px;line-height:1;color:var(--c)}
+.t-linker{font-size:12px;font-weight:800;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.t-res{font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;align-self:flex-start;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.is-ok .t-res{background:var(--ok);color:var(--on-dark)}
+.is-oops .t-res{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+
+.foot{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;color:var(--muted);font-size:14px;font-weight:600}
+.foot b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+.winner{
+  background:var(--yellow);color:var(--on-light);border-radius:20px;padding:14px 18px;
+  font-weight:800;font-size:18px;box-shadow:0 5px 0 var(--edge);
+}
+.winner .big{font-family:var(--f-display);font-weight:400;font-size:28px;display:block;line-height:1.1}
+
+/* ---------- card modal ---------- */
+.overlay{
+  position:fixed;inset:0;z-index:40;background:var(--scrim);
+  display:grid;place-items:center;
+  padding:max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  backdrop-filter:blur(3px);
+}
+.card{
+  width:min(780px,100%);max-height:100%;display:flex;flex-direction:column;
+  background:var(--surface);border-radius:26px;overflow:hidden;
+  box-shadow:0 10px 0 var(--edge), 0 30px 60px rgba(0,0,0,.3);
+  animation:pop .28s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes pop{from{transform:scale(.86) rotate(-3deg);opacity:0}to{transform:none;opacity:1}}
+.card-head{
+  position:relative;background:var(--c);color:var(--on);
+  display:flex;align-items:center;gap:12px;padding:16px 20px 16px 22px;flex:none;
+}
+.card-no{font-family:var(--f-display);font-size:34px;line-height:1}
+.card-cat{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.92}
+.pts{
+  margin-left:auto;width:74px;height:74px;border-radius:50%;flex:none;
+  background:var(--surface);color:var(--ink);border:3px solid var(--edge);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-8deg);
+  box-shadow:0 4px 0 var(--edge);margin-block:-8px;
+}
+.pts b{font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1}
+.pts small{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.x{border:0;background:rgba(0,0,0,.16);color:inherit;width:38px;height:38px;border-radius:12px;font-size:24px;line-height:1;flex:none}
+.card-body{padding:20px 24px 8px;overflow:auto;display:flex;flex-direction:column;gap:16px;min-height:0}
+/* linker and topic sit side by side, like "Because / Because of  |  Sleep" */
+.prompt{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,30%);gap:12px;align-items:stretch}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.slot{display:flex;flex-direction:column;gap:6px;min-width:0;border-radius:18px;padding:12px 16px 14px}
+.slot-linker{background:color-mix(in srgb, var(--c) 9%, var(--surface));border:2px solid color-mix(in srgb, var(--c) 35%, transparent)}
+.slot-topic{background:var(--c);color:var(--on);box-shadow:inset 0 -5px 0 rgba(0,0,0,.18)}
+.slot-topic .lbl{color:inherit;opacity:.85}
+.topic{
+  font-family:var(--f-display);font-weight:400;font-size:clamp(22px,3.4vw,34px);line-height:1.05;
+  margin-top:auto;margin-bottom:auto;overflow-wrap:break-word;-webkit-hyphens:auto;hyphens:auto;text-wrap:balance;
+}
+.linker{
+  font-family:var(--f-display);font-weight:400;font-size:clamp(30px,5vw,52px);line-height:1.05;
+  text-wrap:balance;margin:0;overflow-wrap:break-word;-webkit-hyphens:auto;hyphens:auto;
+}
+.linker.long{font-size:clamp(24px,3.8vw,40px)}
+.linker span{background:linear-gradient(transparent 62%, color-mix(in srgb, var(--c) 45%, transparent) 62%);padding:0 4px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.task{margin:0;font-weight:600;color:var(--muted)}
+.task b{color:var(--ink)}
+
+.info{display:grid;gap:12px;background:var(--surface-2);border:2px solid var(--line);border-radius:18px;padding:14px 16px}
+.info h3,.answers h3{margin:0 0 4px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.info p{margin:0}
+.forms{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.forms li{
+  font-family:var(--f-mono);font-size:14px;font-weight:500;line-height:1.35;
+  background:color-mix(in srgb, var(--c) 16%, var(--surface));border:1.5px solid color-mix(in srgb, var(--c) 45%, transparent);
+  border-radius:10px;padding:5px 10px;max-width:100%;
+}
+.wr{margin:0;display:flex;gap:8px;align-items:baseline}
+.wr + .wr{margin-top:2px}
+.mark-bad,.mark-good{flex:none;width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;font-size:13px;font-weight:800;color:var(--on-dark);transform:translateY(3px)}
+.mark-bad{background:var(--oops)}
+.mark-good{background:var(--ok)}
+.wr.bad span.txt{text-decoration:line-through;text-decoration-color:var(--oops);text-decoration-thickness:2px;color:var(--muted)}
+.note{margin-top:6px !important;color:var(--muted);font-size:15px}
+
+.check{
+  border:3px dashed var(--c);background:color-mix(in srgb, var(--c) 10%, var(--surface));
+  border-radius:16px;padding:12px 16px;font-weight:800;font-size:16px;text-align:center;
+}
+.check:hover{background:color-mix(in srgb, var(--c) 20%, var(--surface))}
+.answers{border-radius:18px;padding:14px 16px;background:color-mix(in srgb, var(--c) 12%, var(--surface));animation:slide .25s ease}
+@keyframes slide{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+.answers ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px;font-size:17px;font-weight:500}
+.answers mark{background:color-mix(in srgb, var(--c) 40%, transparent);color:inherit;font-weight:800;border-radius:4px;padding:0 3px}
+
+.card-foot{display:flex;flex-wrap:wrap;gap:10px;padding:14px 24px 20px;flex:none;border-top:2px solid var(--line);align-items:center}
+.ok,.oops{border:0;border-radius:16px;padding:14px 18px;font-weight:800;font-size:17px;color:var(--on-dark);box-shadow:inset 0 -5px 0 rgba(0,0,0,.2)}
+.ok{background:var(--ok);flex:2 1 260px}
+.oops{background:var(--oops);flex:1 1 140px}
+.ok:active,.oops:active{transform:translateY(2px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.review-text{flex:1 1 220px;font-weight:700;color:var(--muted);min-width:0}
+.review-text b{color:var(--ink)}
+
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+
+
+/* QR panel */
+:root{--qr-bg:#FFFFFF}
+#qrDlg{border:0;padding:0;background:transparent;color:var(--ink);width:min(520px, calc(100% - 24px));max-width:none}
+#qrDlg::backdrop{background:var(--scrim)}
+.qrpanel{
+  background:var(--surface);color:var(--ink);border-radius:26px;padding:clamp(20px,3.4vw,32px);
+  display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+  box-shadow:0 8px 0 var(--edge);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;
+}
+.qrpanel h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(26px,4vw,34px);line-height:1.1}
+.qrbox{width:min(400px, 68vmin, 100%);padding:8px;border-radius:16px;background:var(--qr-bg);border:5px solid var(--pink)}
+.qrbox svg{display:block;width:100%;height:auto}
+.qrurl{margin:0;font-weight:600;font-size:14px;color:var(--muted);overflow-wrap:anywhere;-webkit-user-select:all;user-select:all}
+.qrbtns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;width:100%}
+.qrbtns .btn{flex:1 1 150px}
+.btn-qr{background:var(--ink);color:var(--bg);border-color:var(--ink);box-shadow:0 3px 0 var(--pink)}
+
+@media (max-width:900px){ .board{grid-template-columns:repeat(6,minmax(0,1fr))} }
+@media (max-width:600px){
+  .board{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .tile{border-radius:12px}
+  .card-body{padding:16px 16px 6px}
+  .card-foot{padding:12px 16px 16px}
+  .card-head{padding:14px 14px 14px 16px}
+  .pts{width:62px;height:62px}
+  .pts b{font-size:24px}
+  .team{flex:1 1 100%}
+  .t-linker{font-size:10.5px}
+  .prompt{grid-template-columns:minmax(0,1fr) minmax(0,40%);gap:8px}
+  .slot{padding:10px 10px 12px;border-radius:14px}
+  .topic{font-size:17px}
+  .linker{font-size:21px}
+  .linker.long{font-size:19px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="top">
+    <div>
+      <div class="brand">
+        <h1 class="logo" aria-label="Linkers"><span>L</span><span>I</span><span>N</span><span>K</span><span>E</span><span>R</span><span>S</span></h1>
+        <span class="badge-b2">B2</span>
+      </div>
+      <p class="how">Pick a card, then make a sentence about the <b>topic</b> using the <b>linker</b>. Press <b>Check</b> to see possible answers, then <b>Okay</b> or <b>Oops</b>.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="When to show the watch-out tips">
+        <span class="seg-label">Watch out tips</span>
+        <button id="info-open" type="button" data-info="open">On open</button>
+        <button id="info-check" type="button" data-info="check">With answers</button>
+      </div>
+      <button id="qrBtn" class="btn btn-qr" type="button">QR code</button>
+      <span id="newgame-wrap"><button id="newgame" class="btn" type="button">New game</button></span>
+    </div>
+  </header>
+
+  <section class="teams-wrap" aria-label="Teams and scores">
+    <div class="teams" id="teams"></div>
+    <div class="team-count">Teams
+      <button id="team-minus" type="button" aria-label="Remove a team">−</button>
+      <b id="team-n">2</b>
+      <button id="team-plus" type="button" aria-label="Add a team">+</button>
+    </div>
+  </section>
+
+  <nav class="legend" id="legend" aria-label="Filter cards by linker type"></nav>
+
+  <div id="winner" class="winner" hidden></div>
+
+  <main class="board" id="board" aria-label="Card board"></main>
+
+  <footer class="foot">
+    <span>Played <b id="played">0</b> of <b id="total">48</b> cards</span>
+    <span>Tile colour = linker type · open a played card again to review it</span>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <article class="card" id="card" lang="en" role="dialog" aria-modal="true" aria-labelledby="m-linker">
+    <header class="card-head">
+      <span class="card-no" id="m-no">#1</span>
+      <span class="card-cat" id="m-cat"></span>
+      <span class="pts" aria-label="points"><b id="m-pts">10</b><small>points</small></span>
+      <button class="x" id="m-close" type="button" aria-label="Close card">×</button>
+    </header>
+    <div class="card-body">
+      <div class="prompt">
+        <div class="slot slot-linker"><span class="lbl">Linker</span><h2 class="linker" id="m-linker"></h2></div>
+        <div class="slot slot-topic" lang="en"><span class="lbl">Topic</span><span class="topic" id="m-topic"></span></div>
+      </div>
+      <p class="task">Make a sentence about <b id="m-topic2"></b> using this linker.</p>
+      <section class="info" id="m-info" aria-label="Watch out">
+        <div id="m-tip-row"><h3>Watch out</h3><div id="m-tip"></div></div>
+      </section>
+      <button class="check" id="m-check" type="button">Check · show possible answers</button>
+      <section class="answers" id="m-answers" hidden aria-live="polite">
+        <h3>Possible answers</h3>
+        <ol id="m-ex"></ol>
+      </section>
+    </div>
+    <footer class="card-foot" id="m-play">
+      <button class="ok" id="m-ok" type="button">Okay</button>
+      <button class="oops" id="m-oops" type="button">Oops</button>
+    </footer>
+    <footer class="card-foot" id="m-review" hidden>
+      <span class="review-text" id="m-review-text"></span>
+      <button class="btn" id="m-undo" type="button">Put card back</button>
+    </footer>
+  </article>
+</div>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open Linkers B2</h2>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens Linkers B2"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM13 4h1v1h-1zM16 4h1v1h-1zM18 4h1v1h-1zM21 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM13 5h1v1h-1zM14 5h1v1h-1zM15 5h1v1h-1zM16 5h1v1h-1zM17 5h1v1h-1zM18 5h1v1h-1zM20 5h1v1h-1zM24 5h1v1h-1zM26 5h1v1h-1zM29 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM17 6h1v1h-1zM18 6h1v1h-1zM19 6h1v1h-1zM20 6h1v1h-1zM25 6h1v1h-1zM32 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM12 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM18 7h1v1h-1zM21 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM27 7h1v1h-1zM29 7h1v1h-1zM31 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM14 8h1v1h-1zM15 8h1v1h-1zM17 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM21 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM25 8h1v1h-1zM27 8h1v1h-1zM29 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM14 9h1v1h-1zM16 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM21 9h1v1h-1zM25 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM12 11h1v1h-1zM13 11h1v1h-1zM15 11h1v1h-1zM17 11h1v1h-1zM18 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM28 11h1v1h-1zM30 11h1v1h-1zM32 11h1v1h-1zM4 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM17 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM23 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM30 12h1v1h-1zM31 12h1v1h-1zM33 12h1v1h-1zM34 12h1v1h-1zM37 12h1v1h-1zM38 12h1v1h-1zM39 12h1v1h-1zM4 13h1v1h-1zM5 13h1v1h-1zM6 13h1v1h-1zM8 13h1v1h-1zM9 13h1v1h-1zM11 13h1v1h-1zM12 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM15 13h1v1h-1zM16 13h1v1h-1zM17 13h1v1h-1zM20 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM25 13h1v1h-1zM27 13h1v1h-1zM28 13h1v1h-1zM29 13h1v1h-1zM30 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM35 13h1v1h-1zM36 13h1v1h-1zM37 13h1v1h-1zM38 13h1v1h-1zM39 13h1v1h-1zM4 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM13 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM25 14h1v1h-1zM29 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM35 14h1v1h-1zM37 14h1v1h-1zM39 14h1v1h-1zM40 14h1v1h-1zM5 15h1v1h-1zM6 15h1v1h-1zM8 15h1v1h-1zM11 15h1v1h-1zM13 15h1v1h-1zM14 15h1v1h-1zM15 15h1v1h-1zM16 15h1v1h-1zM18 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM27 15h1v1h-1zM28 15h1v1h-1zM30 15h1v1h-1zM36 15h1v1h-1zM37 15h1v1h-1zM40 15h1v1h-1zM4 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM13 16h1v1h-1zM14 16h1v1h-1zM15 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM30 16h1v1h-1zM34 16h1v1h-1zM40 16h1v1h-1zM5 17h1v1h-1zM6 17h1v1h-1zM11 17h1v1h-1zM12 17h1v1h-1zM15 17h1v1h-1zM18 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM29 17h1v1h-1zM30 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM33 17h1v1h-1zM35 17h1v1h-1zM37 17h1v1h-1zM39 17h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM7 18h1v1h-1zM8 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM14 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM22 18h1v1h-1zM24 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM35 18h1v1h-1zM36 18h1v1h-1zM37 18h1v1h-1zM39 18h1v1h-1zM40 18h1v1h-1zM6 19h1v1h-1zM11 19h1v1h-1zM12 19h1v1h-1zM14 19h1v1h-1zM16 19h1v1h-1zM19 19h1v1h-1zM23 19h1v1h-1zM26 19h1v1h-1zM27 19h1v1h-1zM30 19h1v1h-1zM31 19h1v1h-1zM32 19h1v1h-1zM34 19h1v1h-1zM35 19h1v1h-1zM37 19h1v1h-1zM38 19h1v1h-1zM6 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM12 20h1v1h-1zM14 20h1v1h-1zM18 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM33 20h1v1h-1zM34 20h1v1h-1zM36 20h1v1h-1zM38 20h1v1h-1zM4 21h1v1h-1zM5 21h1v1h-1zM8 21h1v1h-1zM13 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM17 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM27 21h1v1h-1zM31 21h1v1h-1zM32 21h1v1h-1zM35 21h1v1h-1zM37 21h1v1h-1zM39 21h1v1h-1zM5 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM12 22h1v1h-1zM13 22h1v1h-1zM14 22h1v1h-1zM15 22h1v1h-1zM17 22h1v1h-1zM18 22h1v1h-1zM20 22h1v1h-1zM23 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM28 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM33 22h1v1h-1zM38 22h1v1h-1zM40 22h1v1h-1zM4 23h1v1h-1zM5 23h1v1h-1zM8 23h1v1h-1zM13 23h1v1h-1zM14 23h1v1h-1zM15 23h1v1h-1zM16 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM22 23h1v1h-1zM26 23h1v1h-1zM27 23h1v1h-1zM28 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM33 23h1v1h-1zM34 23h1v1h-1zM35 23h1v1h-1zM37 23h1v1h-1zM40 23h1v1h-1zM6 24h1v1h-1zM7 24h1v1h-1zM10 24h1v1h-1zM11 24h1v1h-1zM12 24h1v1h-1zM13 24h1v1h-1zM17 24h1v1h-1zM21 24h1v1h-1zM26 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM32 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM38 24h1v1h-1zM8 25h1v1h-1zM13 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM26 25h1v1h-1zM27 25h1v1h-1zM29 25h1v1h-1zM30 25h1v1h-1zM31 25h1v1h-1zM36 25h1v1h-1zM38 25h1v1h-1zM39 25h1v1h-1zM7 26h1v1h-1zM8 26h1v1h-1zM9 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM13 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM21 26h1v1h-1zM24 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM31 26h1v1h-1zM32 26h1v1h-1zM35 26h1v1h-1zM36 26h1v1h-1zM37 26h1v1h-1zM39 26h1v1h-1zM40 26h1v1h-1zM5 27h1v1h-1zM7 27h1v1h-1zM8 27h1v1h-1zM15 27h1v1h-1zM17 27h1v1h-1zM20 27h1v1h-1zM21 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM26 27h1v1h-1zM27 27h1v1h-1zM30 27h1v1h-1zM31 27h1v1h-1zM32 27h1v1h-1zM34 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM37 27h1v1h-1zM39 27h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM7 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM12 28h1v1h-1zM14 28h1v1h-1zM19 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM26 28h1v1h-1zM32 28h1v1h-1zM34 28h1v1h-1zM35 28h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM8 29h1v1h-1zM12 29h1v1h-1zM16 29h1v1h-1zM18 29h1v1h-1zM22 29h1v1h-1zM24 29h1v1h-1zM27 29h1v1h-1zM29 29h1v1h-1zM31 29h1v1h-1zM33 29h1v1h-1zM35 29h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM10 30h1v1h-1zM12 30h1v1h-1zM13 30h1v1h-1zM14 30h1v1h-1zM15 30h1v1h-1zM19 30h1v1h-1zM20 30h1v1h-1zM23 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM33 30h1v1h-1zM36 30h1v1h-1zM37 30h1v1h-1zM38 30h1v1h-1zM39 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM8 31h1v1h-1zM9 31h1v1h-1zM11 31h1v1h-1zM13 31h1v1h-1zM14 31h1v1h-1zM20 31h1v1h-1zM23 31h1v1h-1zM26 31h1v1h-1zM31 31h1v1h-1zM32 31h1v1h-1zM35 31h1v1h-1zM37 31h1v1h-1zM38 31h1v1h-1zM4 32h1v1h-1zM8 32h1v1h-1zM10 32h1v1h-1zM11 32h1v1h-1zM12 32h1v1h-1zM19 32h1v1h-1zM21 32h1v1h-1zM23 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM37 32h1v1h-1zM38 32h1v1h-1zM39 32h1v1h-1zM40 32h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM14 33h1v1h-1zM15 33h1v1h-1zM18 33h1v1h-1zM19 33h1v1h-1zM20 33h1v1h-1zM23 33h1v1h-1zM24 33h1v1h-1zM25 33h1v1h-1zM27 33h1v1h-1zM28 33h1v1h-1zM29 33h1v1h-1zM30 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM15 34h1v1h-1zM16 34h1v1h-1zM19 34h1v1h-1zM21 34h1v1h-1zM22 34h1v1h-1zM23 34h1v1h-1zM27 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM14 35h1v1h-1zM15 35h1v1h-1zM17 35h1v1h-1zM18 35h1v1h-1zM19 35h1v1h-1zM25 35h1v1h-1zM28 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM39 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM14 36h1v1h-1zM18 36h1v1h-1zM19 36h1v1h-1zM22 36h1v1h-1zM23 36h1v1h-1zM24 36h1v1h-1zM25 36h1v1h-1zM26 36h1v1h-1zM28 36h1v1h-1zM29 36h1v1h-1zM30 36h1v1h-1zM31 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM38 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM13 37h1v1h-1zM14 37h1v1h-1zM16 37h1v1h-1zM24 37h1v1h-1zM25 37h1v1h-1zM26 37h1v1h-1zM27 37h1v1h-1zM30 37h1v1h-1zM32 37h1v1h-1zM33 37h1v1h-1zM34 37h1v1h-1zM40 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM14 38h1v1h-1zM15 38h1v1h-1zM22 38h1v1h-1zM24 38h1v1h-1zM26 38h1v1h-1zM29 38h1v1h-1zM30 38h1v1h-1zM31 38h1v1h-1zM33 38h1v1h-1zM38 38h1v1h-1zM39 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM13 39h1v1h-1zM15 39h1v1h-1zM19 39h1v1h-1zM20 39h1v1h-1zM22 39h1v1h-1zM27 39h1v1h-1zM28 39h1v1h-1zM30 39h1v1h-1zM32 39h1v1h-1zM33 39h1v1h-1zM34 39h1v1h-1zM36 39h1v1h-1zM40 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM13 40h1v1h-1zM15 40h1v1h-1zM18 40h1v1h-1zM23 40h1v1h-1zM24 40h1v1h-1zM32 40h1v1h-1zM34 40h1v1h-1zM35 40h1v1h-1zM37 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/linkers-b2/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+const CATS = {
+  reason:    {name:"Reasons & listing",     color:"var(--red)",    on:"var(--on-dark)"},
+  addition:  {name:"Adding ideas",          color:"var(--orange)", on:"var(--on-light)"},
+  contrast:  {name:"Contrast",              color:"var(--violet)", on:"var(--on-dark)"},
+  cause:     {name:"Cause",                 color:"var(--blue)",   on:"var(--on-dark)"},
+  result:    {name:"Result",                color:"var(--teal)",   on:"var(--on-dark)"},
+  purpose:   {name:"Purpose",               color:"var(--lime)",   on:"var(--on-light)"},
+  condition: {name:"Condition",             color:"var(--pink)",   on:"var(--on-dark)"},
+  example:   {name:"Examples & summing up", color:"var(--yellow)", on:"var(--on-light)"}
+};
+const TEAM = [
+  {c:"var(--blue)",on:"var(--on-dark)"},{c:"var(--pink)",on:"var(--on-dark)"},
+  {c:"var(--orange)",on:"var(--on-light)"},{c:"var(--teal)",on:"var(--on-dark)"},
+  {c:"var(--violet)",on:"var(--on-dark)"},{c:"var(--lime)",on:"var(--on-light)"}
+];
+
+/* [[ ]] marks the linker inside a possible answer */
+const CARDS = [
+/* ---------- Reasons & listing ---------- */
+{id:"r1",cat:"reason",topic:"Social media",linker:"One major reason why … is that …",pts:15,
+ does:"Introduces your first and strongest reason in an opinion paragraph.",
+ form:["One major reason why + clause + is that + clause","One major reason for + noun + is that + clause"],
+ bad:"One major reason is because they are bored.",good:"One major reason is that they are bored.",
+ ex:["[[One major reason why]] teenagers spend hours on social media [[is that]] they are afraid of missing out.","[[One major reason for]] the popularity of short videos [[is that]] they are quick and easy to watch."]},
+{id:"r2",cat:"reason",topic:"Learning English",linker:"Another reason (why …) is that …",pts:15,
+ does:"Adds a second reason after you have already given one.",
+ form:["Another reason (why + clause) is that + clause","Another reason for + noun + is that + clause"],
+ bad:"Another reasons is that…",good:"Another reason is that…",
+ note:"Use it only after a first reason. ‘Another’ takes a singular noun.",
+ ex:["One major reason why I study English is that it helps me find a better job. [[Another reason is that]] I can travel without a translator.","[[Another reason why]] English is important [[is that]] most academic articles are published in it."]},
+{id:"r3",cat:"reason",topic:"Remote work",linker:"The main reason (why …) is that …",pts:15,
+ does:"Names the most important reason, usually near the start of a paragraph.",
+ form:["The main reason (why + clause) is that + clause","The most important reason for + noun + is that + clause"],
+ bad:"The main reason is because…",good:"The main reason is that…",
+ ex:["[[The main reason why]] many people prefer remote work [[is that]] they save hours of commuting.","[[The main reason that]] some companies reject remote work [[is that]] managers find it harder to manage teams."]},
+{id:"r4",cat:"reason",topic:"Smartphones",linker:"One of the main reasons why … is that …",pts:20,
+ does:"Presents a reason as one of several important ones.",
+ form:["One of the main reasons (plural) why + clause + is that + clause"],
+ bad:"One of the main reason why…",good:"One of the main reasons why…",
+ note:"The verb is singular (is) because the subject is ‘one’.",
+ ex:["[[One of the main reasons why]] children want smartphones [[is that]] all their friends have one.","[[One of the main reasons why]] phones are addictive [[is that]] apps send constant notifications."]},
+{id:"r5",cat:"reason",topic:"Cars",linker:"This is because …",pts:15,
+ does:"Explains the reason for the sentence you have just written.",
+ form:["Sentence 1. This is (mainly) because + clause","Sentence 1. This is because of + noun"],
+ bad:"This is because of parking is expensive.",good:"This is because parking is expensive.",
+ ex:["Many people in big cities don't own a car. [[This is because]] parking is so expensive.","Electric cars are becoming popular. [[This is mainly because]] fuel prices keep rising."]},
+{id:"r6",cat:"reason",topic:"Exams",linker:"First of all / Firstly",pts:10,
+ does:"Introduces the first point in a list of ideas.",
+ form:["First of all, + clause","Firstly, + clause"],
+ bad:"At first, exams cause a lot of stress.",good:"First of all, exams cause a lot of stress.",
+ note:"‘At first’ means ‘in the beginning (but later it changed)’. It does not list points.",
+ ex:["[[First of all]], exams put students under a lot of pressure.","[[Firstly]], multiple-choice exams do not show how well students can write."]},
+{id:"r7",cat:"reason",topic:"Public transport",linker:"To begin with",pts:10,
+ does:"Introduces the first point in an argument.",
+ form:["To begin with, + clause"],
+ note:"Follow it later with ‘Secondly’, ‘In addition’ or ‘Another reason is that’.",
+ ex:["[[To begin with]], public transport is much cheaper than owning a car.","[[To begin with]], buses in big cities are often crowded during rush hour."]},
+{id:"r8",cat:"reason",topic:"Volunteering",linker:"Finally / Lastly",pts:10,
+ does:"Introduces the last point in a list.",
+ form:["Finally, + clause","Lastly, + clause"],
+ bad:"In the end, volunteering gives you work experience.",good:"Finally, volunteering gives you work experience.",
+ note:"‘In the end’ means ‘eventually, after a long time’.",
+ ex:["[[Finally]], volunteering helps young people gain work experience.","[[Lastly]], volunteers often make friends with people who share their interests."]},
+{id:"r9",cat:"reason",topic:"Fast food",linker:"Last but not least",pts:15,
+ does:"Introduces the final point and shows it is still important.",
+ form:["Last but not least, + clause"],
+ note:"Use it only for the last item in a list, never for the first or middle points.",
+ ex:["[[Last but not least]], fast food contains a lot of salt, which can lead to health problems.","[[Last but not least]], eating fast food every day costs more than cooking at home."]},
+
+/* ---------- Adding ideas ---------- */
+{id:"a1",cat:"addition",topic:"Home cooking",linker:"In addition",pts:10,
+ does:"Adds another point that supports the same idea.",
+ form:["Sentence 1. In addition, + clause"],
+ bad:"In addition, cooking at home.",good:"In addition, cooking at home is cheaper.",
+ note:"Needs a full clause. Before a noun or -ing, use ‘in addition to’.",
+ ex:["Home-cooked meals are healthier. [[In addition]], they are much cheaper.","Cooking with your family is fun. [[In addition]], children learn useful skills."]},
+{id:"a2",cat:"addition",topic:"Travel",linker:"In addition to",pts:15,
+ does:"Adds one thing to another inside the same sentence.",
+ form:["In addition to + noun / -ing, + clause"],
+ bad:"In addition to visit museums, we…",good:"In addition to visiting museums, we…",
+ ex:["[[In addition to]] visiting museums, we tried a lot of local food in Rome.","[[In addition to]] the flight, you have to pay for hotels and transport."]},
+{id:"a3",cat:"addition",topic:"Technology",linker:"Furthermore",pts:15,
+ does:"Adds a further point; formal and common in essays.",
+ form:["Sentence 1. Furthermore, + clause","Clause 1; furthermore, clause 2"],
+ note:"Put a comma after it. It starts a new sentence or comes after a semicolon.",
+ ex:["Online banking is fast. [[Furthermore]], it is available 24 hours a day.","Smart home devices save energy; [[furthermore]], they can be controlled from a phone."]},
+{id:"a4",cat:"addition",topic:"Health",linker:"Moreover",pts:15,
+ does:"Adds a point, often a stronger one than the first.",
+ form:["Sentence 1. Moreover, + clause"],
+ bad:"Exercise is healthy, moreover it is fun.",good:"Exercise is healthy. Moreover, it is fun.",
+ ex:["Regular exercise strengthens the heart. [[Moreover]], it reduces stress.","Smoking damages the lungs. [[Moreover]], it harms the people around the smoker."]},
+{id:"a5",cat:"addition",topic:"Cities",linker:"What is more",pts:15,
+ does:"Adds an extra, often surprising point; less formal than ‘moreover’.",
+ form:["Sentence 1. What is more, + clause","Sentence 1. What's more, + clause"],
+ note:"Common in speaking and informal writing.",
+ ex:["Living in the city centre is convenient. [[What is more]], you don't need a car.","Istanbul has amazing views. [[What's more]], the food is fantastic."]},
+{id:"a6",cat:"addition",topic:"Pets",linker:"Besides",pts:15,
+ does:"Adds another point (adverb) or means ‘in addition to’ (preposition).",
+ form:["Sentence 1. Besides, + clause","Besides + noun / -ing, + clause"],
+ bad:"Beside being loyal, dogs…",good:"Besides being loyal, dogs…",
+ note:"‘Beside’ (no s) means ‘next to’.",
+ ex:["Dogs are loyal. [[Besides]], they make you go for a walk every day.","[[Besides]] being good company, cats are easy to look after."]},
+{id:"a7",cat:"addition",topic:"Sports",linker:"As well as",pts:15,
+ does:"Adds one thing to another, like ‘and also’.",
+ form:["As well as + noun / -ing, + clause","X as well as Y"],
+ bad:"As well as play football, he…",good:"As well as playing football, he…",
+ ex:["[[As well as]] keeping you fit, team sports teach you how to cooperate.","Football improves speed [[as well as]] teamwork."]},
+{id:"a8",cat:"addition",topic:"Music",linker:"Not only … but also",pts:25,
+ does:"Adds two points and puts emphasis on the second.",
+ form:["not only + X + but also + Y","Not only + auxiliary + subject + verb …, but + subject + also …"],
+ bad:"Not only music relaxes us, but…",good:"Not only does music relax us, but…",
+ note:"At the start of a sentence, use question word order (inversion).",
+ ex:["[[Not only]] does music help people relax, [[but]] it [[also]] improves memory.","Learning an instrument is [[not only]] fun [[but also]] good for the brain."]},
+{id:"a9",cat:"addition",topic:"Reading",linker:"Apart from",pts:20,
+ does:"Means ‘in addition to’; it can also mean ‘except’, so context matters.",
+ form:["Apart from + noun / -ing, + clause"],
+ bad:"Apart from it improves vocabulary, …",good:"Apart from improving vocabulary, …",
+ ex:["[[Apart from]] improving your vocabulary, reading helps you relax before bed.","[[Apart from]] novels, I enjoy reading science magazines."]},
+
+/* ---------- Contrast ---------- */
+{id:"c1",cat:"contrast",topic:"Education",linker:"However",pts:10,
+ does:"Shows a contrast with the previous sentence.",
+ form:["Sentence 1. However, + clause","Clause 1; however, clause 2"],
+ bad:"Online classes are flexible, however they are boring.",good:"Online classes are flexible. However, they can be boring.",
+ ex:["Online classes are flexible. [[However]], many students find it hard to stay motivated.","Private schools have smaller classes; [[however]], they are very expensive."]},
+{id:"c2",cat:"contrast",topic:"Shopping",linker:"On the other hand",pts:15,
+ does:"Gives the other side of the same topic (advantage ↔ disadvantage).",
+ form:["(On the one hand, sentence 1.) On the other hand, + clause"],
+ note:"Don't confuse it with ‘on the contrary’, which rejects the previous idea.",
+ ex:["[[On the one hand]], online shopping saves time. [[On the other hand]], you can't try clothes on.","Shopping malls are fun to visit. [[On the other hand]], they encourage people to spend too much."]},
+{id:"c3",cat:"contrast",topic:"Video games",linker:"Nevertheless",pts:20,
+ does:"Says something is true despite the point just made; formal.",
+ form:["Sentence 1. Nevertheless, + clause"],
+ note:"Close to ‘however’, but with the meaning ‘even so’.",
+ ex:["Video games can be addictive. [[Nevertheless]], some of them improve problem-solving skills.","Many parents worry about violent games. [[Nevertheless]], millions of children play them every day."]},
+{id:"c4",cat:"contrast",topic:"Climate change",linker:"Although / Even though",pts:15,
+ does:"Contrasts two ideas in one sentence; ‘even though’ is stronger.",
+ form:["Although + clause, + clause","Clause + although + clause"],
+ bad:"Although it is cheap, but it is slow.",good:"Although it is cheap, it is slow.",
+ note:"Don't use ‘but’ in the same sentence.",
+ ex:["[[Although]] most people know about climate change, they still drive everywhere.","[[Even though]] recycling is easy, a lot of people don't do it."]},
+{id:"c5",cat:"contrast",topic:"Environment",linker:"Despite",pts:20,
+ does:"Shows a contrast; followed by a noun or -ing, not a clause.",
+ form:["Despite + noun / -ing","Despite the fact that + clause"],
+ bad:"Despite of the warnings… / Despite it was raining…",good:"Despite the warnings… / Despite the rain…",
+ ex:["[[Despite]] the warnings, many factories still pollute rivers.","[[Despite]] knowing the risks, people continue to use plastic bags."]},
+{id:"c6",cat:"contrast",topic:"Holidays",linker:"In spite of",pts:20,
+ does:"Same meaning as ‘despite’; remember the ‘of’.",
+ form:["In spite of + noun / -ing","In spite of the fact that + clause"],
+ bad:"In spite the rain, we…",good:"In spite of the rain, we…",
+ ex:["[[In spite of]] the rain, we enjoyed our holiday in Antalya.","[[In spite of]] having a small budget, they travelled around Europe."]},
+{id:"c7",cat:"contrast",topic:"Feelings",linker:"Whereas",pts:20,
+ does:"Compares two different facts, people or things.",
+ form:["Clause 1, whereas + clause 2","Whereas + clause 1, clause 2"],
+ note:"There is usually a comma before ‘whereas’.",
+ ex:["Some people show their feelings openly, [[whereas]] others keep them inside.","My sister gets angry quickly, [[whereas]] I usually stay calm."]},
+{id:"c8",cat:"contrast",topic:"Friendship",linker:"While",pts:15,
+ does:"Contrasts two ideas, like ‘whereas’.",
+ form:["While + clause 1, clause 2","Clause 1, while + clause 2"],
+ note:"‘While’ can also mean ‘during the time that’. The context shows which meaning you want.",
+ ex:["[[While]] some friendships last a lifetime, others end after school.","I prefer a few close friends, [[while]] my brother loves big groups."]},
+{id:"c9",cat:"contrast",topic:"Advertising",linker:"On the contrary",pts:25,
+ does:"Rejects the previous statement and says the opposite is true.",
+ form:["Negative statement. On the contrary, + the true statement"],
+ bad:"Ads are useful. On the contrary, they are annoying.",good:"Ads are useful. On the other hand, they are annoying.",
+ note:"Not for comparing two sides of a topic. Use ‘on the other hand’ for that.",
+ ex:["Advertising isn't just information. [[On the contrary]], it often creates needs we didn't have.","Ads are not harmless. [[On the contrary]], they can damage children's self-esteem."]},
+
+/* ---------- Cause ---------- */
+{id:"k1",cat:"cause",topic:"Sleep",linker:"Because / Because of",pts:10,
+ does:"Gives a reason. ‘Because’ takes a clause; ‘because of’ takes a noun.",
+ form:["because + subject + verb","because of + noun / -ing"],
+ bad:"I was tired because of I slept badly.",good:"I was tired because I slept badly.",
+ ex:["I was exhausted [[because]] I slept only four hours.","I couldn't sleep [[because of]] the noise from the street."]},
+{id:"k2",cat:"cause",topic:"Television",linker:"Due to",pts:15,
+ does:"Gives a cause; common in formal writing.",
+ form:["due to + noun","due to the fact that + clause"],
+ bad:"Due to young people prefer YouTube, …",good:"Due to the fact that young people prefer YouTube, …",
+ ex:["[[Due to]] the popularity of streaming, fewer people watch TV channels.","TV ratings have dropped [[due to the fact that]] young people prefer online videos."]},
+{id:"k3",cat:"cause",topic:"Family",linker:"Owing to",pts:20,
+ does:"Gives a cause; slightly formal, similar to ‘because of’.",
+ form:["Owing to + noun / -ing, + clause","Owing to the fact that + clause"],
+ note:"Not followed directly by subject + verb.",
+ ex:["[[Owing to]] their busy schedules, many families rarely eat dinner together.","[[Owing to]] the high cost of living, young people stay with their parents longer."]},
+{id:"k4",cat:"cause",topic:"Work",linker:"On account of",pts:25,
+ does:"Gives a cause; formal and less common.",
+ form:["on account of + noun / -ing"],
+ bad:"…on account of the hours were long.",good:"…on account of the long hours.",
+ ex:["The meeting was cancelled [[on account of]] the strike.","He left his job [[on account of]] the long working hours."]},
+{id:"k5",cat:"cause",topic:"Housing",linker:"Since / As",pts:15,
+ does:"Gives a reason the reader may already know; often at the start.",
+ form:["Since + clause, + clause","As + clause, + clause"],
+ note:"Here ‘since’ means ‘because’, not ‘from that time’.",
+ ex:["[[Since]] rents are very high in Istanbul, many students share flats.","[[As]] house prices keep rising, young couples are buying smaller homes."]},
+
+/* ---------- Result ---------- */
+{id:"s1",cat:"result",topic:"Recycling",linker:"Therefore",pts:10,
+ does:"Shows a result or a logical conclusion.",
+ form:["Sentence 1. Therefore, + clause","Clause 1; therefore, clause 2"],
+ bad:"Plastic is harmful, therefore we…",good:"Plastic is harmful. Therefore, we…",
+ ex:["Plastic takes hundreds of years to break down. [[Therefore]], we should recycle it.","Landfills are full; [[therefore]], cities need better recycling systems."]},
+{id:"s2",cat:"result",topic:"Money",linker:"As a result",pts:15,
+ does:"Shows what happened because of the previous point.",
+ form:["Sentence 1. As a result, + clause","As a result of + noun / -ing, + clause"],
+ note:"‘As a result’ + clause; ‘as a result of’ + noun.",
+ ex:["Prices went up quickly. [[As a result]], people started spending less.","[[As a result of]] saving every month, he bought a car without a loan."]},
+{id:"s3",cat:"result",topic:"Artificial intelligence",linker:"Consequently",pts:20,
+ does:"Shows a result; formal.",
+ form:["Sentence 1. Consequently, + clause","Clause 1; consequently, clause 2"],
+ note:"Don't mix it up with the noun ‘consequence’.",
+ ex:["AI can write texts in seconds. [[Consequently]], teachers are changing the way they assess homework.","Many tasks are now automated; [[consequently]], some jobs are disappearing."]},
+{id:"s4",cat:"result",topic:"Space exploration",linker:"Thus / Hence",pts:25,
+ does:"Shows a result or conclusion; very formal.",
+ form:["Sentence 1. Thus, + clause","…; hence + noun phrase"],
+ note:"‘Hence’ can be followed by a noun phrase with no verb.",
+ ex:["Space missions are extremely expensive. [[Thus]], many countries work on them together.","Satellites help us predict the weather; [[hence]] their importance for farmers."]},
+
+/* ---------- Purpose ---------- */
+{id:"p1",cat:"purpose",topic:"Science",linker:"In order to / So as to",pts:15,
+ does:"Shows purpose: why someone does something.",
+ form:["in order to + base verb","so as to + base verb","in order not to / so as not to + verb"],
+ bad:"Scientists use computers for analyse data.",good:"Scientists use computers in order to analyse data.",
+ ex:["Scientists use computers [[in order to]] analyse huge amounts of data.","Researchers wear gloves [[so as not to]] contaminate the samples."]},
+{id:"p2",cat:"purpose",topic:"Homework",linker:"So that",pts:20,
+ does:"Shows purpose with a full clause.",
+ form:["so that + subject + can / could / will / would + verb"],
+ note:"Use ‘could / would’ after a past verb.",
+ ex:["Teachers give homework [[so that]] students can practise at home.","I finished my homework early [[so that]] I could watch the match."]},
+
+/* ---------- Condition ---------- */
+{id:"d1",cat:"condition",topic:"Fashion",linker:"Provided (that) / Providing",pts:20,
+ does:"Means ‘only if’; sets a condition.",
+ form:["Provided (that) + present clause, + will / can …","Providing + clause"],
+ bad:"Provided that it will be cheap, I'll buy it.",good:"Provided that it is cheap, I'll buy it.",
+ note:"Use the present tense for future meaning.",
+ ex:["[[Provided that]] clothes are well made, I don't mind paying more.","You can return the jacket [[providing]] you keep the receipt."]},
+{id:"d2",cat:"condition",topic:"Online learning",linker:"As long as",pts:15,
+ does:"Means ‘only if’ or ‘on condition that’.",
+ form:["as long as + present clause"],
+ bad:"As long as you will take notes, …",good:"As long as you take notes, …",
+ ex:["Online learning works well [[as long as]] students have a good internet connection.","[[As long as]] you take notes, recorded lessons are very useful."]},
+{id:"d3",cat:"condition",topic:"Driving",linker:"Unless",pts:20,
+ does:"Means ‘if … not’.",
+ form:["unless + affirmative clause"],
+ bad:"Unless you don't practise, you won't pass.",good:"Unless you practise, you won't pass.",
+ ex:["You won't pass your driving test [[unless]] you practise regularly.","[[Unless]] drivers slow down, accidents will keep happening."]},
+{id:"d4",cat:"condition",topic:"Free time",linker:"Even if",pts:25,
+ does:"The result stays the same whether or not the condition happens.",
+ form:["Even if + clause, + clause"],
+ note:"‘Even if’ = it may or may not be true. ‘Even though’ = it is really true.",
+ ex:["[[Even if]] I had more free time, I wouldn't spend it on social media.","I'll go jogging tomorrow [[even if]] it rains."]},
+{id:"d5",cat:"condition",topic:"Camping",linker:"In case",pts:25,
+ does:"Shows a precaution: you do something because something might happen.",
+ form:["clause + in case + present clause"],
+ bad:"Take a jacket in case it will be cold.",good:"Take a jacket in case it gets cold.",
+ note:"‘In case’ is not the same as ‘if’.",
+ ex:["Take a power bank [[in case]] your phone dies.","We packed extra water [[in case]] there was no shop near the campsite."]},
+
+/* ---------- Examples & summing up ---------- */
+{id:"e1",cat:"example",topic:"Tourism",linker:"For example / For instance",pts:10,
+ does:"Introduces an example that supports your point.",
+ form:["Sentence 1. For example, + clause","Clause 1; for instance, clause 2"],
+ note:"Follow it with a full sentence. Before a single noun or a list, use ‘such as’.",
+ ex:["Tourism creates jobs. [[For example]], hotels in Bodrum hire thousands of people every summer.","Some cities suffer from too many tourists; [[for instance]], Venice is crowded all year."]},
+{id:"e2",cat:"example",topic:"Hobbies",linker:"Such as",pts:15,
+ does:"Introduces examples inside a sentence.",
+ form:["noun + such as + noun / list of nouns"],
+ bad:"…hobbies such as people paint pictures.",good:"…hobbies such as painting.",
+ note:"Not followed by a full clause.",
+ ex:["Creative hobbies [[such as]] painting and photography reduce stress.","I enjoy outdoor activities [[such as]] hiking, cycling and camping."]},
+{id:"e3",cat:"example",topic:"Teenagers",linker:"In other words",pts:20,
+ does:"Says the previous idea again in simpler words.",
+ form:["Sentence 1. In other words, + clause"],
+ ex:["Teenagers need about nine hours of sleep a night. [[In other words]], most of them are not sleeping enough.","Many teenagers check their phones every few minutes; [[in other words]], they find it very hard to disconnect."]},
+{id:"e4",cat:"example",topic:"School uniforms",linker:"In conclusion / To sum up",pts:10,
+ does:"Introduces the final summary of your paragraph or essay.",
+ form:["In conclusion, + clause","To sum up, + clause"],
+ note:"Don't add a new idea after it. Summarise and restate your opinion.",
+ ex:["[[In conclusion]], school uniforms save families both time and money.","[[To sum up]], uniforms make students feel equal, but they limit self-expression."]},
+{id:"e5",cat:"example",topic:"Living abroad",linker:"All in all",pts:15,
+ does:"Sums up after you have considered everything.",
+ form:["All in all, + clause"],
+ ex:["[[All in all]], living abroad is difficult at first but very rewarding.","[[All in all]], the advantages of studying abroad outweigh the disadvantages."]}
+];
+
+const byId = Object.fromEntries(CARDS.map(c => [c.id, c]));
+const KEY = "linkers-b2-board-v1";
+const $ = s => document.getElementById(s);
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function fresh(prev){
+  const teams = prev && prev.teams ? prev.teams.map(t => ({name:t.name, score:0})) : [{name:"Team 1",score:0},{name:"Team 2",score:0}];
+  return {order: shuffle(CARDS.map(c => c.id)), done:{}, teams, cur:0, filter:"all", info: prev ? prev.info : "open"};
+}
+function valid(s){
+  return s && Array.isArray(s.order) && s.order.length === CARDS.length && s.order.every(id => byId[id])
+    && Array.isArray(s.teams) && s.teams.length > 0 && s.teams.length <= TEAM.length && s.done && typeof s.done === "object";
+}
+function load(){
+  try { const raw = localStorage.getItem(KEY); if (raw){ const s = JSON.parse(raw); if (valid(s)) return Object.assign({cur:0, filter:"all", info:"open"}, s); } } catch(e){}
+  return fresh();
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+
+let state = null;
+let openId = null;
+let hasTip = false;
+let lastTile = null;
+let confirming = false;
+
+/* ---------- render ---------- */
+function render(){ renderTeams(); renderLegend(); renderBoard(); renderInfoToggle(); renderWinner(); save(); }
+
+function renderTeams(){
+  if (state.cur >= state.teams.length) state.cur = 0;
+  $("teams").innerHTML = state.teams.map((t, i) => {
+    const tc = TEAM[i];
+    const turn = i === state.cur;
+    return `<div class="team ${turn ? "is-turn" : ""}" style="--tc:${tc.c};--ton:${tc.on}">
+      ${turn ? '<span class="turn-tag">Turn</span>' : ""}
+      <button class="t-turn" type="button" data-turn="${i}" aria-label="Give the turn to ${esc(t.name)}">${i + 1}</button>
+      <input id="team-name-${i}" class="t-name" data-name="${i}" value="${esc(t.name)}" maxlength="18" aria-label="Team ${i + 1} name">
+      <div class="t-score">
+        <button type="button" data-adj="${i}" data-d="-5" aria-label="Take 5 points from ${esc(t.name)}">−</button>
+        <output>${t.score}</output>
+        <button type="button" data-adj="${i}" data-d="5" aria-label="Give 5 points to ${esc(t.name)}">+</button>
+      </div>
+    </div>`;
+  }).join("");
+  $("team-n").textContent = state.teams.length;
+}
+
+function leftIn(cat){ return CARDS.filter(c => (cat === "all" || c.cat === cat) && !state.done[c.id]).length; }
+
+function renderLegend(){
+  const chips = [`<button class="chip ${state.filter === "all" ? "on" : ""}" type="button" data-f="all" style="--c:var(--ink);--on:var(--bg)">All cards <span class="n">${leftIn("all")}</span></button>`];
+  for (const k in CATS){
+    const c = CATS[k];
+    chips.push(`<button class="chip ${state.filter === k ? "on" : ""}" type="button" data-f="${k}" style="--c:${c.color};--on:${c.on}" aria-pressed="${state.filter === k}"><i class="dot"></i>${c.name} <span class="n">${leftIn(k)}</span></button>`);
+  }
+  $("legend").innerHTML = chips.join("");
+}
+
+function renderBoard(){
+  const html = state.order.map((id, i) => {
+    const c = byId[id];
+    if (state.filter !== "all" && c.cat !== state.filter) return "";
+    const cat = CATS[c.cat];
+    const d = state.done[id];
+    const style = `--c:${cat.color};--on:${cat.on}`;
+    if (!d) return `<button class="tile" type="button" data-id="${id}" data-n="${i + 1}" style="${style}" aria-label="Card ${i + 1}, closed"><span class="t-num">${i + 1}</span></button>`;
+    const team = state.teams[d.team];
+    const res = d.ok ? `+${d.pts} ${team ? esc(team.name) : ""}` : "Oops";
+    return `<button class="tile done ${d.ok ? "is-ok" : "is-oops"}" type="button" data-id="${id}" data-n="${i + 1}" style="${style}" aria-label="Card ${i + 1}: ${esc(c.linker)}, played">
+      <span class="t-small">${i + 1}</span><span class="t-linker">${esc(c.linker)}</span><span class="t-res">${res}</span></button>`;
+  }).join("");
+  $("board").innerHTML = html;
+  $("played").textContent = Object.keys(state.done).length;
+  $("total").textContent = CARDS.length;
+}
+
+function renderInfoToggle(){
+  $("info-open").setAttribute("aria-pressed", String(state.info === "open"));
+  $("info-check").setAttribute("aria-pressed", String(state.info === "check"));
+}
+
+function renderWinner(){
+  const w = $("winner");
+  if (Object.keys(state.done).length < CARDS.length){ w.hidden = true; return; }
+  const top = Math.max(...state.teams.map(t => t.score));
+  const winners = state.teams.filter(t => t.score === top).map(t => esc(t.name));
+  w.innerHTML = `<span class="big">${winners.length > 1 ? "It's a tie: " + winners.join(" & ") : winners[0] + " wins!"}</span>All ${CARDS.length} cards played · ${top} points`;
+  w.hidden = false;
+}
+
+/* ---------- card ---------- */
+function linkerHTML(s){ return s.split(" / ").map(p => `<span>${esc(p)}</span>`).join(" / "); }
+function exHTML(s){ return esc(s).replace(/\[\[(.+?)\]\]/g, "<mark>$1</mark>"); }
+
+function openCard(id, tile){
+  const c = byId[id], cat = CATS[c.cat], d = state.done[id];
+  const n = state.order.indexOf(id) + 1;
+  openId = id; lastTile = tile || null;
+  const card = $("card");
+  card.style.setProperty("--c", cat.color);
+  card.style.setProperty("--on", cat.on);
+  $("m-no").textContent = "#" + n;
+  $("m-cat").textContent = cat.name;
+  $("m-pts").textContent = c.pts;
+  $("m-topic").textContent = c.topic;
+  $("m-topic2").textContent = c.topic;
+  const L = $("m-linker");
+  L.innerHTML = linkerHTML(c.linker);
+  L.classList.toggle("long", c.linker.length > 24);
+  let tip = "";
+  if (c.bad) tip += `<p class="wr bad"><span class="mark-bad" aria-label="wrong">✗</span><span class="txt">${esc(c.bad)}</span></p><p class="wr"><span class="mark-good" aria-label="right">✓</span><span>${esc(c.good)}</span></p>`;
+  if (c.note) tip += `<p class="note">${esc(c.note)}</p>`;
+  $("m-tip").innerHTML = tip;
+  hasTip = !!tip;
+  $("m-ex").innerHTML = c.ex.map(e => `<li>${exHTML(e)}</li>`).join("");
+
+  const review = !!d;
+  setReveal(review);
+  $("m-play").hidden = review;
+  $("m-review").hidden = !review;
+  if (review){
+    const team = state.teams[d.team];
+    $("m-review-text").innerHTML = d.ok ? `Played · <b>+${d.pts}</b> to <b>${team ? esc(team.name) : "a removed team"}</b>` : `Played · <b>Oops</b>${team ? " (" + esc(team.name) + ")" : ""}`;
+  } else {
+    $("m-ok").textContent = `Okay · +${c.pts} to ${state.teams[state.cur].name}`;
+  }
+  $("overlay").hidden = false;
+  document.body.classList.add("modal-open");
+  $("m-close").focus();
+}
+
+function setReveal(on, scroll){
+  $("m-answers").hidden = !on;
+  $("m-info").hidden = !hasTip || (state.info === "check" && !on);
+  $("m-check").textContent = on ? "Hide possible answers" : "Check · show possible answers";
+  $("m-check").setAttribute("aria-expanded", String(on));
+  if (on && scroll){
+    /* bring the answers into view inside the card (they sit below the info box) */
+    requestAnimationFrame(() => $("m-answers").scrollIntoView({block:"nearest", behavior: reduceMotion ? "auto" : "smooth"}));
+  }
+}
+
+function closeCard(){
+  $("overlay").hidden = true;
+  document.body.classList.remove("modal-open");
+  openId = null;
+  const n = lastTile && lastTile.dataset.n;
+  if (n){ const t = document.querySelector(`.tile[data-n="${n}"]`); if (t) t.focus(); }
+}
+
+function nextTurn(){ state.cur = (state.cur + 1) % state.teams.length; }
+
+function score(ok){
+  if (!openId) return;
+  const c = byId[openId];
+  state.done[openId] = {ok, team: state.cur, pts: ok ? c.pts : 0};
+  if (ok){
+    state.teams[state.cur].score += c.pts;
+    const r = $("m-ok").getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top + r.height / 2);
+  }
+  nextTurn();
+  closeCard();
+  render();
+}
+
+function undo(){
+  if (!openId) return;
+  const d = state.done[openId];
+  if (d && d.ok && state.teams[d.team]) state.teams[d.team].score -= d.pts;
+  delete state.done[openId];
+  closeCard();
+  render();
+}
+
+/* ---------- confetti ---------- */
+const cv = $("confetti"), cx = cv.getContext("2d");
+let parts = [], raf = 0;
+function burst(x, y){
+  if (reduceMotion) return;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cs = getComputedStyle(document.documentElement);
+  const cols = ["--red","--orange","--yellow","--lime","--teal","--blue","--violet","--pink"].map(v => cs.getPropertyValue(v).trim());
+  for (let i = 0; i < 140; i++){
+    const a = Math.random() * Math.PI * 2, sp = 4 + Math.random() * 9;
+    parts.push({x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 6, w: 6 + Math.random() * 7, h: 4 + Math.random() * 5,
+      r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[i % cols.length], life: 0});
+  }
+  if (!raf) raf = requestAnimationFrame(tick);
+}
+function tick(){
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  parts = parts.filter(p => p.life < 120 && p.y < innerHeight + 40);
+  for (const p of parts){
+    p.life++; p.vy += .32; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.globalAlpha = Math.max(0, 1 - p.life / 120);
+    cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore();
+  }
+  raf = parts.length ? requestAnimationFrame(tick) : 0;
+  if (!raf) cx.clearRect(0, 0, innerWidth, innerHeight);
+}
+
+/* ---------- events ---------- */
+$("board").addEventListener("click", e => { const t = e.target.closest(".tile"); if (t) openCard(t.dataset.id, t); });
+$("legend").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; state.filter = b.dataset.f; render(); });
+$("teams").addEventListener("click", e => {
+  const turn = e.target.closest("[data-turn]");
+  if (turn){ state.cur = +turn.dataset.turn; render(); return; }
+  const adj = e.target.closest("[data-adj]");
+  if (adj){ state.teams[+adj.dataset.adj].score += +adj.dataset.d; render(); }
+});
+$("teams").addEventListener("input", e => {
+  const i = e.target.dataset.name; if (i == null) return;
+  state.teams[+i].name = e.target.value.trim() || `Team ${+i + 1}`;
+  save();
+});
+$("teams").addEventListener("change", () => render());
+$("team-plus").addEventListener("click", () => { if (state.teams.length < TEAM.length){ state.teams.push({name:`Team ${state.teams.length + 1}`, score:0}); render(); } });
+$("team-minus").addEventListener("click", () => { if (state.teams.length > 1){ state.teams.pop(); if (state.cur >= state.teams.length) state.cur = 0; render(); } });
+document.querySelectorAll("[data-info]").forEach(b => b.addEventListener("click", () => { state.info = b.dataset.info; render(); }));
+
+function showNewGame(){
+  const w = $("newgame-wrap");
+  if (!confirming){ w.innerHTML = `<button id="newgame" class="btn" type="button">New game</button>`; $("newgame").addEventListener("click", () => { confirming = true; showNewGame(); }); return; }
+  w.innerHTML = `<span class="confirm">Reset scores and reshuffle? <button id="ng-yes" class="btn yes" type="button">Yes</button><button id="ng-no" class="btn" type="button">No</button></span>`;
+  $("ng-yes").addEventListener("click", () => { state = fresh(state); confirming = false; showNewGame(); render(); });
+  $("ng-no").addEventListener("click", () => { confirming = false; showNewGame(); });
+  $("ng-no").focus();
+}
+
+$("m-close").addEventListener("click", closeCard);
+$("overlay").addEventListener("click", e => { if (e.target === $("overlay")) closeCard(); });
+$("m-check").addEventListener("click", () => setReveal($("m-answers").hidden, true));
+$("m-ok").addEventListener("click", () => score(true));
+$("m-oops").addEventListener("click", () => score(false));
+$("m-undo").addEventListener("click", undo);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && openId) closeCard(); });
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if (e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try { navigator.clipboard.writeText(text).then(() => done(true), selectIt); } catch(e){ selectIt(); }
+});
+
+/* ---------- boot ---------- */
+function start(data){
+  state = (data && data.state && valid(data.state)) ? data.state : load();
+  showNewGame();
+  render();
+}
+start({});
+})();
+</script>
+</body>
+</html>
