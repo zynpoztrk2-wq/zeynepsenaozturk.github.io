@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relative Clause Wheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#2B1B4D;
+    --night-2:#3A2566;
+    --cream:#FFF8EC;
+    --ink:#241440;
+    --yellow:#FFD23F;
+    --coral:#FF5A6E;
+    --mint:#2EC4A6;
+    --violet:#9B5DE5;
+    --display:"Fredoka","Century Gothic","Quicksand","Avenir Next",system-ui,sans-serif;
+    --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(760px 520px at 8% -8%, #4A2C7A 0%, transparent 58%),
+      radial-gradient(680px 520px at 100% 108%, #1E4E6B 0%, transparent 60%),
+      var(--night);
+    color:var(--cream);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+    padding:30px 18px 52px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1240px;margin:0 auto}
+
+  header{margin-bottom:24px}
+  h1{font-family:var(--display);font-size:40px;font-weight:600;letter-spacing:-.4px;margin:0 0 4px;
+     color:var(--yellow)}
+  .lede{font-size:16.5px;color:#C9B8E8;margin:0}
+
+  .board{display:grid;grid-template-columns:minmax(340px,1.12fr) minmax(320px,1fr);gap:44px;align-items:center}
+
+  .wheelbox{display:flex;flex-direction:column;align-items:center;gap:22px}
+  .dial{width:100%;max-width:560px;filter:drop-shadow(0 18px 34px rgba(0,0,0,.45))}
+  svg{display:block;width:100%;height:auto}
+  #rotor text,#rotor path{pointer-events:none}
+  #rotor{transform-origin:220px 220px;transition:transform 3.6s cubic-bezier(.1,.72,.14,1)}
+  .seg{stroke:rgba(255,255,255,.55);stroke-width:1.2}
+  .seg.used{opacity:1}
+  .lab{font-family:var(--display);font-weight:500}
+  .lab.used{opacity:1}
+  .rim{fill:none;stroke:var(--yellow);stroke-width:7}
+  .hub{fill:var(--cream)}
+  .hubring{fill:none;stroke:var(--yellow);stroke-width:4}
+  .hubcue{font-family:var(--body);font-size:11px;font-weight:700;fill:#8B79B5;text-anchor:middle;
+    letter-spacing:.4px}
+  .hubtext{font-family:var(--display);font-weight:600;fill:var(--ink);text-anchor:middle}
+  .needle{fill:var(--yellow);stroke:#8A6A00;stroke-width:1.5;stroke-linejoin:round}
+
+  .spin{
+    font-family:var(--display);font-size:23px;font-weight:600;letter-spacing:.3px;
+    background:var(--yellow);color:#4A3200;border:0;
+    padding:16px 62px;border-radius:999px;cursor:pointer;
+    box-shadow:0 8px 0 #C9A01E, 0 16px 28px rgba(0,0,0,.35);
+    transition:transform .12s, box-shadow .12s;
+  }
+  .spin:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 0 #C9A01E,0 18px 30px rgba(0,0,0,.38)}
+  .spin:active:not(:disabled){transform:translateY(5px);box-shadow:0 3px 0 #C9A01E,0 8px 16px rgba(0,0,0,.3)}
+  .spin:disabled{background:#6D5F94;color:#C9BEE4;box-shadow:none;cursor:default}
+  .spin:focus-visible{outline:3px solid var(--mint);outline-offset:4px}
+
+  .tally{font-size:15px;color:#B9A7DD;display:flex;align-items:center;gap:16px;margin:0}
+  .reset{font:inherit;font-size:15px;font-weight:700;background:none;border:0;color:var(--yellow);
+    text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px}
+  .reset:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+
+  .panel{background:var(--cream);border-radius:30px;padding:38px 38px 34px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);color:var(--ink)}
+  .starter{font-family:var(--display);font-size:40px;line-height:1.24;font-weight:600;margin:0}
+  .invite{font-size:22px;line-height:1.5;color:#7A6AA0;margin:0;font-weight:600}
+  .finish{font-size:22px;line-height:1.5;margin:0;font-weight:700}
+
+  .reveal{margin-top:28px}
+  .showbtn{
+    font-family:var(--display);font-size:18px;font-weight:600;
+    background:var(--mint);color:#06372E;border:0;
+    padding:13px 30px;border-radius:999px;cursor:pointer;
+    box-shadow:0 5px 0 #1E9B82;transition:transform .12s,box-shadow .12s;
+  }
+  .showbtn:hover{transform:translateY(-1px)}
+  .showbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #1E9B82}
+  .showbtn:focus-visible{outline:3px solid var(--violet);outline-offset:3px}
+
+  .answer{
+    margin-top:20px;background:#fff;border-radius:20px;padding:22px 24px;
+    font-size:21px;line-height:1.55;font-weight:600;color:var(--ink);
+    box-shadow:inset 0 0 0 3px #EFE4FF;
+  }
+  .answer em{font-style:normal;
+    background:linear-gradient(transparent 54%, #FFE68A 54%);}
+  .judge{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
+  .jbtn{font-family:var(--display);font-size:17px;font-weight:600;border:0;cursor:pointer;
+    padding:12px 26px;border-radius:999px;transition:transform .12s,box-shadow .12s}
+  .jbtn:active{transform:translateY(3px)}
+  .jbtn.yes{background:var(--mint);color:#06372E;box-shadow:0 5px 0 #1E9B82}
+  .jbtn.yes:active{box-shadow:0 2px 0 #1E9B82}
+  .jbtn.no{background:var(--coral);color:#4A0410;box-shadow:0 5px 0 #CC3A4D}
+  .jbtn.no:active{box-shadow:0 2px 0 #CC3A4D}
+  .jbtn:focus-visible{outline:3px solid var(--violet);outline-offset:3px}
+  .react{display:flex;align-items:center;gap:16px;margin-top:20px}
+  .react .face{font-size:50px;line-height:1;animation:bounce .5s cubic-bezier(.2,1.4,.4,1)}
+  .react .cap{font-family:var(--display);font-size:26px;font-weight:600}
+  @keyframes bounce{0%{transform:scale(.3) rotate(-14deg)}60%{transform:scale(1.16) rotate(6deg)}100%{transform:scale(1) rotate(0)}}
+  .score{margin-top:20px;font-size:15px;font-weight:700;color:#7A6AA0}
+  #confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:40}
+  .conf{position:absolute;width:11px;height:17px;border-radius:3px;will-change:transform,opacity;
+    animation:fall 1.5s cubic-bezier(.2,.6,.4,1) forwards}
+  @keyframes fall{0%{transform:translate3d(0,0,0) rotate(0);opacity:1}
+    100%{transform:translate3d(var(--dx),var(--dy),0) rotate(var(--rot));opacity:0}}
+  .pop{animation:pop .34s cubic-bezier(.2,.9,.3,1.1)}
+  @keyframes pop{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  [hidden]{display:none !important}
+
+  @media (max-width:900px){
+    .board{grid-template-columns:1fr;gap:28px}
+    h1{font-size:31px}
+    .starter{font-size:28px}
+    .panel{padding:26px 24px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #rotor{transition:none}
+    .pop{animation:none}
+    .spin:hover:not(:disabled){transform:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Relative Clause Wheel</h1>
+    <p class="lede">Spin, read the starter aloud, finish it with a relative clause.</p>
+  </header>
+
+  <div class="board">
+    <div class="wheelbox">
+      <div class="dial">
+        <svg viewBox="0 0 440 440" role="img" aria-label="Wheel of forty sentence starters">
+          <g id="rotor"></g>
+          <circle class="rim" cx="220" cy="220" r="203"></circle>
+          <circle class="hub" cx="220" cy="220" r="76"></circle>
+          <circle class="hubring" cx="220" cy="220" r="70"></circle>
+          <text class="hubcue" id="hubcue" x="220" y="198"></text>
+          <g id="hubwrap"></g>
+          <path class="needle" d="M220 0 L240 40 L200 40 Z"></path>
+        </svg>
+      </div>
+      <button class="spin" id="spin">Spin</button>
+      <p class="tally"><span id="tally">0 of 40 used</span>
+        <button class="reset" id="reset" hidden>Start again</button></p>
+    </div>
+
+    <div class="panel" id="panel">
+      <p class="invite" id="invite">Press spin to get a sentence starter.</p>
+
+      <div id="result" hidden>
+        <p class="starter" id="starter"></p>
+        <div class="reveal">
+          <button class="showbtn" id="show">Show possible answer</button>
+          <div class="answer" id="answer" hidden></div>
+        </div>
+
+        <div class="judge">
+          <button class="jbtn yes" id="yes">Correct</button>
+          <button class="jbtn no" id="no">Not yet</button>
+        </div>
+        <div class="react" id="react" hidden>
+          <span class="face" id="face"></span>
+          <span class="cap" id="cap"></span>
+        </div>
+        <p class="score" id="score" hidden></p>
+      </div>
+
+      <p class="finish" id="finish" hidden>All forty are used. Press “Start again” for a new round.</p>
+    </div>
+  </div>
+
+</div>
+<div id="confetti"></div>
+
+<script>
+// [starter, model answer, the noun the clause must describe]
+const ITEMS = [
+["I know a girl...","I know a girl <em>who can speak four languages fluently</em>.","a girl"],
+["I recently met someone...","I recently met someone <em>who has travelled to more than thirty countries</em>.","someone"],
+["I talked to a boy...","I talked to a boy <em>whose brother studies at the same university as me</em>.","a boy"],
+["I have a friend...","I have a friend <em>who I can always count on when I have a problem</em>.","a friend"],
+["I will never forget the teacher...","I will never forget the teacher <em>who encouraged me to believe in myself</em>.","the teacher"],
+["I admire people...","I admire people <em>who are willing to take risks to achieve their goals</em>.","people"],
+["I once met a person...","I once met a person <em>whose life story completely changed my perspective</em>.","a person"],
+["I don't trust people...","I don't trust people <em>who make promises they cannot keep</em>.","people"],
+["I have a relative...","I have a relative <em>who has been living abroad for more than ten years</em>.","a relative"],
+["I would like to meet someone...","I would like to meet someone <em>who has made a significant contribution to society</em>.","someone"],
+["I have been to a restaurant...","I have been to a restaurant <em>where customers are allowed to prepare their own meals</em>.","a restaurant"],
+["I would love to visit a country...","I would love to visit a country <em>where people have a completely different way of life</em>.","a country"],
+["I grew up in a neighbourhood...","I grew up in a neighbourhood <em>where everyone knew each other</em>.","a neighbourhood"],
+["I know a place...","I know a place <em>where you can enjoy nature without being disturbed by crowds</em>.","a place"],
+["I once stayed at a hotel...","I once stayed at a hotel <em>which had an amazing view of the mountains</em>.","a hotel"],
+["I want to live in a city...","I want to live in a city <em>where public transportation is efficient and affordable</em>.","a city"],
+["I remember a café...","I remember a café <em>where I used to spend hours studying for my exams</em>.","a café"],
+["I have visited a museum...","I have visited a museum <em>which displays objects from ancient civilizations</em>.","a museum"],
+["I would never go back to a place...","I would never go back to a place <em>where I felt uncomfortable and unsafe</em>.","a place"],
+["I dream of living in a house...","I dream of living in a house <em>which has a large garden overlooking the sea</em>.","a house"],
+["I recently watched a movie...","I recently watched a movie <em>which made me question some of my beliefs</em>.","a movie"],
+["I have read a book...","I have read a book <em>that completely changed the way I think about success</em>.","a book"],
+["I bought something...","I bought something <em>that turned out to be a complete waste of money</em>.","something"],
+["I lost an item...","I lost an item <em>which had great sentimental value to me</em>.","an item"],
+["I use an app...","I use an app <em>that helps me organize my daily responsibilities</em>.","an app"],
+["I have a hobby...","I have a hobby <em>which allows me to relax after a stressful day</em>.","a hobby"],
+["I received a gift...","I received a gift <em>that I had wanted for several years</em>.","a gift"],
+["I remember a moment...","I remember a moment <em>when I felt extremely proud of myself</em>.","a moment"],
+["I made a decision...","I made a decision <em>that had a major impact on my future</em>.","a decision"],
+["I had an experience...","I had an experience <em>which taught me the importance of being independent</em>.","an experience"],
+["I have a friend whose...","I have a friend whose <em>parents have been living in Canada for several years</em>.","a friend whose"],
+["I once met someone whose...","I once met someone whose <em>personal experiences inspired me to pursue my dreams</em>.","someone whose"],
+["I remember the day when...","I remember the day when <em>I received my university acceptance letter</em>.","the day when"],
+["I will never forget the moment when...","I will never forget the moment when <em>I realized that I had achieved one of my biggest goals</em>.","the moment when"],
+["I know a family whose...","I know a family whose <em>children have grown up speaking three different languages</em>.","a family whose"],
+["I have a friend with whom...","I have a friend with whom <em>I can discuss almost anything without feeling judged</em>.","a friend with whom"],
+["I recently discovered something about which...","I recently discovered something about which <em>very little research has been conducted</em>.","something about which"],
+["I have experienced a situation in which...","I have experienced a situation in which <em>I had to make an important decision under pressure</em>.","a situation in which"],
+["I have a teacher from whom...","I have a teacher from whom <em>I have learned valuable lessons about life</em>.","a teacher from whom"],
+["I remember a time during which...","I remember a time during which <em>I struggled to balance my academic responsibilities and personal life</em>.","a time during which"]
+];
+
+const FAIR = ["#FF5A6E","#FF9F1C","#FFD23F","#2EC4A6","#3FA9F5","#9B5DE5","#FF5FA2"];
+const N = ITEMS.length, SEG = 360 / N, CX = 220, CY = 220, R = 200;
+const IN = 84, OUT = 197, SPACE = OUT - IN;
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+function readable(hex){                       // white or ink, whichever contrasts
+  const n = parseInt(hex.slice(1),16);
+  const [r,g,b] = [n>>16, (n>>8)&255, n&255].map(v => {
+    const s = v/255; return s <= .03928 ? s/12.92 : Math.pow((s+.055)/1.055, 2.4);
+  });
+  return (.2126*r + .7152*g + .0722*b) > .42 ? '#241440' : '#FFFFFF';
+}
+
+const rotor   = document.getElementById('rotor');
+const hubWrap = document.getElementById('hubwrap');
+const hubCue  = document.getElementById('hubcue');
+const spinBtn = document.getElementById('spin');
+const resetBtn= document.getElementById('reset');
+const tallyEl = document.getElementById('tally');
+const invite  = document.getElementById('invite');
+const resultEl= document.getElementById('result');
+const finishEl= document.getElementById('finish');
+const startEl = document.getElementById('starter');
+const showBtn = document.getElementById('show');
+const answerEl= document.getElementById('answer');
+
+let angle = 0, spinning = false;
+const used = new Set();
+
+function wedge(i){
+  const a1 = (i * SEG - 90 - SEG / 2) * Math.PI / 180;
+  const a2 = ((i + 1) * SEG - 90 - SEG / 2) * Math.PI / 180;
+  const x1 = CX + R * Math.cos(a1), y1 = CY + R * Math.sin(a1);
+  const x2 = CX + R * Math.cos(a2), y2 = CY + R * Math.sin(a2);
+  return `M${CX} ${CY} L${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2} Z`;
+}
+
+function drawWheel(){
+  rotor.innerHTML = '';
+  for (let i = 0; i < N; i++){
+    const isUsed = used.has(i);
+    const fill = isUsed ? '#59497E' : FAIR[i % FAIR.length];
+    const path = document.createElementNS(SVGNS,'path');
+    path.setAttribute('d', wedge(i));
+    path.setAttribute('fill', fill);
+    path.setAttribute('class', 'seg' + (isUsed ? ' used' : ''));
+    rotor.appendChild(path);
+
+    const text = ITEMS[i][0];
+    const fs = Math.max(5.4, Math.min(9.2, SPACE / (text.length * 0.52)));
+    const mid = i * SEG - 90;
+    const flip = mid > 90 || mid < -90;
+    const t = document.createElementNS(SVGNS,'text');
+    t.setAttribute('class', 'lab' + (isUsed ? ' used' : ''));
+    t.setAttribute('fill', isUsed ? '#9D8FC2' : readable(fill));
+    t.setAttribute('font-size', fs.toFixed(2));
+    t.setAttribute('x', CX + (flip ? -IN : IN));
+    t.setAttribute('y', CY + fs * 0.34);
+    t.setAttribute('text-anchor', flip ? 'end' : 'start');
+    t.setAttribute('textLength', SPACE);
+    t.setAttribute('lengthAdjust', 'spacing');
+    t.setAttribute('transform', `rotate(${flip ? mid + 180 : mid} ${CX} ${CY})`);
+    t.textContent = text;
+    rotor.appendChild(t);
+  }
+  tallyEl.textContent = `${used.size} of ${N} used`;
+  resetBtn.hidden = used.size === 0;
+  const done = used.size === N;
+  spinBtn.disabled = done;
+  finishEl.hidden = !done;
+  if (done){ resultEl.hidden = true; invite.hidden = true; }
+}
+
+function setHub(phrase){
+  hubWrap.innerHTML = '';
+  if (!phrase){
+    hubCue.textContent = '';
+    const t = document.createElementNS(SVGNS,'text');
+    t.setAttribute('class','hubtext');
+    t.setAttribute('x', CX); t.setAttribute('y', CY + 14);
+    t.setAttribute('font-size','38');
+    t.textContent = '?';
+    hubWrap.appendChild(t);
+    return;
+  }
+  hubCue.textContent = 'Describe';
+  const words = phrase.split(' ');
+  const lines = [];
+  let line = '';
+  const limit = phrase.length > 22 ? 11 : 14;
+  words.forEach(w => {
+    if ((line + ' ' + w).trim().length > limit && line){ lines.push(line); line = w; }
+    else line = (line + ' ' + w).trim();
+  });
+  if (line) lines.push(line);
+
+  const longest = Math.max(...lines.map(l => l.length));
+  const fs = Math.max(10, Math.min(19, 118 / (longest * 0.56)));
+  const startY = CY + 12 - (lines.length - 1) * fs * 0.62;
+  lines.forEach((l, k) => {
+    const t = document.createElementNS(SVGNS,'text');
+    t.setAttribute('class','hubtext');
+    t.setAttribute('x', CX);
+    t.setAttribute('y', (startY + k * fs * 1.18).toFixed(1));
+    t.setAttribute('font-size', fs.toFixed(1));
+    t.textContent = l;
+    hubWrap.appendChild(t);
+  });
+}
+
+function spin(){
+  if (spinning) return;
+  const pool = [];
+  for (let i = 0; i < N; i++) if (!used.has(i)) pool.push(i);
+  if (!pool.length) return;
+
+  spinning = true;
+  spinBtn.disabled = true;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+
+  const target = -(pick * SEG);
+  const current = ((angle % 360) + 360) % 360;
+  let delta = (((target % 360) + 360) % 360) - current;
+  if (delta < 0) delta += 360;
+  angle += 6 * 360 + delta;
+  rotor.style.transform = `rotate(${angle}deg)`;
+
+  const land = () => {
+    used.add(pick);
+    show(pick);
+    drawWheel();
+    spinning = false;
+    spinBtn.disabled = used.size === N;
+  };
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) land();
+  else setTimeout(land, 3650);
+}
+
+function show(i){
+  invite.hidden = true;
+  finishEl.hidden = true;
+  resultEl.hidden = false;
+  startEl.textContent = ITEMS[i][0];
+  answerEl.innerHTML = ITEMS[i][1];
+  setHub(ITEMS[i][2]);
+  answerEl.hidden = true;
+  showBtn.textContent = 'Show possible answer';
+  reactEl.hidden = true;
+  resultEl.classList.remove('pop');
+  void resultEl.offsetWidth;
+  resultEl.classList.add('pop');
+}
+
+// ---- reactions ----
+const WIN = [
+  ["🎉","Let's go!"],["🔥","That's the one."],["👏","No notes."],["🤩","Textbook."],
+  ["💪","Clean clause."],["🏆","Straight to the exam paper."],["✨","Perfect fit."],
+  ["🎯","Bullseye."],["🚀","Lift off."],["🌟","Star answer."],["😎","Smooth."],
+  ["🧠","Brain fully on."],["💎","Polished."],["📌","Pin that one up."],
+  ["🥳","Worth a party."],["👑","Royal clause."],["🍀","Nothing to fix."],
+  ["⚡","Instant."],["🎸","Rock solid."],["🧩","Fits exactly."],["🍯","Sweet."],
+  ["🛡️","Error-proof."],["📚","Straight out of the grammar book."],["🙌","That is the level."],
+  ["🦾","Strong clause."],["🏅","Medal for that one."],["🎊","Exactly right."],
+  ["💯","Full marks."],["🌈","Beautiful."],["🧿","Flawless."],["🕺","Showing off now."],
+  ["🦉","Wise choice of pronoun."]
+];
+const MISS = [
+  ["🤔","Not quite — try the clause again."],["😅","So close."],["🫠","Nearly there."],
+  ["🙃","Check the pronoun."],["😬","One more go."],["🧐","Read the noun again."],
+  ["🔍","Something is missing."],["🌀","Close — turn it around."],["🚧","Still under construction."],
+  ["🐢","Slow down and rebuild it."],["🧶","A bit tangled."],["🪜","One step short."],
+  ["🤏","Tiny fix needed."],["🎈","Not yet — keep going."],["📎","Attach the clause to the noun."],
+  ["🧊","Cold. Try again."],["🔁","Rewind and retry."],["💭","Think: who, which or where?"],
+  ["🪁","Drifting — anchor it to the noun."],["🧭","Right idea, wrong turn."],
+  ["🙂","Not this time."],["🪞","Say it once more."],["🧱","Build the clause again."],
+  ["🫧","Almost formed."],["🛟","Need the pronoun here."]
+];
+const bag = { win: [], miss: [] };
+function draw(key, pool){                     // shuffled bag: nothing repeats until all are used
+  if (!bag[key].length){
+    bag[key] = pool.map((_, i) => i);
+    for (let i = bag[key].length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[key][i], bag[key][j]] = [bag[key][j], bag[key][i]];
+    }
+  }
+  return pool[bag[key].pop()];
+}
+const CONF_COLOURS = ['#FF5A6E','#FF9F1C','#FFD23F','#2EC4A6','#3FA9F5','#9B5DE5','#FF5FA2'];
+const reactEl = document.getElementById('react');
+const faceEl  = document.getElementById('face');
+const capEl   = document.getElementById('cap');
+const scoreEl = document.getElementById('score');
+const confBox = document.getElementById('confetti');
+let hits = 0, misses = 0;
+
+function burst(){
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = document.getElementById('panel').getBoundingClientRect();
+  const ox = r.left + r.width / 2, oy = r.top + r.height / 2;
+  for (let i = 0; i < 34; i++){
+    const d = document.createElement('div');
+    d.className = 'conf';
+    d.style.left = ox + 'px';
+    d.style.top  = oy + 'px';
+    d.style.background = CONF_COLOURS[i % CONF_COLOURS.length];
+    const a = Math.random() * Math.PI * 2, dist = 140 + Math.random() * 300;
+    d.style.setProperty('--dx', Math.cos(a) * dist + 'px');
+    d.style.setProperty('--dy', (Math.sin(a) * dist + 260) + 'px');
+    d.style.setProperty('--rot', (Math.random() * 900 - 450) + 'deg');
+    d.style.animationDelay = (Math.random() * .12) + 's';
+    confBox.appendChild(d);
+    setTimeout(() => d.remove(), 1800);
+  }
+}
+
+function react(ok){
+  const [face, cap] = ok ? draw('win', WIN) : draw('miss', MISS);
+  faceEl.textContent = face;
+  capEl.textContent = cap;
+  capEl.style.color = ok ? '#117A62' : '#C33148';
+  reactEl.hidden = false;
+  faceEl.style.animation = 'none'; void faceEl.offsetWidth; faceEl.style.animation = '';
+  if (ok){ hits++; burst(); } else { misses++; }
+  scoreEl.hidden = false;
+  scoreEl.textContent = `${hits} correct, ${misses} to revisit`;
+}
+
+document.getElementById('yes').addEventListener('click', () => react(true));
+document.getElementById('no').addEventListener('click', () => react(false));
+
+showBtn.addEventListener('click', () => {
+  const wasHidden = answerEl.hidden;
+  answerEl.hidden = !wasHidden;
+  showBtn.textContent = wasHidden ? 'Hide answer' : 'Show possible answer';
+  if (wasHidden){ answerEl.classList.remove('pop'); void answerEl.offsetWidth; answerEl.classList.add('pop'); }
+});
+
+spinBtn.addEventListener('click', spin);
+
+resetBtn.addEventListener('click', () => {
+  used.clear();
+  resultEl.hidden = true;
+  finishEl.hidden = true;
+  invite.hidden = false;
+  setHub(null);
+  drawWheel();
+});
+
+setHub(null);
+drawWheel();
+</script>
+</body>
+</html>
