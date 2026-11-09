@@ -228,6 +228,7 @@ const DECKS = [
 ];
 
 const on = new Set(DECKS.map(d => d.id));
+let mode = "mix";
 let seconds = 60, pile = [], used = new Set();
 let state = "ready", student = 1, score = 0, card = null, left = 0, timer = null, log = [];
 const scores = [];
@@ -241,15 +242,18 @@ function draw(){ if(!pile.length) rebuild(); card = pile.pop(); used.add(card.w)
 function meta(){ const total = allCards().length; $("meta").textContent = total + " cards selected · " + pile.length + " left in the pile"; }
 
 function renderDecks(){
-  $("decks").replaceChildren(...DECKS.map(d => {
+  const total = DECKS.reduce((n,d) => n + d.cards.length, 0);
+  const opts = [{id:"mix", label:"Mix (all words)", color:"--ink", n:total}, ...DECKS.map(d => ({...d, n:d.cards.length}))];
+  $("decks").replaceChildren(...opts.map(d => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "chip";
     b.style.setProperty("--c", "var(" + d.color + ")");
-    b.setAttribute("aria-pressed", on.has(d.id));
-    b.innerHTML = esc(d.label) + "<small>" + d.cards.length + "</small>";
+    b.setAttribute("aria-pressed", mode === d.id);
+    b.innerHTML = esc(d.label) + "<small>" + d.n + "</small>";
     b.onclick = () => {
-      if(on.has(d.id) && on.size === 1) return;
-      on.has(d.id) ? on.delete(d.id) : on.add(d.id);
+      mode = d.id;
+      on.clear();
+      (d.id === "mix" ? DECKS : [d]).forEach(x => on.add(x.id));
       renderDecks(); rebuild(); if(state === "play") { draw(); render(); }
     };
     return b;
