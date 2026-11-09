@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vocab Taboo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root{
+  --bg:#EEF2F7; --ink:#1B2B4B; --muted:#5A6882; --card:#FFFFFF; --line:#C9D3E3;
+  --accent:#2F5BD3; --accent-ink:#FFFFFF;
+  --good:#0F8B6A; --good-soft:#D5F1E7; --bad:#D23B3B; --bad-soft:#FBE0E0; --warn:#C27A00;
+  --w3:#2F5BD3; --w5:#0F8B7A; --w9:#B4448C; --sp:#C26A00; --env:#3F8A2E;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --card:#1B2436; --line:#2E3A52;
+    --accent:#7B9DF4; --accent-ink:#0E1422;
+    --good:#3CC29A; --good-soft:#163A30; --bad:#F07070; --bad-soft:#3D1D22; --warn:#F2B04A;
+    --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --sp:#F2A54A; --env:#7CCB63;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --card:#1B2436; --line:#2E3A52;
+  --accent:#7B9DF4; --accent-ink:#0E1422;
+  --good:#3CC29A; --good-soft:#163A30; --bad:#F07070; --bad-soft:#3D1D22; --warn:#F2B04A;
+  --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --sp:#F2A54A; --env:#7CCB63;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.45}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:22px 40px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,4.5vw,36px);margin:0}
+.meta{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+
+.decks{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:700 14px var(--body);border:2px solid var(--c);color:var(--c);background:transparent;border-radius:999px;padding:6px 14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--c);color:var(--card)}
+.chip small{font-weight:400;opacity:.85;margin-left:4px}
+.timesel{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.timesel button{font:700 14px var(--body);border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 10px;cursor:pointer}
+.timesel button[aria-pressed="true"]{border-color:var(--ink)}
+
+.stage{background:var(--card);border:2px solid var(--line);border-radius:24px;padding:clamp(20px,4vw,40px);display:flex;flex-direction:column;align-items:center;gap:20px;min-height:430px;justify-content:center;text-align:center}
+.bar{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;font-variant-numeric:tabular-nums}
+.who{font-weight:700;color:var(--muted)}
+.clock{font-family:var(--display);font-weight:800;font-size:clamp(34px,6vw,52px);line-height:1}
+.clock.low{color:var(--bad)}
+.score{font-family:var(--display);font-weight:800;font-size:22px}
+.score span{color:var(--good)}
+
+.tag{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tc);border:1.5px solid var(--tc);border-radius:999px;padding:3px 10px}
+.target{font-family:var(--display);font-weight:800;font-size:clamp(44px,10vw,92px);line-height:1;color:var(--tc);overflow-wrap:anywhere;text-wrap:balance}
+.taboo{width:min(100%,460px);border-top:3px solid var(--bad);padding-top:14px}
+.taboo h3{margin:0 0 10px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--bad)}
+.taboo ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.taboo li{background:var(--bad-soft);color:var(--ink);font-weight:700;font-size:clamp(17px,2.6vw,22px);border-radius:10px;padding:8px 10px}
+
+.actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.btn{font:700 18px var(--body);border:0;border-radius:14px;padding:14px 26px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn kbd{font:600 12px var(--body);opacity:.75;border:1px solid currentColor;border-radius:5px;padding:1px 5px}
+.btn.good{background:var(--good);color:var(--card)}
+.btn.pass{background:var(--line);color:var(--ink)}
+.btn.bad{background:var(--bad);color:var(--card)}
+.btn.main{background:var(--accent);color:var(--accent-ink);font-size:20px;padding:16px 34px}
+.btn.ghost{background:none;color:var(--muted);border:1.5px solid var(--line);font-size:15px;padding:10px 18px}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+.big{font-family:var(--display);font-weight:800;font-size:clamp(28px,5vw,44px);margin:0;text-wrap:balance}
+.hint{color:var(--muted);max-width:52ch;margin:0}
+.final{font-family:var(--display);font-weight:800;font-size:clamp(64px,14vw,120px);line-height:1;color:var(--good)}
+.got{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:600px}
+.got span{font-size:14px;font-weight:700;border-radius:999px;padding:4px 10px}
+.got .y{background:var(--good-soft);color:var(--good)}
+.got .n{background:var(--line);color:var(--muted);text-decoration:line-through}
+.got .x{background:var(--bad-soft);color:var(--bad)}
+
+.history{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;font-variant-numeric:tabular-nums}
+.history b{color:var(--muted);font-weight:700;margin-right:4px}
+.history span{background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:3px 10px}
+.history span.best{border-color:var(--good);color:var(--good);font-weight:700}
+@media (max-width:520px){ .taboo ul{grid-template-columns:1fr} .btn{font-size:16px;padding:12px 18px} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Vocab Taboo</h1>
+    <div class="timesel" id="timeSel">Time per student:
+      <button type="button" data-s="45" aria-pressed="false">45s</button>
+      <button type="button" data-s="60" aria-pressed="true">60s</button>
+      <button type="button" data-s="90" aria-pressed="false">90s</button>
+    </div>
+  </header>
+
+  <div class="decks" id="decks"></div>
+  <div class="meta" id="meta"></div>
+
+  <section class="stage" id="stage" aria-live="polite"></section>
+
+  <div class="history" id="history" hidden></div>
+</div>
+
+<script>
+const DECKS = [
+  {id:"w3", label:"Week 3", color:"--w3", cards:[
+    ["intend",["plan","want","mean","future"]],
+    ["trial",["test","try","experiment","court"]],
+    ["noticeable",["notice","see","obvious","clear"]],
+    ["demonstrate",["show","explain","protest","example"]],
+    ["administrator",["manager","boss","office","school"]],
+    ["occupy",["live","space","fill","busy"]],
+    ["burden",["heavy","load","problem","carry"]],
+    ["irrational",["logical","reason","crazy","fear"]],
+    ["factual",["fact","true","real","information"]],
+    ["carry out",["do","perform","complete","research"]],
+    ["lift",["raise","up","heavy","elevator"]],
+    ["practical",["useful","real","hands","idea"]],
+    ["notice",["see","realize","sign","attention"]],
+    ["residential",["house","live","area","people"]],
+    ["judgment",["decide","opinion","judge","court"]],
+    ["examination",["exam","test","doctor","check"]]
+  ]},
+  {id:"w5", label:"Week 5", color:"--w5", cards:[
+    ["remind",["remember","forget","memory","again"]],
+    ["treat",["behave","people","medicine","doctor"]],
+    ["morality",["right","wrong","moral","ethics"]],
+    ["hospitality",["guest","welcome","hotel","friendly"]],
+    ["discriminate",["unfair","treat","race","different"]],
+    ["abuse",["hurt","cruel","misuse","power"]],
+    ["revenge",["back","angry","payback","hurt"]],
+    ["diversity",["different","variety","culture","many"]],
+    ["instinct",["feeling","natural","animal","gut"]],
+    ["tolerance",["accept","patient","respect","different"]],
+    ["abandon",["leave","alone","give up","forever"]],
+    ["prejudice",["bias","judge","opinion","unfair"]],
+    ["mistreat",["badly","treat","abuse","hurt"]],
+    ["ethnicity",["race","culture","origin","background"]],
+    ["minority",["small","group","majority","few"]],
+    ["rate",["speed","price","percentage","fast"]],
+    ["equal",["same","fair","rights","value"]],
+    ["obviously",["clearly","of course","sure","see"]],
+    ["implication",["result","consequence","effect","suggest"]],
+    ["vicious cycle",["circle","problem","again","repeat"]],
+    ["imply",["suggest","hint","directly","mean"]],
+    ["claim",["say","true","prove","insist"]],
+    ["identity",["who","self","ID card","personality"]],
+    ["borrow",["take","give back","money","lend"]],
+    ["harassment",["bother","upset","threaten","workplace"]],
+    ["tackle",["deal","problem","solve","football"]],
+    ["economic",["money","economy","finance","growth"]],
+    ["ensure",["sure","guarantee","certain","make"]],
+    ["pretend",["fake","act","lie","true"]],
+    ["escape",["run away","prison","free","get away"]],
+    ["global",["world","international","earth","everywhere"]]
+  ]},
+  {id:"w9", label:"Week 9", color:"--w9", cards:[
+    ["recall",["remember","memory","forget","past"]],
+    ["fade",["disappear","slowly","color","weak"]],
+    ["retain",["keep","hold","memory","information"]],
+    ["store",["keep","save","shop","information"]],
+    ["attention",["focus","pay","listen","concentrate"]],
+    ["situation",["condition","position","problem","case"]],
+    ["bring up",["mention","raise","child","topic"]],
+    ["altered",["changed","different","modify","new"]],
+    ["envy",["jealous","want","green","have"]],
+    ["disorder",["illness","mental","mess","condition"]],
+    ["phenomenon",["event","nature","strange","happen"]],
+    ["circumstance",["condition","situation","fact","event"]],
+    ["faulty",["broken","wrong","mistake","work"]],
+    ["prioritize",["important","first","order","list"]],
+    ["subjective",["opinion","personal","objective","feel"]],
+    ["navigation",["way","map","direction","GPS"]],
+    ["raise",["increase","lift","up","hand"]],
+    ["concern",["worry","problem","care","anxious"]],
+    ["alert",["awake","careful","warning","aware"]],
+    ["care",["look after","love","help","worry"]],
+    ["uneasy",["comfortable","nervous","worried","feel"]],
+    ["seek",["look for","search","find","help"]],
+    ["confront",["face","problem","fight","brave"]],
+    ["extent",["degree","how much","level","size"]],
+    ["medication",["medicine","doctor","pill","drug"]],
+    ["persist",["continue","keep","stop","long"]],
+    ["distressing",["upset","sad","worry","bad"]],
+    ["reaction",["response","react","allergy","answer"]],
+    ["common",["usual","normal","many","share"]],
+    ["recover",["get better","ill","health","again"]],
+    ["cut down",["reduce","less","tree","eat"]],
+    ["adverse",["bad","harmful","negative","effect"]],
+    ["nervous",["anxious","worried","scared","exam"]],
+    ["unsure",["sure","certain","know","doubt"]]
+  ]},
+  {id:"sp", label:"Sports & culture", color:"--sp", cards:[
+    ["highly",["very","much","recommend","high"]],
+    ["annual",["year","every","once","event"]],
+    ["venue",["place","concert","event","stadium"]],
+    ["genuine",["real","true","fake","original"]],
+    ["insist",["demand","keep saying","strongly","firm"]],
+    ["suspend",["stop","temporary","school","ban"]],
+    ["anticipation",["wait","excited","expect","future"]],
+    ["chant",["sing","fans","crowd","repeat"]],
+    ["roots",["origin","tree","family","history"]],
+    ["existence",["exist","alive","life","real"]],
+    ["evolution",["change","Darwin","develop","time"]],
+    ["loyalty",["faithful","support","team","friend"]],
+    ["unite",["together","join","one","people"]],
+    ["fierce",["strong","aggressive","wild","angry"]],
+    ["transform",["change","completely","different","shape"]],
+    ["associate",["connect","link","think","related"]],
+    ["incident",["event","happen","accident","police"]],
+    ["occasion",["event","special","time","celebrate"]]
+  ]},
+  {id:"env", label:"Environment", color:"--env", cards:[
+    ["extinction",["animal","disappear","dinosaur","species"]],
+    ["sustainable",["environment","future","green","long"]],
+    ["release",["let go","free","gas","new"]],
+    ["carbon footprint",["CO2","environment","pollution","travel"]],
+    ["contribute",["give","help","part","add"]],
+    ["dump",["throw","rubbish","waste","leave"]],
+    ["plant-based",["vegetable","meat","vegan","food"]]
+  ]}
+];
+
+const on = new Set(DECKS.map(d => d.id));
+let seconds = 60, pile = [], used = new Set();
+let state = "ready", student = 1, score = 0, card = null, left = 0, timer = null, log = [];
+const scores = [];
+const $ = id => document.getElementById(id);
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function allCards(){ return DECKS.filter(d => on.has(d.id)).flatMap(d => d.cards.map(([w,t]) => ({w, t, deck:d}))); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function rebuild(){ pile = shuffle(allCards().filter(c => !used.has(c.w))); if(!pile.length){ used.clear(); pile = shuffle(allCards()); } meta(); }
+function draw(){ if(!pile.length) rebuild(); card = pile.pop(); used.add(card.w); meta(); }
+function meta(){ const total = allCards().length; $("meta").textContent = total + " cards selected · " + pile.length + " left in the pile"; }
+
+function renderDecks(){
+  $("decks").replaceChildren(...DECKS.map(d => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip";
+    b.style.setProperty("--c", "var(" + d.color + ")");
+    b.setAttribute("aria-pressed", on.has(d.id));
+    b.innerHTML = esc(d.label) + "<small>" + d.cards.length + "</small>";
+    b.onclick = () => {
+      if(on.has(d.id) && on.size === 1) return;
+      on.has(d.id) ? on.delete(d.id) : on.add(d.id);
+      renderDecks(); rebuild(); if(state === "play") { draw(); render(); }
+    };
+    return b;
+  }));
+}
+
+function beep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = 660; o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(.25, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .7);
+    o.start(); o.stop(ctx.currentTime + .7);
+  }catch(e){}
+}
+
+function start(){
+  state = "play"; score = 0; log = []; left = seconds; draw(); render();
+  clearInterval(timer);
+  timer = setInterval(() => { left--; if(left <= 0){ end(); beep(); } else tick(); }, 1000);
+}
+function tick(){ const c = $("clock"); if(c){ c.textContent = fmt(left); c.classList.toggle("low", left <= 10); } }
+function fmt(s){ return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
+function mark(kind){
+  if(state !== "play") return;
+  log.push({w:card.w, k:kind});
+  if(kind === "y") score++;
+  draw(); render();
+}
+function end(){
+  clearInterval(timer); state = "done"; scores.push(score); renderHistory(); render();
+}
+function next(){ student++; state = "ready"; render(); }
+
+function render(){
+  const s = $("stage");
+  if(state === "ready"){
+    s.innerHTML =
+      '<p class="big">Student ' + student + ', come to the board</p>' +
+      '<p class="hint">Sit or stand with your back to the screen. Your classmates describe the word without saying it or the red words. You have ' + seconds + ' seconds.</p>' +
+      '<button class="btn main" id="go" type="button">Start <kbd>Space</kbd></button>';
+    $("go").onclick = start;
+  } else if(state === "play"){
+    s.style.setProperty("--tc", "var(" + card.deck.color + ")");
+    s.innerHTML =
+      '<div class="bar"><span class="who">Student ' + student + '</span><span class="clock" id="clock"></span><span class="score">Score <span>' + score + '</span></span></div>' +
+      '<span class="tag">' + esc(card.deck.label) + '</span>' +
+      '<div class="target">' + esc(card.w) + '</div>' +
+      '<div class="taboo"><h3>Don\'t say</h3><ul>' + card.t.map(t => '<li>' + esc(t) + '</li>').join("") + '</ul></div>' +
+      '<div class="actions">' +
+        '<button class="btn good" id="bY" type="button">Correct <kbd>→</kbd></button>' +
+        '<button class="btn pass" id="bN" type="button">Pass <kbd>←</kbd></button>' +
+        '<button class="btn bad" id="bX" type="button">Taboo! <kbd>T</kbd></button>' +
+      '</div>' +
+      '<button class="btn ghost" id="bEnd" type="button">End turn</button>';
+    tick();
+    $("bY").onclick = () => mark("y"); $("bN").onclick = () => mark("n"); $("bX").onclick = () => mark("x"); $("bEnd").onclick = end;
+  } else {
+    s.innerHTML =
+      '<p class="big">Time\'s up, Student ' + student + '!</p>' +
+      '<div class="final">' + score + '</div>' +
+      '<p class="hint">' + (score === 1 ? "word guessed" : "words guessed") + '</p>' +
+      '<div class="got">' + log.map(l => '<span class="' + l.k + '">' + esc(l.w) + '</span>').join("") + '</div>' +
+      '<button class="btn main" id="nx" type="button">Next student <kbd>Space</kbd></button>';
+    $("nx").onclick = next;
+  }
+}
+
+function renderHistory(){
+  const h = $("history"); h.hidden = !scores.length;
+  const best = Math.max(...scores);
+  h.innerHTML = "<b>Scores</b>" + scores.map((v,i) => '<span class="' + (v === best ? "best" : "") + '">S' + (i+1) + ': ' + v + '</span>').join("");
+}
+
+document.querySelectorAll("#timeSel button").forEach(b => b.onclick = () => {
+  seconds = +b.dataset.s;
+  document.querySelectorAll("#timeSel button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  if(state === "ready") render();
+});
+
+document.addEventListener("keydown", e => {
+  if(e.target.closest && e.target.closest("input,textarea")) return;
+  if(state === "play"){
+    if(e.key === "ArrowRight"){ e.preventDefault(); mark("y"); }
+    else if(e.key === "ArrowLeft"){ e.preventDefault(); mark("n"); }
+    else if(e.key === "t" || e.key === "T"){ mark("x"); }
+  } else if(e.key === " " || e.key === "Enter"){
+    if(e.target.tagName === "BUTTON") return;
+    e.preventDefault(); state === "ready" ? start() : next();
+  }
+});
+
+renderDecks(); rebuild(); render();
+</script>
+</body>
+</html>
