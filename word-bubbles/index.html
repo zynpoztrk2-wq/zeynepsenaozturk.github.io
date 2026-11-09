@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Bubbles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root{
+  --bg:#EEF2F7; --ink:#1B2B4B; --muted:#5A6882; --disc:#FFFFFF; --ring:#C9D3E3;
+  --c1:#2F5BD3; --c2:#0F8B7A; --c3:#B4448C; --syn-bg:#1B2B4B; --syn-ink:#FFFFFF;
+  --tab-on:#1B2B4B; --tab-on-ink:#FFFFFF;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --disc:#1B2436; --ring:#2E3A52;
+    --c1:#7B9DF4; --c2:#3CC2AE; --c3:#E07DBE; --syn-bg:#E6ECF7; --syn-ink:#111827;
+    --tab-on:#E6ECF7; --tab-on-ink:#111827;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --disc:#1B2436; --ring:#2E3A52;
+  --c1:#7B9DF4; --c2:#3CC2AE; --c3:#E07DBE; --syn-bg:#E6ECF7; --syn-ink:#111827;
+  --tab-on:#E6ECF7; --tab-on-ink:#111827;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
+.wrap{max-width:780px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:flex;flex-direction:column;align-items:center;gap:18px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,38px);margin:0;text-align:center}
+.sub{color:var(--muted);margin:4px 0 0;text-align:center}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;background:var(--disc);border:1.5px solid var(--ring);border-radius:999px;padding:5px}
+.tabs button{font:700 15px var(--body);color:var(--ink);background:none;border:0;border-radius:999px;padding:8px 18px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--tab-on);color:var(--tab-on-ink)}
+.subtabs{display:flex;gap:8px;justify-content:center}
+.subtabs button{font:700 14px var(--body);color:var(--muted);background:none;border:1.5px solid var(--ring);border-radius:999px;padding:5px 14px;cursor:pointer}
+.subtabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
+
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+button.ctl{font:700 14px var(--body);color:var(--ink);background:var(--disc);border:1.5px solid var(--ring);border-radius:999px;padding:8px 16px;cursor:pointer}
+button.ctl:hover{border-color:var(--ink)}
+button:focus-visible{outline:3px solid var(--c1);outline-offset:3px}
+
+.cloud{position:relative;width:min(100%,680px);aspect-ratio:1;max-width:100%;border-radius:50%;
+  background:var(--disc);border:3px solid var(--ring);
+  box-shadow:0 0 0 12px color-mix(in srgb,var(--ring) 35%,transparent);
+  container-type:inline-size}
+.w{position:absolute;transform:translate(-50%,-50%);background:none;border:0;padding:0;cursor:pointer;
+  font-family:var(--display);font-weight:700;color:var(--col);line-height:1;white-space:nowrap;
+  display:flex;flex-direction:column;align-items:center}
+.w .t{font-size:var(--fs);transition:transform .15s}
+.w .i{font-family:var(--emoji);font-size:4.6cqw;line-height:1;margin-top:.7cqw}
+.w:hover .t{transform:scale(1.06)}
+.w .s{position:absolute;top:calc(100% + .9cqw);left:50%;transform:translate(-50%,-4px);
+  font-family:var(--body);font-weight:700;font-size:max(12px,2.9cqw);white-space:nowrap;
+  background:var(--syn-bg);color:var(--syn-ink);padding:.6cqw 1.8cqw;border-radius:999px;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:2}
+.w[aria-expanded="true"] .s{opacity:1;transform:translate(-50%,0)}
+.w[aria-expanded="true"] .t{text-decoration:underline;text-decoration-thickness:.5cqw;text-underline-offset:1cqw}
+@media (prefers-reduced-motion:reduce){ .w .s,.w .t{transition:none} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div>
+    <h1>Word Bubbles</h1>
+    <p class="sub">Click a word to see its synonym.</p>
+  </div>
+
+  <div class="tabs" role="tablist" id="weekTabs"></div>
+  <div class="subtabs" role="tablist" id="chTabs"></div>
+
+  <div class="cloud" id="cloud"></div>
+
+  <div class="controls">
+    <button class="ctl" id="showAll" type="button">Show all</button>
+    <button class="ctl" id="hideAll" type="button">Hide all</button>
+  </div>
+</div>
+
+<script>
+// Positions inside the circle: x, y in %, fs = max font size (cqw), mw = max word width (cqw)
+const SLOTS = [
+  {x:36,y:14,fs:5.6,mw:24},{x:64,y:14,fs:5.6,mw:24},
+  {x:27,y:25,fs:5.0,mw:30},{x:71,y:25,fs:5.0,mw:30},
+  {x:50,y:35,fs:5.4,mw:46},
+  {x:18,y:45,fs:4.8,mw:22},{x:82,y:45,fs:4.8,mw:22},
+  {x:50,y:51,fs:7.0,mw:44},
+  {x:19,y:62,fs:5.0,mw:22},{x:50,y:63,fs:5.4,mw:30},{x:82,y:62,fs:5.6,mw:22},
+  {x:25,y:73,fs:5.0,mw:28},{x:50,y:74,fs:5.0,mw:22},{x:75,y:73,fs:5.0,mw:28},
+  {x:31,y:85,fs:5.0,mw:28},{x:68,y:85,fs:5.0,mw:28},
+  {x:50,y:85,fs:5.0,mw:30}
+];
+
+// Layout for word + icon sets: 18 places in rows of 2-3-4-4-3-2
+const ICON_SLOTS = [
+  {x:38,y:11},{x:62,y:11},
+  {x:24,y:26},{x:50,y:26},{x:76,y:26},
+  {x:15,y:41},{x:38,y:41},{x:62,y:41},{x:85,y:41},
+  {x:15,y:57},{x:38,y:57},{x:62,y:57},{x:85,y:57},
+  {x:24,y:72},{x:50,y:72},{x:76,y:72},
+  {x:39,y:86},{x:61,y:86}
+].map(p => ({...p, fs:4.6, mw:20}));
+
+const COLORS = ["--c1","--c2","--c3"];
+
+// Plain sets: [word, synonym, slot]
+// Icon sets: [word, synonym, slot, icon]
+const SETS = {
+  w3: [
+    ["intend","plan",0],["trial","test",1],["noticeable","obvious",2],["demonstrate","show",3],
+    ["administrator","manager",4],["occupy","live in",5],["burden","heavy load",6],["irrational","illogical",7],
+    ["factual","true",8],["carry out","perform",9],["lift","raise",10],["practical","useful",11],
+    ["notice","realize",12],["residential","inhabited",13],["judgment","decision-making",14],["examination","inspection",15]
+  ],
+  w5ch1: [
+    ["remind","make remember",0],["treat","deal with",1],["morality","ethics",2],["hospitality","warm welcome",3],
+    ["discriminate","treat unfairly",4],["abuse","cruelty",5],["revenge","payback",6],["diversity","variety",7],
+    ["instinct","gut feeling",8],["tolerance","acceptance",9],["abandon","leave",10],["prejudice","bias",11],
+    ["mistreat","treat badly",15],["ethnicity","heritage",13],["minority","small group",14]
+  ],
+  w5ch2: [
+    ["rate","pace",0],["equal","same",1],["obviously","clearly",2],["implication","consequence",3],
+    ["vicious cycle","downward spiral",4],["imply","suggest",5],["claim","assert",6],["identity","sense of self",7],
+    ["borrow","take on loan",8],["harassment","intimidation",9],["tackle","deal with",10],["economic","financial",11],
+    ["ensure","guarantee",12],["pretend","fake",13],["escape","get away",14],["global","worldwide",15]
+  ],
+  w9ch1: [
+    ["recall","remember",0,"💭"],["fade","disappear",1,"🌫️"],
+    ["retain","keep",2,"🧲"],["store","save",3,"💾"],["attention","focus",4,"👀"],
+    ["situation","position",5,"📍"],["bring up","mention",6,"🗣️"],["altered","changed",7,"🔄"],["envy","jealousy",8,"😒"],
+    ["disorder","illness",9,"🩺"],["phenomenon","occurrence",10,"🌈"],["circumstance","condition",11,"🌦️"],["faulty","flawed",12,"🔧"],
+    ["prioritize","put first",13,"🥇"],["subjective","personal",14,"👤"],["navigation","finding the way",15,"🧭"],
+    ["raise","increase",16,"📈"],["concern","worry",17,"😟"]
+  ],
+  w9ch2: [
+    ["seek","look for",0,"🔍"],["care","looking after",1,"🤲"],
+    ["alert","watchful",2,"🚨"],["extent","degree",4,"📏"],
+    ["uneasy","uncomfortable",5,"😬"],["confront","face",6,"🥊"],["persist","continue",7,"⏳"],["nervous","anxious",8,"😰"],
+    ["adverse","harmful",9,"⚠️"],["distressing","upsetting",10,"😢"],["medication","medicine",11,"💊"],["reaction","response",12,"⚡"],
+    ["common","usual",13,"👥"],["recover","get better",15,"🩹"],
+    ["cut down","reduce",16,"✂️"],["unsure","uncertain",17,"🤷"]
+  ]
+};
+
+const WEEKS = [
+  {id:"w3", label:"Week 3", chapters:[{id:"w3"}]},
+  {id:"w5", label:"Week 5", chapters:[{id:"w5ch1",label:"Ch 1"},{id:"w5ch2",label:"Ch 2"}]},
+  {id:"w9", label:"Week 9", chapters:[{id:"w9ch1",label:"Ch 1"},{id:"w9ch2",label:"Ch 2"}]}
+];
+
+const cloud = document.getElementById("cloud");
+const weekTabs = document.getElementById("weekTabs");
+const chTabs = document.getElementById("chTabs");
+let week = WEEKS[WEEKS.length - 1], set = week.chapters[0].id;
+
+function tabButton(label, selected, onClick){
+  const b = document.createElement("button");
+  b.type = "button"; b.setAttribute("role","tab");
+  b.setAttribute("aria-selected", selected);
+  b.textContent = label;
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function renderTabs(){
+  weekTabs.replaceChildren(...WEEKS.map(wk => tabButton(wk.label, wk === week, () => {
+    week = wk; set = wk.chapters[0].id; renderTabs(); renderCloud();
+  })));
+  const labelled = week.chapters.filter(c => c.label);
+  chTabs.hidden = labelled.length === 0;
+  chTabs.replaceChildren(...labelled.map(c => tabButton(c.label, c.id === set, () => {
+    set = c.id; renderTabs(); renderCloud();
+  })));
+}
+
+function renderCloud(){
+  cloud.replaceChildren();
+  SETS[set].forEach(([w, s, slot, icon], i) => {
+    const p = icon ? ICON_SLOTS[slot] : SLOTS[slot];
+    const fs = Math.min(p.fs, p.mw / (w.length * 0.56));
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "w";
+    b.style.left = p.x + "%";
+    b.style.top = p.y + "%";
+    b.style.setProperty("--fs", fs.toFixed(2) + "cqw");
+    b.style.setProperty("--col", "var(" + COLORS[i % 3] + ")");
+    b.setAttribute("aria-expanded","false");
+    b.innerHTML = '<span class="t"></span>' + (icon ? '<span class="i" aria-hidden="true"></span>' : '') + '<span class="s" aria-live="polite"></span>';
+    b.querySelector(".t").textContent = w;
+    if (icon) b.querySelector(".i").textContent = icon;
+    b.querySelector(".s").textContent = s;
+    b.addEventListener("click", () => b.setAttribute("aria-expanded", b.getAttribute("aria-expanded") !== "true"));
+    cloud.appendChild(b);
+  });
+}
+
+function setAll(v){ cloud.querySelectorAll(".w").forEach(b => b.setAttribute("aria-expanded", v)); }
+document.getElementById("showAll").onclick = () => setAll(true);
+document.getElementById("hideAll").onclick = () => setAll(false);
+
+renderTabs();
+renderCloud();
+</script>
+</body>
+</html>
