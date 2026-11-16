@@ -106,8 +106,9 @@ const ICON_SLOTS = [
   {x:15,y:41},{x:38,y:41},{x:62,y:41},{x:85,y:41},
   {x:15,y:57},{x:38,y:57},{x:62,y:57},{x:85,y:57},
   {x:24,y:72},{x:50,y:72},{x:76,y:72},
-  {x:39,y:86},{x:61,y:86}
-].map(p => ({...p, fs:4.6, mw:20}));
+  {x:39,y:86},{x:61,y:86},
+  {x:50,y:86,mw:28}
+].map(p => ({fs:4.6, mw:20, ...p}));
 
 const COLORS = ["--c1","--c2","--c3"];
 
@@ -155,6 +156,14 @@ const SETS = {
     ["oppress","control cruelly",9,"⛓️"],["anonymous","nameless",10,"🎭"],["hate speech","hateful words",11,"🗯️"],["advocate","support",12,"🤝"],
     ["speak out","speak up",13,"🎤"],["complicated","complex",14,"🧶"],["prohibit","ban",15,"⛔"],
     ["extremist","radical",16,"‼️"],["disapprove","dislike",17,"👎"]
+  ],
+  w10ch2: [
+    ["vast","huge",0,"🌌"],["track","follow",1,"👣"],
+    ["consent","permission",2,"✅"],["network","connected system",4,"🕸️"],
+    ["leaked","revealed",5,"🔓"],["record","write down",6,"📝"],["act","law",7,"📜"],["abuse","misuse",8,"🚫"],
+    ["sacrifice","give up",9,"⚖️"],["invade","intrude on",10,"🚪"],["surveillance","close watching",11,"👁️"],["investigate","look into",12,"🕵️"],
+    ["contradiction","opposite claim",13,"🔀"],["convenience","ease",15,"🛋️"],
+    ["interfere with","get in the way of",18,"✋"]
   ]
 };
 
@@ -162,7 +171,7 @@ const WEEKS = [
   {id:"w3", label:"Week 3", chapters:[{id:"w3"}]},
   {id:"w5", label:"Week 5", chapters:[{id:"w5ch1",label:"Ch 1"},{id:"w5ch2",label:"Ch 2"}]},
   {id:"w9", label:"Week 9", chapters:[{id:"w9ch1",label:"Ch 1"},{id:"w9ch2",label:"Ch 2"}]},
-  {id:"w10", label:"Week 10", chapters:[{id:"w10ch1",label:"Ch 1"}]}
+  {id:"w10", label:"Week 10", chapters:[{id:"w10ch1",label:"Ch 1"},{id:"w10ch2",label:"Ch 2"}]}
 ];
 
 const cloud = document.getElementById("cloud");
