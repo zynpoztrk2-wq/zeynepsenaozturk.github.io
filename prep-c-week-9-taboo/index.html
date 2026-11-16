@@ -11,7 +11,7 @@
   --bg:#EEF2F7; --ink:#1B2B4B; --muted:#5A6882; --card:#FFFFFF; --line:#C9D3E3;
   --accent:#2F5BD3; --accent-ink:#FFFFFF;
   --good:#0F8B6A; --good-soft:#D5F1E7; --bad:#D23B3B; --bad-soft:#FBE0E0; --warn:#C27A00;
-  --w3:#2F5BD3; --w5:#0F8B7A; --w9:#B4448C; --sp:#C26A00; --env:#3F8A2E;
+  --w3:#2F5BD3; --w5:#0F8B7A; --w9:#B4448C; --w10:#6A4FC9; --sp:#C26A00; --env:#3F8A2E;
   --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
   --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
 }
@@ -21,7 +21,7 @@
     --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --card:#1B2436; --line:#2E3A52;
     --accent:#7B9DF4; --accent-ink:#0E1422;
     --good:#3CC29A; --good-soft:#163A30; --bad:#F07070; --bad-soft:#3D1D22; --warn:#F2B04A;
-    --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --sp:#F2A54A; --env:#7CCB63;
+    --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --w10:#A894F2; --sp:#F2A54A; --env:#7CCB63;
   }
 }
 :root[data-theme="dark"]{
@@ -29,7 +29,7 @@
   --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --card:#1B2436; --line:#2E3A52;
   --accent:#7B9DF4; --accent-ink:#0E1422;
   --good:#3CC29A; --good-soft:#163A30; --bad:#F07070; --bad-soft:#3D1D22; --warn:#F2B04A;
-  --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --sp:#F2A54A; --env:#7CCB63;
+  --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --w10:#A894F2; --sp:#F2A54A; --env:#7CCB63;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.45}
@@ -195,6 +195,41 @@ const DECKS = [
     ["adverse",["bad","harmful","negative","effect"]],
     ["nervous",["anxious","worried","scared","exam"]],
     ["unsure",["sure","certain","know","doubt"]]
+  ]},
+  {id:"w10", label:"Week 10", color:"--w10", cards:[
+    ["riot",["violent","protest","angry","police"]],
+    ["range",["variety","from","to","different"]],
+    ["election",["vote","president","choose","politics"]],
+    ["protest",["demonstrate","against","street","march"]],
+    ["censorship",["ban","media","control","freedom"]],
+    ["monitor",["watch","check","screen","observe"]],
+    ["offensive",["rude","insulting","upset","attack"]],
+    ["bullying",["school","hurt","weak","bully"]],
+    ["liberal",["open-minded","free","politics","conservative"]],
+    ["oppress",["control","cruel","power","freedom"]],
+    ["anonymous",["name","unknown","secret","identity"]],
+    ["hate speech",["hate","words","insult","online"]],
+    ["advocate",["support","speak","lawyer","rights"]],
+    ["speak out",["speak up","opinion","brave","publicly"]],
+    ["complicated",["complex","difficult","easy","simple"]],
+    ["prohibit",["ban","forbid","not allowed","law"]],
+    ["extremist",["radical","extreme","violent","ideas"]],
+    ["disapprove",["dislike","approve","agree","wrong"]],
+    ["vast",["huge","big","large","area"]],
+    ["track",["follow","path","location","record"]],
+    ["consent",["permission","agree","allow","yes"]],
+    ["network",["connect","internet","social","system"]],
+    ["leaked",["secret","information","water","revealed"]],
+    ["record",["write","save","data","video"]],
+    ["act",["law","government","perform","theatre"]],
+    ["abuse",["misuse","power","cruel","hurt"]],
+    ["sacrifice",["give up","lose","important","for"]],
+    ["invade",["enter","army","privacy","force"]],
+    ["surveillance",["watch","camera","police","monitor"]],
+    ["investigate",["look into","police","research","find out"]],
+    ["contradiction",["opposite","contradict","say","true"]],
+    ["convenience",["easy","comfortable","store","useful"]],
+    ["interfere with",["get in the way","stop","involve","disturb"]]
   ]},
   {id:"sp", label:"Sports & culture", color:"--sp", cards:[
     ["highly",["very","much","recommend","high"]],
