@@ -57,13 +57,22 @@ button:focus-visible{outline:3px solid var(--c1);outline-offset:3px}
 .w .t{font-size:var(--fs);transition:transform .15s}
 .w .i{font-family:var(--emoji);font-size:4.6cqw;line-height:1;margin-top:.7cqw}
 .w:hover .t{transform:scale(1.06)}
-.w .s{position:absolute;top:calc(100% + .9cqw);left:50%;transform:translate(-50%,-4px);
-  font-family:var(--body);font-weight:700;font-size:max(12px,2.9cqw);white-space:nowrap;
-  background:var(--syn-bg);color:var(--syn-ink);padding:.6cqw 1.8cqw;border-radius:999px;
+.w .pop{position:absolute;top:calc(100% + .9cqw);left:50%;transform:translate(-50%,-4px);
+  display:flex;flex-direction:column;align-items:center;gap:.7cqw;
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:2}
-.w[aria-expanded="true"] .s{opacity:1;transform:translate(-50%,0)}
+.w[aria-expanded="true"] .pop{opacity:1;transform:translate(-50%,0)}
+.w .s{font-family:var(--body);font-weight:700;font-size:max(12px,2.9cqw);white-space:nowrap;
+  background:var(--syn-bg);color:var(--syn-ink);padding:.6cqw 1.8cqw;border-radius:999px}
+.w .f{display:none;gap:2cqw;padding:.6cqw 1.8cqw 1cqw;border-radius:2cqw;
+  background:var(--disc);border:1.5px solid var(--ring);box-shadow:0 6px 18px color-mix(in srgb,var(--ink) 14%,transparent)}
+.w.focus{z-index:5}
+.w.focus[aria-expanded="true"] .f:not(:empty){display:flex}
+.w .f span{display:flex;flex-direction:column;align-items:center;gap:.3cqw;
+  font-family:var(--body);font-weight:700;font-size:max(11px,2.6cqw);color:var(--muted);white-space:nowrap}
+.w .f b{font-weight:400;font-size:max(14px,3.4cqw);line-height:1;color:var(--col);opacity:.45}
+.w .f i{font-weight:400;font-size:.85em;opacity:.75}
 .w[aria-expanded="true"] .t{text-decoration:underline;text-decoration-thickness:.5cqw;text-underline-offset:1cqw}
-@media (prefers-reduced-motion:reduce){ .w .s,.w .t{transition:none} }
+@media (prefers-reduced-motion:reduce){ .w .pop,.w .t{transition:none} }
 </style>
 </head>
 <body>
@@ -71,7 +80,7 @@ button:focus-visible{outline:3px solid var(--c1);outline-offset:3px}
 <div class="wrap">
   <div>
     <h1>Word Bubbles</h1>
-    <p class="sub">Click a word to see its synonym.</p>
+    <p class="sub">Click a word to see its synonym and other word forms.</p>
   </div>
 
   <div class="tabs" role="tablist" id="weekTabs"></div>
@@ -111,6 +120,117 @@ const ICON_SLOTS = [
 ].map(p => ({fs:4.6, mw:20, ...p}));
 
 const COLORS = ["--c1","--c2","--c3"];
+
+// Other word forms, shown with faint arrows when a word is opened ("form:part of speech")
+const FORMS = {
+  "intend":["intention:n","intentional:adj","intentionally:adv"],
+  "trial":["try:v"],
+  "noticeable":["notice:v","noticeably:adv"],
+  "demonstrate":["demonstration:n","demonstrator:n","demonstrative:adj"],
+  "administrator":["administer:v","administration:n","administrative:adj"],
+  "occupy":["occupation:n","occupant:n","occupied:adj"],
+  "burden":["burdensome:adj"],
+  "irrational":["rational:adj","irrationally:adv","irrationality:n"],
+  "factual":["fact:n","factually:adv"],
+  "practical":["practice:n","practically:adv","impractical:adj"],
+  "notice":["noticeable:adj","noticeably:adv"],
+  "residential":["reside:v","resident:n","residence:n"],
+  "judgment":["judge:v","judgmental:adj"],
+  "examination":["examine:v","examiner:n"],
+  "remind":["reminder:n"],
+  "treat":["treatment:n","mistreat:v"],
+  "morality":["moral:adj","immoral:adj","morally:adv"],
+  "hospitality":["hospitable:adj","inhospitable:adj"],
+  "discriminate":["discrimination:n","discriminatory:adj"],
+  "abuse":["abusive:adj","abuser:n"],
+  "revenge":["vengeful:adj","avenge:v"],
+  "diversity":["diverse:adj","diversify:v"],
+  "instinct":["instinctive:adj","instinctively:adv"],
+  "tolerance":["tolerate:v","tolerant:adj","intolerant:adj"],
+  "abandon":["abandoned:adj","abandonment:n"],
+  "prejudice":["prejudiced:adj"],
+  "mistreat":["mistreatment:n"],
+  "ethnicity":["ethnic:adj"],
+  "minority":["minor:adj"],
+  "rate":["rating:n"],
+  "equal":["equality:n","equally:adv","unequal:adj"],
+  "obviously":["obvious:adj"],
+  "implication":["imply:v","implied:adj"],
+  "imply":["implication:n","implicit:adj"],
+  "identity":["identify:v","identical:adj","identification:n"],
+  "borrow":["borrower:n"],
+  "harassment":["harass:v","harassed:adj"],
+  "economic":["economy:n","economical:adj","economist:n"],
+  "pretend":["pretence:n"],
+  "global":["globe:n","globalization:n","globally:adv"],
+  "fade":["faded:adj"],
+  "retain":["retention:n"],
+  "store":["storage:n"],
+  "attention":["attend:v","attentive:adj"],
+  "situation":["situated:adj"],
+  "bring up":["upbringing:n"],
+  "altered":["alter:v","alteration:n"],
+  "envy":["envious:adj","enviable:adj"],
+  "disorder":["disordered:adj"],
+  "phenomenon":["phenomena:plural","phenomenal:adj"],
+  "circumstance":["circumstantial:adj"],
+  "faulty":["fault:n"],
+  "prioritize":["priority:n"],
+  "subjective":["subjectively:adv","subjectivity:n"],
+  "navigation":["navigate:v","navigator:n"],
+  "concern":["concerned:adj","concerning:prep"],
+  "alert":["alertness:n"],
+  "care":["careful:adj","careless:adj","caring:adj"],
+  "uneasy":["unease:n","uneasily:adv"],
+  "confront":["confrontation:n","confrontational:adj"],
+  "extent":["extend:v","extensive:adj"],
+  "medication":["medicine:n","medical:adj","medicate:v"],
+  "persist":["persistent:adj","persistence:n"],
+  "distressing":["distress:n","distressed:adj"],
+  "reaction":["react:v","reactive:adj"],
+  "common":["commonly:adv","uncommon:adj"],
+  "recover":["recovery:n"],
+  "adverse":["adversely:adv","adversity:n"],
+  "nervous":["nervously:adv","nervousness:n","nerve:n"],
+  "unsure":["sure:adj"],
+  "riot":["rioter:n"],
+  "election":["elect:v","elected:adj"],
+  "protest":["protester:n"],
+  "censorship":["censor:v"],
+  "monitor":["monitoring:n"],
+  "offensive":["offend:v","offence:n"],
+  "bullying":["bully:v / n"],
+  "liberal":["liberty:n","liberate:v","liberalism:n"],
+  "oppress":["oppression:n","oppressive:adj","oppressor:n"],
+  "anonymous":["anonymity:n","anonymously:adv"],
+  "hate speech":["hateful:adj"],
+  "advocate":["advocacy:n"],
+  "speak out":["outspoken:adj"],
+  "complicated":["complicate:v","complication:n"],
+  "prohibit":["prohibition:n"],
+  "extremist":["extreme:adj","extremism:n"],
+  "disapprove":["disapproval:n","approve:v"],
+  "vast":["vastly:adv"],
+  "track":["tracker:n"],
+  "network":["networking:n"],
+  "leaked":["leak:v / n"],
+  "record":["recording:n"],
+  "sacrifice":["sacrificial:adj"],
+  "invade":["invasion:n","invader:n"],
+  "investigate":["investigation:n","investigator:n"],
+  "contradiction":["contradict:v","contradictory:adj"],
+  "convenience":["convenient:adj","inconvenient:adj"],
+  "interfere with":["interference:n"]
+};
+const ARROWS = {1:["↓"], 2:["↙","↘"], 3:["↙","↓","↘"]};
+
+function nudge(f){
+  f.style.transform = "";
+  const r = f.getBoundingClientRect(), vw = document.documentElement.clientWidth;
+  let dx = 0;
+  if (r.left < 8) dx = 8 - r.left; else if (r.right > vw - 8) dx = vw - 8 - r.right;
+  if (dx) f.style.transform = "translateX(" + dx + "px)";
+}
 
 // Plain sets: [word, synonym, slot]
 // Icon sets: [word, synonym, slot, icon]
@@ -212,16 +332,33 @@ function renderCloud(){
     b.style.setProperty("--fs", fs.toFixed(2) + "cqw");
     b.style.setProperty("--col", "var(" + COLORS[i % 3] + ")");
     b.setAttribute("aria-expanded","false");
-    b.innerHTML = '<span class="t"></span>' + (icon ? '<span class="i" aria-hidden="true"></span>' : '') + '<span class="s" aria-live="polite"></span>';
+    b.innerHTML = '<span class="t"></span>' + (icon ? '<span class="i" aria-hidden="true"></span>' : '') + '<span class="pop"><span class="s" aria-live="polite"></span><span class="f"></span></span>';
     b.querySelector(".t").textContent = w;
     if (icon) b.querySelector(".i").textContent = icon;
     b.querySelector(".s").textContent = s;
-    b.addEventListener("click", () => b.setAttribute("aria-expanded", b.getAttribute("aria-expanded") !== "true"));
+    const forms = FORMS[w] || [];
+    const f = b.querySelector(".f");
+    forms.forEach((x, k) => {
+      const [form, pos] = x.split(":");
+      const sp = document.createElement("span");
+      sp.innerHTML = "<b></b><span></span>";
+      sp.querySelector("b").textContent = ARROWS[forms.length][k];
+      sp.lastChild.innerHTML = "";
+      sp.lastChild.append(form + " ", Object.assign(document.createElement("i"), {textContent: "(" + pos + ")"}));
+      sp.lastChild.style.display = "inline";
+      f.appendChild(sp);
+    });
+    b.addEventListener("click", () => {
+      const open = b.getAttribute("aria-expanded") !== "true";
+      b.setAttribute("aria-expanded", open);
+      cloud.querySelectorAll(".w.focus").forEach(x => x.classList.remove("focus"));
+      if (open) { b.classList.add("focus"); requestAnimationFrame(() => nudge(f)); }
+    });
     cloud.appendChild(b);
   });
 }
 
-function setAll(v){ cloud.querySelectorAll(".w").forEach(b => b.setAttribute("aria-expanded", v)); }
+function setAll(v){ cloud.querySelectorAll(".w").forEach(b => { b.setAttribute("aria-expanded", v); b.classList.remove("focus"); }); }
 document.getElementById("showAll").onclick = () => setAll(true);
 document.getElementById("hideAll").onclick = () => setAll(false);
 
