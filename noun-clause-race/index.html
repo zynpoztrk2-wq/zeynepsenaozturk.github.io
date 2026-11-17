@@ -151,6 +151,34 @@ button{font-family:inherit}
 .rv .a.no{color:#b0a8c8;font-style:italic}
 .steps-help{padding-left:20px;line-height:1.55;font-weight:700}
 .steps-help li{margin:6px 0}
+/* card mode */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:2px solid var(--line);background:#fff;font:800 13.5px var(--body);padding:6px 9px;border-radius:10px;cursor:pointer;color:var(--muted)}
+.chips button.on{border-color:var(--accent);background:#efeaff;color:var(--ink)}
+.mstrip{display:flex;flex-wrap:wrap;gap:4px;margin:7px 0 3px}
+.mc{min-width:30px;height:30px;padding:0 4px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:900 14px var(--body);background:#ece7f8;color:var(--muted)}
+.mc.op{background:#fff3cd;color:var(--ink);box-shadow:inset 0 0 0 2px #f2c94c}
+.mc.ok{background:var(--c);color:#fff}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:10px;margin:12px 0 8px}
+.pc{position:relative;aspect-ratio:3/4;border:0;border-radius:16px;cursor:pointer;font-family:var(--disp);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 4px 0 rgba(0,0,0,.2);transition:transform .08s}
+.pc:active{transform:translateY(3px)}
+.pc.cl{background:linear-gradient(150deg,var(--c),#3d2b8f);color:#fff}
+.pc.cl .n{font-size:34px;font-weight:700;line-height:1}
+.pc.cl .q{font-size:15px;opacity:.85}
+.pc.op{background:#fff;border:3px solid var(--c);color:var(--ink)}
+.pc.op .ic{font-size:30px;line-height:1}
+.pc.op .n,.pc.ok .n{font-size:15px;font-weight:700}
+.pc.ok{background:#e8f8ee;color:#166534;cursor:default;box-shadow:none}
+.pc.ok .ic{font-size:24px}
+.pc .who{position:absolute;bottom:5px;left:4px;right:4px;font:800 10.5px var(--body);text-align:center;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc.wait{opacity:.6}
+.surtag{display:inline-block;background:#fff3cd;color:#7a4b00;font-weight:900;font-size:13px;border-radius:999px;padding:3px 10px;margin-left:6px}
+.reveal{position:fixed;inset:0;z-index:55;background:rgba(18,10,46,.75);display:flex;align-items:center;justify-content:center;padding:24px}
+.reveal .rc{background:#fff;border-radius:26px;padding:30px 22px;max-width:360px;width:100%;text-align:center;animation:flip .6s cubic-bezier(.2,1.4,.4,1) both;border:6px solid var(--c,#7b5cff)}
+.reveal .rc .ic{font-size:84px;line-height:1}
+.reveal .rc h2{font-size:28px;margin:10px 0 6px}
+.reveal .rc p{font-weight:800;color:var(--muted);margin:0}
+@keyframes flip{from{transform:perspective(600px) rotateY(90deg) scale(.7);opacity:0}}
 /* chat */
 .chatp{width:300px;flex:none;margin:6px 0 24px 20px;background:#fff;border-radius:20px;box-shadow:0 6px 0 rgba(0,0,0,.18);display:flex;flex-direction:column;height:calc(100vh - 96px);position:sticky;top:12px;overflow:hidden}
 .ch-head{display:flex;align-items:center;gap:6px;padding:12px 12px 10px 16px;border-bottom:2px solid var(--line)}
@@ -299,6 +327,29 @@ const TEAMS = [
   { name: 'Tigers', emoji: '🐯', color: '#ff7a00' }
 ];
 const BONUS = [150, 100, 50];
+const SUR_VAL = 50;
+const SUR = {
+  none: { icon: '📄', name: 'Normal card' },
+  bonus: { icon: '🎁', name: 'Bonus +50' },
+  x2: { icon: '⚡', name: 'Double points' },
+  lose: { icon: '💥', name: 'Lose 50' },
+  give: { icon: '🎀', name: 'Give 50' },
+  steal: { icon: '🕵️', name: 'Steal 50' }
+};
+const SUR_TYPES = ['bonus', 'x2', 'lose', 'give', 'steal'];
+function surText(type, team, target, forMe) {
+  const tg = TEAMS[target] ? TEAMS[target].emoji + ' ' + TEAMS[target].name : 'another team';
+  const tm = TEAMS[team] ? TEAMS[team].emoji + ' ' + TEAMS[team].name : 'A team';
+  const you = forMe ? 'Your team' : tm;
+  return ({
+    none: forMe ? 'A normal card. Write your sentence!' : '',
+    bonus: `${you} gets +${SUR_VAL} bonus points!`,
+    x2: forMe ? 'Double points! A correct sentence on this card counts ×2.' : `${tm} found a ×2 card!`,
+    lose: `Oh no! ${you} loses ${SUR_VAL} points.`,
+    give: `${you} gives ${SUR_VAL} points to ${tg}.`,
+    steal: `${you} steals ${SUR_VAL} points from ${tg}!`
+  })[type] || '';
+}
 const STARTERS = ["I wonder", "Do you know", "Can you tell me", "I don't know", "I'm not sure", "Nobody knows"];
 
 /*GRADER-START*/
@@ -535,13 +586,14 @@ const H = { T: null, sample: null, ai: 'off', aiCool: 0, view: null, cards: {}, 
 let G = null;
 let MODE = null;
 
-function defaults() { return { teams: 4, per: 5, cmin: 10, rmin: 8, ai: true }; }
+function defaults() { return { teams: 4, per: 5, cmin: 10, rmin: 8, ai: true, mode: 'race', sur: { bonus: 1, x2: 1, lose: 1, give: 1, steal: 1 } }; }
 function freshGame(keepRoster) {
   const prev = G;
   G = {
     v: 1, gid: rid(6), phase: 'lobby', created: now(), settings: prev ? { ...prev.settings } : defaults(), endsAt: 0,
     roster: {}, qs: {}, banned: {}, solved: {}, pscore: {}, streak: {}, cur: {}, feed: [], checks: [], res: {}, seen: {}, finish: [],
     stats: { checks: 0, correct: 0 }, code: prev ? prev.code : null, joinSeq: prev ? prev.joinSeq || 0 : 0,
+    sur: {}, opened: {}, adj: [0, 0, 0, 0, 0, 0],
     chat: prev && prev.chat ? prev.chat : [], chatOn: prev ? prev.chatOn !== false : true, seenChat: prev && prev.seenChat ? prev.seenChat : {}
   };
   if (keepRoster && prev) for (const [sid, r] of Object.entries(prev.roster)) G.roster[sid] = { name: r.name, team: r.team, online: r.online, seq: r.seq };
@@ -581,6 +633,7 @@ function ingest(s) {
     if (G.phase === 'race') {
       const cur = typeof s.cur === 'string' ? clean(s.cur, 40) : null;
       if (G.cur[sid] !== cur) { G.cur[sid] = cur; ch = true; }
+      if (G.settings.mode === 'cards' && cur && G.qs[cur] && G.qs[cur].team === r.team && !G.opened[cur]) { openCard(cur, sid); ch = true; }
       if (Array.isArray(s.att)) for (const a of s.att.slice(0, 3)) if (Array.isArray(a) && typeof a[0] === 'string' && !G.seen[clean(a[0], 12)]) { enqueue(sid, a); ch = true; }
     }
   }
@@ -614,6 +667,29 @@ function startCollect() {
   G.phase = 'collect'; G.endsAt = now() + G.settings.cmin * 60000; markDirty();
   if (H.sample && G.settings.ai && H.ai !== 'on') warmAI();
 }
+function assignSurprises() {
+  G.sur = {}; G.opened = {}; G.adj = [0, 0, 0, 0, 0, 0];
+  const types = SUR_TYPES.filter(k => G.settings.sur && G.settings.sur[k]);
+  if (!types.length) return;
+  for (let t = 0; t < nTeams(); t++) {
+    const list = teamQ(t).sort((a, b) => a.order - b.order); if (!list.length) continue;
+    const nSp = Math.max(1, Math.round(list.length * 0.45));
+    let pool = []; while (pool.length < nSp) pool.push(...shuffle(types));
+    shuffle(list.map((_, i) => i)).slice(0, nSp).forEach((i, k) => { G.sur[list[i].qid] = pool[k]; });
+  }
+}
+function openCard(qid, sid) {
+  const q = G.qs[qid]; const t = q.team; const type = G.sur[qid] || 'none';
+  const others = [...Array(nTeams()).keys()].filter(i => i !== t);
+  let target = -1;
+  if (type === 'give' || type === 'steal') target = others[Math.floor(Math.random() * others.length)];
+  if (type === 'bonus') G.adj[t] += SUR_VAL;
+  if (type === 'lose') G.adj[t] -= SUR_VAL;
+  if (type === 'give') { G.adj[t] -= SUR_VAL; G.adj[target] += SUR_VAL; }
+  if (type === 'steal') { G.adj[t] += SUR_VAL; G.adj[target] -= SUR_VAL; }
+  G.opened[qid] = { sid, type, target, at: now() };
+  if (type !== 'none') banner(`${TEAMS[t].emoji} card ${q.order + 1} · ${SUR[type].icon} ${surText(type, t, target, false)}`);
+}
 function distribute() {
   const list = shuffle(Object.values(G.qs));
   if (!list.length) { G.endsAt = 0; markDirty(); banner('No questions yet. Give the class a little more time!'); return; }
@@ -624,9 +700,10 @@ function distribute() {
     for (const t of shuffle([...Array(n).keys()])) { if (n > 1 && t === at) continue; if (best < 0 || cnt[t] < cnt[best]) best = t; }
     q.team = best; q.order = cnt[best]++;
   }
+  if (G.settings.mode === 'cards') assignSurprises();
   G.phase = 'sorted'; G.endsAt = 0; markDirty();
 }
-function startRace() { G.phase = 'race'; G.endsAt = now() + G.settings.rmin * 60000; G.cur = {}; G.raceAt = now(); markDirty(); }
+function startRace() { if (G.settings.mode === 'cards' && !G.sur) assignSurprises(); G.phase = 'race'; G.endsAt = now() + G.settings.rmin * 60000; G.cur = {}; G.raceAt = now(); markDirty(); }
 function endRace() { if (G.phase !== 'race') return; G.phase = 'end'; G.endsAt = 0; markDirty(); setTimeout(() => confetti(), 300); }
 function afterReset() { H.lastPub = {}; H.view = null; if (H.T && H.T.replay) H.T.replay(); for (const b of Object.values(H.bots)) ingest(botState(b)); markDirty(); }
 
@@ -712,12 +789,13 @@ function finalize(it, ok, fb, by) {
     if (G.solved[qid]) { setRes(sid, aid, null, 'Correct! But a teammate solved it first.', 0, qid, ''); logCheck(it, true, fb, 0, by); return; }
     const st = G.streak[sid] || 0;
     const speed = Math.max(0, Math.round(50 * (1 - Math.min(it.secs, 60) / 60)));
-    const sb = Math.min(st, 5) * 10, pts = 100 + speed + sb;
+    const sb = Math.min(st, 5) * 10, dbl = G.settings.mode === 'cards' && G.opened[qid] && G.opened[qid].type === 'x2';
+    const pts = (100 + speed + sb) * (dbl ? 2 : 1);
     G.streak[sid] = st + 1;
     G.solved[qid] = { sid, pts, text: it.text, at: now(), aid, by };
     G.pscore[sid] = (G.pscore[sid] || 0) + pts;
     G.feed.unshift({ qid, sid, text: it.text, pts }); if (G.feed.length > 12) G.feed.length = 12;
-    setRes(sid, aid, true, fb, pts, qid, '+100' + (speed ? ' · speed +' + speed : '') + (sb ? ' · streak +' + sb : ''));
+    setRes(sid, aid, true, fb, pts, qid, '+100' + (speed ? ' · speed +' + speed : '') + (sb ? ' · streak +' + sb : '') + (dbl ? ' · ×2 card!' : ''));
     logCheck(it, true, fb, pts, by);
     checkFinish(G.qs[qid].team);
   } else {
@@ -764,6 +842,7 @@ function teamScores() {
   const sc = Array(nTeams()).fill(0);
   for (const [qid, s] of Object.entries(G.solved)) { const q = G.qs[qid]; if (q && q.team >= 0 && q.team < sc.length) sc[q.team] += s.pts; }
   G.finish.forEach((t, i) => { if (t < sc.length) sc[t] += BONUS[i] || 0; });
+  if (G.settings.mode === 'cards' && G.adj) for (let t = 0; t < sc.length; t++) sc[t] += G.adj[t] || 0;
   return sc;
 }
 function teamCounts() {
@@ -780,7 +859,8 @@ function buildLive() {
   const { tot, sol } = teamCounts();
   return { gid: G.gid, phase: G.phase, endsAt: G.endsAt, set: { teams: nTeams(), per: G.settings.per }, roster, ts: teamScores(), tot, sol, pscore: G.pscore, solved, busy,
     feed: G.feed.slice(0, 5).map(f => [f.sid, f.text, f.pts]), res: G.res, finish: G.finish,
-    chat: G.chat.slice(-40).map(m => [m.mid, m.sid, m.name, m.team, m.text]), chatOn: G.chatOn };
+    chat: G.chat.slice(-40).map(m => [m.mid, m.sid, m.name, m.team, m.text]), chatOn: G.chatOn,
+    mode: G.settings.mode, opened: G.settings.mode === 'cards' ? Object.fromEntries(Object.entries(G.opened || {}).map(([k, o]) => [k, [o.sid, o.type, o.target]])) : {} };
 }
 function buildQs() { return { gid: G.gid, dist: ['sorted', 'race', 'end'].includes(G.phase), list: Object.values(G.qs).sort((a, b) => a.at - b.at).map(q => [q.qid, q.text, q.team, q.order || 0]) }; }
 function flush() {
@@ -838,7 +918,7 @@ function botsTick() {
       const team = G.roster[b.sid].team;
       if (!b.cur || G.solved[b.cur]) {
         const busy = buildLive().busy;
-        const cands = Object.values(G.qs).filter(q => q.team === team && !G.solved[q.qid] && BANKMAP[q.text]);
+        const cands = Object.values(G.qs).filter(q => q.team === team && !G.solved[q.qid] && BANKMAP[q.text] && (G.settings.mode !== 'cards' || Math.random() < 0.6 || G.opened[q.qid]));
         const free = cands.filter(q => !busy[q.qid] || busy[q.qid] === b.sid);
         const list = free.length ? free : cands;
         if (!list.length) { if (b.cur) { b.cur = null; ingest(botState(b)); } b.next = t + 3000; continue; }
@@ -952,6 +1032,8 @@ function buildStage(ph, prev) {
         <div class="row"><button class="btn ghost" data-act="shuffle">🔀 Shuffle teams</button><button class="btn ghost" data-act="addBots">🤖 Add 6 demo players</button><button class="btn ghost" data-act="help">❔</button></div></div>
         <div id="lobbyCols"></div><p class="light small" style="opacity:.8;margin-top:10px">Tap a name to move that student to the next team.</p></section>
       <section class="card settings"><h3>Settings</h3>
+        <div class="set"><span>Game mode</span><div class="seg"><button data-act="mode" data-v="race" class="${s.mode !== 'cards' ? 'on' : ''}">🏁 Classic race</button><button data-act="mode" data-v="cards" class="${s.mode === 'cards' ? 'on' : ''}">🃏 Card mode</button></div></div>
+        ${s.mode === 'cards' ? `<div class="set"><span>Surprise cards</span><div class="chips">${SUR_TYPES.map(k => `<button data-act="sur" data-k="${k}" class="${s.sur[k] ? 'on' : ''}">${SUR[k].icon} ${SUR[k].name}</button>`).join('')}</div><div class="small" style="margin-top:6px">Opens when a card is picked. Give/steal: the other team is chosen at random.</div></div>` : ''}
         <div class="set"><span>Teams</span>${seg('teams', [2, 3, 4, 5, 6], s.teams)}</div>
         <div class="set"><span>Questions per student</span>${seg('per', [1, 2, 3, 4, 5, 6, 8], s.per)}</div>
         <div class="set"><span>Question writing time</span>${seg('cmin', [3, 5, 8, 10, 15], s.cmin, '′')}</div>
@@ -992,7 +1074,7 @@ function buildStage(ph, prev) {
         <div class="card"><h3>⭐ Top players</h3><ol class="tops" id="tops"></ol></div>
         <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="plus1">+1 min</button><button class="btn stop" data-act="endRace">End race</button></div></aside></div>`;
     const sb = $('#sb'); const n = nTeams();
-    for (let t = 0; t < n; t++) sb.appendChild(el(`<div class="srow" data-row="${t}" style="--c:${TEAMS[t].color}"><div class="rk">${t + 1}</div><div class="em">${TEAMS[t].emoji}</div><div class="nm"><b>${TEAMS[t].name}</b><span class="fin" hidden>FINISHED</span><div class="bar"><i></i></div><small>0/0 solved</small></div><div class="sc">0</div></div>`));
+    for (let t = 0; t < n; t++) sb.appendChild(el(`<div class="srow" data-row="${t}" style="--c:${TEAMS[t].color}"><div class="rk">${t + 1}</div><div class="em">${TEAMS[t].emoji}</div><div class="nm"><b>${TEAMS[t].name}</b><span class="fin" hidden>FINISHED</span>${G.settings.mode === 'cards' ? '<div class="mstrip"></div>' : '<div class="bar"><i></i></div>'}<small>0/0 solved</small></div><div class="sc">0</div></div>`));
     H.lastScores = [];
   } else if (ph === 'end') {
     const sc = teamScores(); const order = [...Array(nTeams()).keys()].sort((a, b) => sc[b] - sc[a]);
@@ -1044,13 +1126,15 @@ function updSorted() { for (let t = 0; t < nTeams(); t++) { const c = document.q
 function updRace() {
   const sc = teamScores(), { tot, sol } = teamCounts(), n = nTeams();
   const order = [...Array(n).keys()].sort((a, b) => sc[b] - sc[a] || sol[b] - sol[a] || a - b);
-  const rh = Math.max(74, Math.min(118, Math.floor((window.innerHeight - 140) / n) - 14)), gap = 14;
+  const rh = Math.max(G.settings.mode === 'cards' ? 96 : 74, Math.min(G.settings.mode === 'cards' ? 150 : 118, Math.floor((window.innerHeight - 140) / n) - 14)), gap = 14;
   const sb = $('#sb'); sb.style.height = (n * (rh + gap)) + 'px';
   order.forEach((t, i) => {
     const r = sb.querySelector(`[data-row="${t}"]`); if (!r) return;
     r.style.height = rh + 'px'; r.style.top = (i * (rh + gap)) + 'px';
     r.querySelector('.rk').textContent = i + 1;
-    r.querySelector('.bar i').style.width = (tot[t] ? 100 * sol[t] / tot[t] : 0) + '%';
+    const bar = r.querySelector('.bar i'); if (bar) bar.style.width = (tot[t] ? 100 * sol[t] / tot[t] : 0) + '%';
+    const strip = r.querySelector('.mstrip');
+    if (strip) strip.innerHTML = teamQ(t).sort((a, b) => a.order - b.order).map(q => { const o = G.opened[q.qid], ok = G.solved[q.qid]; const ic = o && o.type !== 'none' ? SUR[o.type].icon : ''; return `<span class="mc ${ok ? 'ok' : o ? 'op' : ''}" title="Card ${q.order + 1}">${ok ? (ic || '✓') : o ? (ic || '📄') : q.order + 1}</span>`; }).join('');
     r.querySelector('small').textContent = `${sol[t]}/${tot[t]} solved`;
     r.querySelector('.fin').hidden = !G.finish.includes(t);
     const s = r.querySelector('.sc');
@@ -1097,6 +1181,7 @@ function showHelp() {
     <li><b>Start question writing</b>: each student writes real questions. They pop up on the board.</li>
     <li>When the time is up, the questions fly to the teams — every team gets questions from <b>other</b> teams.</li>
     <li><b>Race</b>: students turn each question into a noun clause (<i>Where does she live?</i> → <i>I don't know where she lives.</i>). Teammates work on different questions at the same time.</li>
+    <li><b>Card mode</b>: each team sees its questions as numbered cards on the phones. Some cards hide a surprise that opens as soon as the card is picked: 🎁 +50, ⚡ ×2 for that card, 💥 −50, 🎀 give 50 to a random team, 🕵️ steal 50 from a random team.</li>
     <li>Points: 100 for a correct sentence + speed bonus (up to 50) + streak bonus. Teams that solve all their questions get +150 / +100 / +50.</li>
     <li>Every check appears on the board. Tap <b>✓ right</b> / <b>✗ wrong</b> to override it.</li>
     <li><b>Class chat</b> (left): students write from the 💬 button on their phones. Hover a message to delete it, use <b>🔓 Open / 🔒 Closed</b> to stop new messages, ◀ to hide the panel.</li></ol>
@@ -1105,7 +1190,9 @@ function showHelp() {
 function onHostClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act;
-  if (a === 'set') { const k = b.dataset.k, v = +b.dataset.v; G.settings[k] = v; if (k === 'teams') rebalance(); H.view = null; markDirty(); }
+  if (a === 'mode') { G.settings.mode = b.dataset.v; H.view = null; markDirty(); }
+  else if (a === 'sur') { G.settings.sur[b.dataset.k] = G.settings.sur[b.dataset.k] ? 0 : 1; H.view = null; markDirty(); }
+  else if (a === 'set') { const k = b.dataset.k, v = +b.dataset.v; G.settings[k] = v; if (k === 'teams') rebalance(); H.view = null; markDirty(); }
   else if (a === 'ai') { G.settings.ai = b.checked; markDirty(); if (b.checked && H.sample && H.ai !== 'on') warmAI(); }
   else if (a === 'startCollect') startCollect();
   else if (a === 'addBots') addBots(6);
@@ -1135,6 +1222,7 @@ async function startHost(makeT, opts) {
   const saved = T ? await T.load() : LS.get('ncr.host', null);
   if (saved && saved.v === 1 && saved.gid && saved.settings && now() - (saved.savedAt || 0) < 6 * 3600e3) {
     G = saved; for (const r of Object.values(G.roster)) r.online = false; restoreBots();
+    G.settings = Object.assign(defaults(), G.settings); if (!G.opened) G.opened = {}; if (!G.adj) G.adj = [0, 0, 0, 0, 0, 0];
     if (!Array.isArray(G.chat)) G.chat = []; if (G.chatOn === undefined) G.chatOn = true; if (!G.seenChat) G.seenChat = {};
     if (G.phase !== 'lobby') setTimeout(() => toast('Your game was restored'), 400);
   } else freshGame(false);
@@ -1149,7 +1237,7 @@ async function startHost(makeT, opts) {
 // ===================================================================
 // STUDENT (phone)
 // ===================================================================
-const S = { chatOut: [], chatOpen: false, chatSeen: {}, chatInit: false, lastChatAt: 0, T: null, sid: null, name: '', code: '', gid: null, qs: [], att: [], cur: null, curSince: 0, pending: null, pendingAt: 0, ping: 0, skipped: {}, done: {}, resInit: false, live: null, qsDoc: null, endsLocal: 0, view: null, lockUntil: 0, lastFb: null };
+const S = { revealed: {}, chatOut: [], chatOpen: false, chatSeen: {}, chatInit: false, lastChatAt: 0, T: null, sid: null, name: '', code: '', gid: null, qs: [], att: [], cur: null, curSince: 0, pending: null, pendingAt: 0, ping: 0, skipped: {}, done: {}, resInit: false, live: null, qsDoc: null, endsLocal: 0, view: null, lockUntil: 0, lastFb: null };
 function sSave() { LS.set('ncr.s', { gid: S.gid, qs: S.qs }); }
 function sendState() { if (!S.T || !S.name) return; S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, qs: S.qs, att: S.att, cur: S.cur, n: S.ping, chat: S.chatOut.map(m => [m[0], m[1]]) }); }
 function myRow() { return S.live && S.live.roster ? S.live.roster[S.sid] : null; }
@@ -1166,6 +1254,10 @@ function onPart(part, data, meta) {
   if (data && !(meta && meta.fromCache)) S.endsLocal = data.endsAt ? now() + (data.left || 0) : 0;
   if (data) handleResults();
   renderStudent(); renderChatS();
+}
+function showReveal(op, t) {
+  const type = op[1]; const r = el(`<div class="reveal"><div class="rc" style="${teamStyle(t)}"><div class="ic">${SUR[type].icon}</div><h2>${type === 'none' ? 'Normal card' : SUR[type].name}</h2><p>${esc(surText(type, t, op[2], true))}</p></div></div>`);
+  document.body.appendChild(r); r.onclick = () => r.remove(); setTimeout(() => r.remove(), type === 'none' ? 1000 : 2600);
 }
 function renderChatS(scroll) {
   const fab = $('#chatFab'); if (!fab) return;
@@ -1206,13 +1298,22 @@ function handleResults() {
     if (aid === S.pending) {
       S.pending = null; S.att = []; sendState();
       S.lastFb = { ok, fb, pts, detail };
-      if (ok !== false) { S.lockUntil = now() + (ok ? 1500 : 1300); setTimeout(() => { S.cur = null; S.lastFb = null; S.view = null; renderStudent(); }, ok ? 1500 : 1300); }
+      if (ok !== false) { S.lockUntil = now() + (ok ? 1500 : 1300); setTimeout(() => { S.cur = null; S.lastFb = null; S.view = null; sendState(); renderStudent(); }, ok ? 1500 : 1300); }
       showFb(true);
     } else if (/x$/.test(aid)) toast((ok ? '✅ ' : '❌ ') + fb + (pts ? ` (${pts > 0 ? '+' : ''}${pts})` : ''), 4000);
   }
 }
+const cardMode = () => !!(S.live && S.live.mode === 'cards');
 function ensureCur() {
   if (sPhase() !== 'race' || S.pending || now() < S.lockUntil) return;
+  if (cardMode()) {
+    const solved = S.live.solved || {};
+    if (S.cur && (solved[S.cur] || !teamList().some(q => q[0] === S.cur))) {
+      if (solved[S.cur] && solved[S.cur][0] !== S.sid) toast('A teammate solved that card!');
+      S.cur = null; S.lastFb = null; S.view = null; sendState();
+    }
+    return;
+  }
   const list = teamList(); const solved = S.live.solved || {};
   const valid = S.cur && list.some(q => q[0] === S.cur) && !solved[S.cur];
   if (valid) return;
@@ -1257,7 +1358,7 @@ function renderStudent() {
   const pts = S.live && S.live.pscore ? S.live.pscore[S.sid] || 0 : 0;
   const sp = $('#sPts'); sp.hidden = !(v === 'race' || v === 'end'); sp.textContent = pts + ' pts';
   if (v === 'race') ensureCur();
-  const key = v === 'race' ? 'race:' + (S.cur || 'none') : v;
+  const key = v === 'race' ? 'race:' + (S.cur || 'none') + (cardMode() && S.cur ? (S.live.opened && S.live.opened[S.cur] ? ':o' : ':w') : '') : v;
   if (S.view !== key) { S.view = key; buildS(v); }
   updS(v);
   sTimer();
@@ -1284,21 +1385,29 @@ function buildS(v) {
       <div class="scard"><p class="muted" style="margin:0;font-weight:700">💡 Mix question types: <b>Wh-</b> (Where / Why / How many…) and <b>Yes/No</b> (Is… / Did… / Can…).</p></div>`;
   } else if (v === 'sorted') {
     const n = teamList().length;
-    st.innerHTML = `<div class="scard bigteam" style="${teamStyle(t)}"><div class="em">🔀</div><h1 style="color:var(--c)">Get ready!</h1><p style="font-weight:800">Your team got <b id="nGot">${n}</b> questions from other teams.</p>
+    st.innerHTML = `<div class="scard bigteam" style="${teamStyle(t)}"><div class="em">🔀</div><h1 style="color:var(--c)">Get ready!</h1><p style="font-weight:800">Your team got <b id="nGot">${n}</b> ${cardMode() ? 'cards' : 'questions'} from other teams.</p>${cardMode() ? '<p style="font-weight:800">🃏 Pick a card, see the surprise, then write your sentence!</p>' : ''}
       <p class="muted" style="font-weight:700">Turn each question into a noun clause:<br><i>Where does she live?</i> → <i>I don't know where she lives.</i><br><i>Is it cold?</i> → <i>I wonder if it is cold.</i></p></div>`;
+  } else if (v === 'race' && cardMode() && !S.cur) {
+    st.innerHTML = `<div class="scard"><div class="qlabel"><span>Pick a card</span><span id="cSolved"></span></div><div class="cgrid" id="cgrid"></div>
+      <p class="muted" style="margin:4px 0 0;font-weight:700;font-size:13.5px">Some cards hide surprises: 🎁 +50 · ⚡ ×2 · 💥 −50 · 🎀 give 50 · 🕵️ steal 50</p></div>${progHTML()}`;
+  } else if (v === 'race' && cardMode() && !(S.live.opened && S.live.opened[S.cur])) {
+    const q = teamList().find(x => x[0] === S.cur);
+    st.innerHTML = `<div class="scard center" style="${teamStyle(t)}"><div class="logo">🃏</div><h2>Opening card ${q ? q[3] + 1 : ''}…</h2><p class="muted" style="font-weight:800"><span class="spin"></span>Waiting for the board</p><button class="btn ghost" data-act="cards">◀ Back to cards</button></div>`;
   } else if (v === 'race') {
     if (!S.cur) {
       const fin = L.finish && L.finish.includes(t);
       st.innerHTML = `<div class="scard center"><div class="logo">${fin ? '🎉' : '⏳'}</div><h2>${fin ? 'Your team solved all its questions!' : 'All questions are taken'}</h2><p class="muted" style="font-weight:800">${fin ? 'Amazing! Watch the board.' : 'Your teammates are working on the last ones. A new question will appear here if one is free.'}</p></div>${progHTML()}`;
     } else {
       const list = teamList(); const pos = list.findIndex(q => q[0] === S.cur);
-      st.innerHTML = `<div class="scard" id="rcard"><div class="qlabel"><span>Question ${pos + 1} of ${list.length}</span><span>from another team</span></div>
+      const op = cardMode() && S.live.opened ? S.live.opened[S.cur] : null;
+      st.innerHTML = `<div class="scard" id="rcard"><div class="qlabel"><span>${op ? 'Card ' + (pos + 1) + (op[1] !== 'none' ? `<span class="surtag">${SUR[op[1]].icon} ${SUR[op[1]].name}</span>` : '') : `Question ${pos + 1} of ${list.length}`}</span><span>from another team</span></div>
         <div class="bigq" id="bigQ"></div><p class="task">Turn it into a <b>noun clause</b> in a full sentence.</p>
         <div class="starters">${STARTERS.map(s => `<button type="button" data-act="starter" data-s="${esc(s)}">${esc(s)}…</button>`).join('')}</div>
         <form data-form="a"><textarea id="aIn" rows="3" maxlength="240" placeholder="I wonder…" autocomplete="off" autocapitalize="sentences"></textarea>
-        <div class="btnrow"><button type="button" class="btn ghost" data-act="skip">Skip ↷</button><button class="btn go" id="aSend">Check ✔</button></div></form>
+        <div class="btnrow"><button type="button" class="btn ghost" data-act="${op ? 'cards' : 'skip'}">${op ? '◀ Cards' : 'Skip ↷'}</button><button class="btn go" id="aSend">Check ✔</button></div></form>
         <div class="fb" id="fb"></div></div>${progHTML()}`;
       $('#bigQ').textContent = qText(S.cur);
+      if (op && op[0] === S.sid && !S.revealed[S.cur]) { S.revealed[S.cur] = 1; showReveal(op, t); }
     }
   } else if (v === 'end') {
     const sc = L.ts || []; const order = sc.map((x, i) => i).sort((a, b) => sc[b] - sc[a]); const rank = order.indexOf(t);
@@ -1322,6 +1431,26 @@ function updS(v) {
     const full = S.qs.length >= per; $('#qSend').disabled = full; $('#qIn').disabled = full; if (full) $('#qIn').placeholder = 'Done! You can delete one to write a new one.';
   }
   if (v === 'sorted' && $('#nGot')) $('#nGot').textContent = teamList().length;
+  if (v === 'race' && $('#cgrid')) {
+    const solved = L.solved || {}, opened = L.opened || {}, busy = L.busy || {}; const list = teamList();
+    const nm = sid => (L.roster[sid] ? L.roster[sid][0] : '');
+    const g = $('#cgrid'); g.setAttribute('style', teamStyle(t));
+    if (!list.length) g.innerHTML = '<div class="muted" style="font-weight:800">Waiting for cards…</div>';
+    else { const w = g.querySelector('.muted'); if (w) w.remove(); }
+    for (const q of list) {
+      const id = q[0], o = opened[id], ok = solved[id], n = q[3] + 1; const ic = o ? SUR[o[1]].icon : '';
+      let cls, html;
+      if (ok) { cls = 'pc ok'; html = `<span class="ic">${o && o[1] !== 'none' ? ic : '✓'}</span><span class="n">${n} ✓</span><span class="who">${esc(nm(ok[0]))}</span>`; }
+      else if (o) { cls = 'pc op'; html = `<span class="ic">${ic}</span><span class="n">${n}</span>${busy[id] && busy[id] !== S.sid ? `<span class="who">✏️ ${esc(nm(busy[id]))}</span>` : ''}`; }
+      else { cls = 'pc cl'; html = `<span class="n">${n}</span><span class="q">?</span>`; }
+      let bt = g.querySelector(`[data-qid="${CSS.escape(id)}"]`);
+      if (!bt) { bt = document.createElement('button'); bt.dataset.qid = id; bt.dataset.act = 'pick'; g.appendChild(bt); }
+      if (bt.className !== cls) bt.className = cls;
+      bt.disabled = !!ok;
+      if (bt._h !== html) { bt._h = html; bt.innerHTML = html; }
+    }
+    const sol = list.filter(q => solved[q[0]]).length; $('#cSolved').textContent = `${sol}/${list.length} solved`;
+  }
   if (v === 'race') {
     const bq = $('#bigQ'); if (bq && S.cur && bq.textContent !== qText(S.cur)) bq.textContent = qText(S.cur);
     const sol = (L.sol || [])[t] || 0, tot = (L.tot || [])[t] || 0;
@@ -1371,6 +1500,8 @@ function onStudentClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
   if (a === 'delq') { S.qs = S.qs.filter(q => q[0] !== b.dataset.k); sSave(); sendState(); renderStudent(); }
   else if (a === 'starter') { const ta = $('#aIn'); if (!ta) return; const s = b.dataset.s; const rest = ta.value.replace(new RegExp('^(' + STARTERS.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\s*', 'i'), ''); ta.value = s + ' ' + rest; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  else if (a === 'pick') { if (S.pending) return; S.cur = b.dataset.qid; S.curSince = now(); S.lastFb = null; S.view = null; sendState(); renderStudent(); }
+  else if (a === 'cards') { if (S.pending) return; S.cur = null; S.lastFb = null; S.view = null; sendState(); renderStudent(); }
   else if (a === 'skip') { if (S.pending || !S.cur) return; S.skipped[S.cur] = 1; const prev = S.cur; S.cur = null; S.lastFb = null; ensureCur(); if (S.cur === prev) toast('This is your only free question.'); S.view = null; renderStudent(); }
   else if (a === 'resend') { S.pendingAt = now(); S.ping++; sendState(); showFb(false); }
   else if (a === 'rename') { S.view = null; S.name = ''; renderStudent(); }
