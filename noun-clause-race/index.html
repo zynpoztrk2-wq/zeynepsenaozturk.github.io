@@ -40,7 +40,8 @@ button{font-family:inherit}
 .timer{font-family:var(--disp);font-size:36px;font-weight:700;background:#fff;color:var(--ink);padding:0 16px;border-radius:14px;min-width:118px;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.25);line-height:1.35}
 .timer.low{background:var(--bad);color:#fff;animation:pulse 1s infinite}
 @keyframes pulse{50%{transform:scale(1.06)}}
-.stage{flex:1;padding:6px 20px 24px;min-height:0}
+.bodyrow{flex:1;display:flex;align-items:flex-start;min-height:0}
+.stage{flex:1;min-width:0;padding:6px 20px 24px;container-type:inline-size}
 .banner{position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:30;background:var(--gold);color:var(--ink);font-family:var(--disp);font-size:clamp(20px,2.4vw,34px);font-weight:700;padding:12px 26px;border-radius:18px;box-shadow:0 6px 0 rgba(0,0,0,.25);animation:drop .5s cubic-bezier(.2,1.5,.4,1);text-align:center;max-width:92vw}
 @keyframes drop{from{transform:translate(-50%,-40px);opacity:0}}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -150,6 +151,38 @@ button{font-family:inherit}
 .rv .a.no{color:#b0a8c8;font-style:italic}
 .steps-help{padding-left:20px;line-height:1.55;font-weight:700}
 .steps-help li{margin:6px 0}
+/* chat */
+.chatp{width:300px;flex:none;margin:6px 0 24px 20px;background:#fff;border-radius:20px;box-shadow:0 6px 0 rgba(0,0,0,.18);display:flex;flex-direction:column;height:calc(100vh - 96px);position:sticky;top:12px;overflow:hidden}
+.ch-head{display:flex;align-items:center;gap:6px;padding:12px 12px 10px 16px;border-bottom:2px solid var(--line)}
+.ch-head h3{font-size:20px;flex:1;white-space:nowrap}
+.ch-head button{border:0;background:var(--soft);border-radius:9px;padding:6px 8px;font:900 12.5px var(--body);cursor:pointer;color:var(--ink);white-space:nowrap}
+.ch-head button.off{background:#ffe4ea;color:var(--bad)}
+.ch-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px;min-height:0}
+.ch-empty{color:var(--muted);font-weight:700;font-size:14px;text-align:center;margin:auto 0;padding:20px 6px}
+.msg{position:relative;padding:7px 28px 8px 10px;border-radius:12px;background:var(--soft);border-left:5px solid var(--c,#bbb);animation:pop .3s both}
+.msg .who{font-weight:900;font-size:13px;color:var(--muted)}
+.msg .txt{font-weight:700;font-size:17px;line-height:1.3;overflow-wrap:anywhere}
+.msg.teacher{background:#ece7ff}
+.msg.teacher .who{color:var(--accent)}
+.msg.me{background:#fff6d6}
+.msg.pending{opacity:.55}
+.msg .del{position:absolute;top:4px;right:4px;border:0;background:transparent;color:#b8b0d3;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:7px;opacity:0}
+.msg:hover .del{opacity:1}.msg .del:hover{background:#ffe4ea;color:var(--bad)}
+.ch-form{display:flex;gap:6px;padding:10px;border-top:2px solid var(--line)}
+.ch-form input{flex:1;min-width:0;font:700 16px var(--body);border:2px solid #e4def5;border-radius:12px;padding:9px 10px;outline:none;color:var(--ink)}
+.ch-form input:focus{border-color:var(--accent)}
+.ch-form .btn{padding:8px 13px}
+.ch-off{background:#ffe4ea;color:#881337;font-weight:800;font-size:13.5px;padding:8px 12px;text-align:center}
+.chat-tab{position:fixed;left:12px;top:90px;z-index:15;border:0;background:#fff;border-radius:14px;padding:10px 12px;font:900 20px var(--body);box-shadow:0 4px 0 rgba(0,0,0,.25);cursor:pointer}
+.chat-tab span{display:block;font-size:12px;color:var(--bad)}
+.chatfab{position:fixed;right:14px;bottom:16px;z-index:25;width:58px;height:58px;border-radius:50%;border:0;background:#fff;font-size:26px;box-shadow:0 5px 0 rgba(0,0,0,.25);cursor:pointer}
+.chatfab .badge{position:absolute;top:-4px;right:-4px;background:var(--bad);color:#fff;font:900 13px var(--body);min-width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 6px}
+.sheet{position:fixed;inset:0;z-index:45;background:rgba(18,10,46,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet-box{background:#fff;width:100%;max-width:540px;height:min(78vh,620px);border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:up .25s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet-head{display:flex;align-items:center;padding:14px 16px;border-bottom:2px solid var(--line);font-family:var(--disp);font-size:20px}
+.sheet-head b{flex:1;font-weight:600}
+.sheet-head button{border:0;background:var(--soft);border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer}
 /* ---------- student ---------- */
 .phone{max-width:540px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:12px 12px 40px;position:relative}
 .sbar{display:flex;align-items:center;gap:8px;color:#fff;margin-bottom:12px;min-height:40px}
@@ -209,8 +242,10 @@ input.code-in{text-transform:uppercase;letter-spacing:4px;font-family:var(--disp
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
 .landing{max-width:520px;margin:8vh auto 0;padding:0 14px}
 .landing .btn{margin-top:12px}
-@media (max-width:1100px){.lobby{grid-template-columns:1fr 1fr}.lobby .teams-wrap{grid-column:1/-1;order:3}.race{grid-template-columns:1fr}}
-@media (max-width:720px){.lobby{grid-template-columns:1fr}.teamcols{grid-template-columns:repeat(2,minmax(0,1fr))}.endgrid{grid-template-columns:1fr}.steps{display:none}.srow{padding:0 12px;gap:10px}.srow .sc{min-width:70px}}
+@container (max-width:1000px){.lobby{grid-template-columns:1fr 1fr}.lobby .teams-wrap{grid-column:1/-1;order:3}}
+@container (max-width:820px){.race{grid-template-columns:1fr}}
+@container (max-width:600px){.lobby{grid-template-columns:1fr}.teamcols{grid-template-columns:repeat(2,minmax(0,1fr))}.endgrid{grid-template-columns:1fr}.srow{padding:0 12px;gap:10px}.srow .sc{min-width:70px}}
+@media (max-width:900px){.bodyrow{flex-direction:column;align-items:stretch}.chatp{width:auto!important;height:280px!important;margin:6px 20px 0!important;position:static!important}.steps{display:none}}
 </style>
 </head>
 <body>
@@ -506,7 +541,8 @@ function freshGame(keepRoster) {
   G = {
     v: 1, gid: rid(6), phase: 'lobby', created: now(), settings: prev ? { ...prev.settings } : defaults(), endsAt: 0,
     roster: {}, qs: {}, banned: {}, solved: {}, pscore: {}, streak: {}, cur: {}, feed: [], checks: [], res: {}, seen: {}, finish: [],
-    stats: { checks: 0, correct: 0 }, code: prev ? prev.code : null, joinSeq: prev ? prev.joinSeq || 0 : 0
+    stats: { checks: 0, correct: 0 }, code: prev ? prev.code : null, joinSeq: prev ? prev.joinSeq || 0 : 0,
+    chat: prev && prev.chat ? prev.chat : [], chatOn: prev ? prev.chatOn !== false : true, seenChat: prev && prev.seenChat ? prev.seenChat : {}
   };
   if (keepRoster && prev) for (const [sid, r] of Object.entries(prev.roster)) G.roster[sid] = { name: r.name, team: r.team, online: r.online, seq: r.seq };
   H.cards = {}; H.Q = []; H.view = null;
@@ -533,6 +569,12 @@ function ingest(s) {
     if (r.name !== name) { r.name = name; ch = true; }
     if (!r.online) { r.online = true; ch = true; }
     if (r.team >= nTeams()) { r.team = pickTeam(); ch = true; }
+  }
+  if (Array.isArray(s.chat)) for (const m of s.chat.slice(0, 4)) {
+    if (!Array.isArray(m)) continue; const mid = clean(m[0], 12).replace(/[^a-z0-9]/gi, '');
+    if (!mid || G.seenChat[mid]) continue; G.seenChat[mid] = 1;
+    const text = clean(m[1], 140); if (!text || !G.chatOn) continue;
+    addMsg(sid, r.name, r.team, text, mid); ch = true;
   }
   if (s.gid === G.gid) {
     if (G.phase === 'collect' && Array.isArray(s.qs)) ch = syncQs(sid, s.qs) || ch;
@@ -737,7 +779,8 @@ function buildLive() {
   const busy = {}; if (G.phase === 'race') for (const [sid, qid] of Object.entries(G.cur)) if (qid && G.roster[sid] && G.roster[sid].online && !G.solved[qid]) busy[qid] = sid;
   const { tot, sol } = teamCounts();
   return { gid: G.gid, phase: G.phase, endsAt: G.endsAt, set: { teams: nTeams(), per: G.settings.per }, roster, ts: teamScores(), tot, sol, pscore: G.pscore, solved, busy,
-    feed: G.feed.slice(0, 5).map(f => [f.sid, f.text, f.pts]), res: G.res, finish: G.finish };
+    feed: G.feed.slice(0, 5).map(f => [f.sid, f.text, f.pts]), res: G.res, finish: G.finish,
+    chat: G.chat.slice(-40).map(m => [m.mid, m.sid, m.name, m.team, m.text]), chatOn: G.chatOn };
 }
 function buildQs() { return { gid: G.gid, dist: ['sorted', 'race', 'end'].includes(G.phase), list: Object.values(G.qs).sort((a, b) => a.at - b.at).map(q => [q.qid, q.text, q.team, q.order || 0]) }; }
 function flush() {
@@ -816,8 +859,40 @@ function renderHostShell() {
   $('#app').innerHTML = `<div class="board">
     <header class="topbar"><div class="brand">🏁 Noun Clause Race</div><nav class="steps" id="steps"></nav>
       <span class="pill" id="aiPill" hidden></span><span class="pill" id="connPill" hidden></span><div class="timer" id="timer" hidden></div></header>
-    <main id="stage" class="stage"></main></div>`;
-  $('#stage').addEventListener('click', onHostClick);
+    <div class="bodyrow">
+      <aside class="chatp" id="chatp"><div class="ch-head"><h3>💬 Class chat</h3><button data-act="chatLock" id="chLock"></button><button data-act="chatClear" title="Delete all messages">🗑</button><button data-act="chatHide" title="Hide the chat">◀</button></div>
+        <div class="ch-off" id="chOff" hidden>Chat is closed for students</div>
+        <div class="ch-list" id="chList"></div>
+        <form class="ch-form" id="chForm"><input id="chIn" maxlength="140" placeholder="Write to the class…" autocomplete="off"><button class="btn go" title="Send">➤</button></form></aside>
+      <button class="chat-tab" id="chatTab" data-act="chatShow" title="Show the chat" hidden>💬<span id="chTabN"></span></button>
+      <main id="stage" class="stage"></main></div></div>`;
+  $('.board').addEventListener('click', onHostClick);
+  $('#chForm').addEventListener('submit', e => { e.preventDefault(); const i = $('#chIn'); const t = clean(i.value, 140); if (!t) return; addMsg('teacher', 'Teacher', -1, t, rid(8)); i.value = ''; i.focus(); });
+}
+// ----- chat -----
+function addMsg(sid, name, team, text, mid) { G.chat.push({ mid, sid, name, team, text, at: now() }); if (G.chat.length > 80) G.chat.splice(0, G.chat.length - 80); markDirty(); }
+function msgHTML(m, o = {}) {
+  const teacher = m.sid === 'teacher', tm = TEAMS[m.team];
+  const who = teacher ? '🧑‍🏫 Teacher' : (tm ? tm.emoji + ' ' : '') + esc(m.name);
+  return `<div class="msg${teacher ? ' teacher' : ''}${o.me ? ' me' : ''}${o.pending ? ' pending' : ''}" style="--c:${teacher ? 'var(--accent)' : tm ? tm.color : '#bbb'}"><div class="who">${who}${o.pending ? ' · sending…' : ''}</div><div class="txt">${esc(m.text)}</div>${o.host ? `<button class="del" data-act="chatDel" data-mid="${esc(m.mid)}" title="Delete">✕</button>` : ''}</div>`;
+}
+function renderChat() {
+  const list = $('#chList'); if (!list || !G) return;
+  if (!H.chatEls) H.chatEls = {};
+  $('#chatp').hidden = !!H.chatHidden; $('#chatTab').hidden = !H.chatHidden;
+  const lock = $('#chLock'); lock.textContent = G.chatOn ? '🔓 Open' : '🔒 Closed'; lock.className = G.chatOn ? '' : 'off';
+  lock.title = G.chatOn ? 'Students can write. Click to close the chat.' : 'Students cannot write. Click to open the chat.';
+  $('#chOff').hidden = G.chatOn;
+  const near = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  const ids = new Set(G.chat.map(m => m.mid));
+  for (const [mid, e] of Object.entries(H.chatEls)) if (!ids.has(mid)) { e.remove(); delete H.chatEls[mid]; }
+  let added = 0;
+  for (const m of G.chat) if (!H.chatEls[m.mid]) { const e = el(msgHTML(m, { host: true })); H.chatEls[m.mid] = e; list.appendChild(e); added++; }
+  let empty = list.querySelector('.ch-empty');
+  if (!G.chat.length && !empty) list.appendChild(el('<div class="ch-empty">Messages from students will appear here.</div>'));
+  if (G.chat.length && empty) empty.remove();
+  if (added && (near || !H.chatScrolled)) { list.scrollTop = list.scrollHeight; H.chatScrolled = true; }
+  if (H.chatHidden) { H.chatUnread = (H.chatUnread || 0) + added; $('#chTabN').textContent = H.chatUnread ? H.chatUnread : ''; } else H.chatUnread = 0;
 }
 function banner(msg) { const old = $('.banner'); if (old) old.remove(); const b = el(`<div class="banner">${esc(msg)}</div>`); document.body.appendChild(b); setTimeout(() => b.remove(), 3800); }
 function renderAIPill() {
@@ -839,7 +914,7 @@ function renderHost() {
   $('#steps').innerHTML = PHASES.map(([k, l], i) => { const cur = PHASES.findIndex(p => p[0] === ph); return `<span class="${i === cur ? 'on' : i < cur ? 'done' : ''}">${i + 1}. ${l}</span>`; }).join('');
   if (H.view !== ph) { buildStage(ph, H.view); H.view = ph; }
   ({ lobby: updLobby, collect: updCollect, sorted: updSorted, race: updRace, end: updEnd })[ph]();
-  updateTimer(); renderAIPill();
+  updateTimer(); renderAIPill(); renderChat();
 }
 function teamColsHTML(id, cls = '') { return `<div class="teamcols ${cls}" id="${id}" style="--n:${nTeams()}">${[...Array(nTeams()).keys()].map(t => `<div class="tcol" style="--c:${TEAMS[t].color}"><div class="thead"><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<span class="cnt" data-cnt="${t}">0</span></div><div class="tbody" data-team="${t}"></div></div>`).join('')}</div>`; }
 function joinURL() {
@@ -1023,7 +1098,8 @@ function showHelp() {
     <li>When the time is up, the questions fly to the teams — every team gets questions from <b>other</b> teams.</li>
     <li><b>Race</b>: students turn each question into a noun clause (<i>Where does she live?</i> → <i>I don't know where she lives.</i>). Teammates work on different questions at the same time.</li>
     <li>Points: 100 for a correct sentence + speed bonus (up to 50) + streak bonus. Teams that solve all their questions get +150 / +100 / +50.</li>
-    <li>Every check appears on the board. Tap <b>✓ right</b> / <b>✗ wrong</b> to override it.</li></ol>
+    <li>Every check appears on the board. Tap <b>✓ right</b> / <b>✗ wrong</b> to override it.</li>
+    <li><b>Class chat</b> (left): students write from the 💬 button on their phones. Hover a message to delete it, use <b>🔓 Open / 🔒 Closed</b> to stop new messages, ◀ to hide the panel.</li></ol>
     <div class="mrow"><button class="btn go" data-close>Got it</button></div>`);
 }
 function onHostClick(e) {
@@ -1046,6 +1122,11 @@ function onHostClick(e) {
   else if (a === 'again') { freshGame(true); afterReset(); }
   else if (a === 'newGame') confirmBox('Start a new game? Teams and scores will be cleared.', () => { freshGame(false); afterReset(); }, 'New game');
   else if (a === 'help') showHelp();
+  else if (a === 'chatLock') { G.chatOn = !G.chatOn; markDirty(); }
+  else if (a === 'chatClear') { if (G.chat.length) confirmBox('Delete all chat messages?', () => { G.chat = []; markDirty(); }, 'Delete'); }
+  else if (a === 'chatDel') { G.chat = G.chat.filter(m => m.mid !== b.dataset.mid); markDirty(); }
+  else if (a === 'chatHide') { H.chatHidden = true; H.chatUnread = 0; $('#chTabN').textContent = ''; markDirty(); }
+  else if (a === 'chatShow') { H.chatHidden = false; H.chatScrolled = false; markDirty(); }
 }
 async function startHost(makeT, opts) {
   H.sample = opts.sample || null; H.demoOnly = !!opts.demoOnly;
@@ -1054,6 +1135,7 @@ async function startHost(makeT, opts) {
   const saved = T ? await T.load() : LS.get('ncr.host', null);
   if (saved && saved.v === 1 && saved.gid && saved.settings && now() - (saved.savedAt || 0) < 6 * 3600e3) {
     G = saved; for (const r of Object.values(G.roster)) r.online = false; restoreBots();
+    if (!Array.isArray(G.chat)) G.chat = []; if (G.chatOn === undefined) G.chatOn = true; if (!G.seenChat) G.seenChat = {};
     if (G.phase !== 'lobby') setTimeout(() => toast('Your game was restored'), 400);
   } else freshGame(false);
   if (MODE === 'p2p' && !G.code) G.code = newCode();
@@ -1067,9 +1149,9 @@ async function startHost(makeT, opts) {
 // ===================================================================
 // STUDENT (phone)
 // ===================================================================
-const S = { T: null, sid: null, name: '', code: '', gid: null, qs: [], att: [], cur: null, curSince: 0, pending: null, pendingAt: 0, ping: 0, skipped: {}, done: {}, resInit: false, live: null, qsDoc: null, endsLocal: 0, view: null, lockUntil: 0, lastFb: null };
+const S = { chatOut: [], chatOpen: false, chatSeen: {}, chatInit: false, lastChatAt: 0, T: null, sid: null, name: '', code: '', gid: null, qs: [], att: [], cur: null, curSince: 0, pending: null, pendingAt: 0, ping: 0, skipped: {}, done: {}, resInit: false, live: null, qsDoc: null, endsLocal: 0, view: null, lockUntil: 0, lastFb: null };
 function sSave() { LS.set('ncr.s', { gid: S.gid, qs: S.qs }); }
-function sendState() { if (!S.T || !S.name) return; S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, qs: S.qs, att: S.att, cur: S.cur, n: S.ping }); }
+function sendState() { if (!S.T || !S.name) return; S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, qs: S.qs, att: S.att, cur: S.cur, n: S.ping, chat: S.chatOut.map(m => [m[0], m[1]]) }); }
 function myRow() { return S.live && S.live.roster ? S.live.roster[S.sid] : null; }
 function myTeam() { const r = myRow(); return r ? r[1] : -1; }
 function allQs() { return (S.qsDoc && S.qsDoc.gid === S.gid && Array.isArray(S.qsDoc.list)) ? S.qsDoc.list : []; }
@@ -1083,7 +1165,31 @@ function onPart(part, data, meta) {
   if (data && data.gid !== S.gid) newGameS(data.gid);
   if (data && !(meta && meta.fromCache)) S.endsLocal = data.endsAt ? now() + (data.left || 0) : 0;
   if (data) handleResults();
-  renderStudent();
+  renderStudent(); renderChatS();
+}
+function renderChatS(scroll) {
+  const fab = $('#chatFab'); if (!fab) return;
+  const L = S.live; const joined = !!(S.name && S.T && L && myRow());
+  fab.hidden = !joined || S.chatOpen;
+  if (!joined) return;
+  const msgs = Array.isArray(L.chat) ? L.chat : [];
+  const onBoard = new Set(msgs.map(m => m[0]));
+  S.chatOut = S.chatOut.filter(m => !onBoard.has(m[0]) && now() - m[2] < 20000);
+  if (!S.chatInit) { S.chatInit = true; for (const m of msgs) S.chatSeen[m[0]] = 1; }
+  if (S.chatOpen) for (const m of msgs) S.chatSeen[m[0]] = 1;
+  const unread = msgs.filter(m => !S.chatSeen[m[0]] && m[1] !== S.sid).length;
+  const b = $('#chatBadge'); b.hidden = !unread; b.textContent = unread > 9 ? '9+' : unread;
+  if (!S.chatOpen) return;
+  const list = $('#sChList'); const near = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  const sig = msgs.map(m => m[0]).join() + '|' + S.chatOut.map(m => m[0]).join();
+  if (sig !== S.chatSig) {
+    S.chatSig = sig;
+    list.innerHTML = msgs.map(m => msgHTML({ mid: m[0], sid: m[1], name: m[2], team: m[3], text: m[4] }, { me: m[1] === S.sid })).join('')
+      + S.chatOut.map(m => msgHTML({ sid: S.sid, name: S.name, team: myTeam(), text: m[1] }, { me: true, pending: true })).join('')
+      || '<div class="ch-empty">No messages yet. Say hi! 👋</div>';
+    if (near || scroll) list.scrollTop = list.scrollHeight;
+  } else if (scroll) list.scrollTop = list.scrollHeight;
+  const off = L.chatOn === false; $('#sChOff').hidden = !off; $('#sChIn').disabled = off; $('#sChForm').querySelector('button').disabled = off;
 }
 function newGameS(gid) {
   const sv = LS.get('ncr.s', null);
@@ -1125,8 +1231,22 @@ function pickNext() {
 }
 function renderStudentShell() {
   document.body.className = 'student';
-  $('#app').innerHTML = `<div class="phone"><header class="sbar"><div class="tbadge" id="sTeam">🏁 Noun Clause Race</div><div class="stimer" id="sTimer" hidden></div><div class="spts" id="sPts" hidden></div></header><main id="sstage"></main><div class="sconn"><span class="pill" id="sConn" hidden></span></div></div>`;
+  $('#app').innerHTML = `<div class="phone"><header class="sbar"><div class="tbadge" id="sTeam">🏁 Noun Clause Race</div><div class="stimer" id="sTimer" hidden></div><div class="spts" id="sPts" hidden></div></header><main id="sstage"></main><div class="sconn"><span class="pill" id="sConn" hidden></span></div></div>
+    <button class="chatfab" id="chatFab" hidden aria-label="Class chat">💬<span class="badge" id="chatBadge" hidden></span></button>
+    <div class="sheet" id="sheet" hidden><div class="sheet-box"><div class="sheet-head"><b>💬 Class chat</b><button id="sheetX" aria-label="Close">✕</button></div>
+      <div class="ch-list" id="sChList"></div><div class="ch-off" id="sChOff" hidden>Your teacher closed the chat.</div>
+      <form class="ch-form" id="sChForm"><input id="sChIn" maxlength="140" placeholder="Write a message…" autocomplete="off" enterkeyhint="send"><button class="btn go">➤</button></form></div></div>`;
   $('#sstage').addEventListener('click', onStudentClick);
+  $('#chatFab').onclick = () => { S.chatOpen = true; $('#sheet').hidden = false; renderChatS(true); setTimeout(() => $('#sChIn').focus(), 50); };
+  $('#sheetX').onclick = () => { S.chatOpen = false; $('#sheet').hidden = true; renderChatS(); };
+  $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') $('#sheetX').click(); });
+  $('#sChForm').addEventListener('submit', e => {
+    e.preventDefault(); const i = $('#sChIn'); const t = clean(i.value, 140); if (!t) return;
+    if (!S.live || S.live.chatOn === false) return;
+    if (now() - S.lastChatAt < 2500) { toast('Wait a moment before the next message.'); return; }
+    if (S.chatOut.length >= 3) { toast('Sending… please wait.'); return; }
+    S.lastChatAt = now(); S.chatOut.push([rid(8), t, now()]); i.value = ''; sendState(); renderChatS(true);
+  });
   $('#sstage').addEventListener('submit', onStudentSubmit);
 }
 function teamStyle(t) { return t >= 0 && TEAMS[t] ? `--c:${TEAMS[t].color}` : ''; }
