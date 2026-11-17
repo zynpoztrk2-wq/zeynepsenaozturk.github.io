@@ -151,6 +151,19 @@ button{font-family:inherit}
 .rv .a.no{color:#b0a8c8;font-style:italic}
 .steps-help{padding-left:20px;line-height:1.55;font-weight:700}
 .steps-help li{margin:6px 0}
+/* team choice */
+.thead .tn{background:rgba(0,0,0,.2);border-radius:8px;padding:0 8px;font-size:16px}
+.unass{background:rgba(255,255,255,.12);border-radius:16px;padding:10px 12px;margin-bottom:12px;color:#fff}
+.unass b{font-weight:900;font-size:14px;margin-right:6px}
+.unass .chip{background:#fff}
+.tpick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.tbtn{border:0;border-radius:18px;background:var(--c);color:#fff;padding:14px 10px 12px;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.22);text-align:center;font-family:var(--body)}
+.tbtn:active{transform:translateY(3px)}
+.tbtn .em{font-size:40px;line-height:1.1;display:block}
+.tbtn .tno{font:900 13px var(--body);opacity:.9;text-transform:uppercase;letter-spacing:.5px}
+.tbtn .tnm{font:600 22px var(--disp);display:block}
+.tbtn .mem{font-weight:800;font-size:12px;opacity:.92;display:block;margin-top:4px;min-height:15px}
+.tbtn.sel{outline:4px solid var(--gold);outline-offset:2px}
 /* card mode */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chips button{border:2px solid var(--line);background:#fff;font:800 13.5px var(--body);padding:6px 9px;border-radius:10px;cursor:pointer;color:var(--muted)}
@@ -586,7 +599,7 @@ const H = { T: null, sample: null, ai: 'off', aiCool: 0, view: null, cards: {}, 
 let G = null;
 let MODE = null;
 
-function defaults() { return { teams: 4, per: 5, cmin: 10, rmin: 8, ai: true, mode: 'race', sur: { bonus: 1, x2: 1, lose: 1, give: 1, steal: 1 } }; }
+function defaults() { return { teams: 4, per: 5, cmin: 10, rmin: 8, ai: true, teamPick: 'students', mode: 'race', sur: { bonus: 1, x2: 1, lose: 1, give: 1, steal: 1 } }; }
 function freshGame(keepRoster) {
   const prev = G;
   G = {
@@ -616,11 +629,16 @@ function ingest(s) {
   const sid = clean(s.sid, 24).replace(/[^a-z0-9-]/gi, ''); if (!sid) return;
   const name = clean(s.name, 20) || 'Player';
   let r = G.roster[sid], ch = false;
-  if (!r) { r = G.roster[sid] = { name, team: pickTeam(), online: true, seq: ++G.joinSeq }; ch = true; }
+  const studentsPick = () => G.settings.teamPick === 'students' && !isBot(sid);
+  if (!r) { r = G.roster[sid] = { name, team: studentsPick() ? -1 : pickTeam(), online: true, seq: ++G.joinSeq }; ch = true; }
   else {
     if (r.name !== name) { r.name = name; ch = true; }
     if (!r.online) { r.online = true; ch = true; }
-    if (r.team >= nTeams()) { r.team = pickTeam(); ch = true; }
+    if (r.team >= nTeams()) { r.team = studentsPick() ? -1 : pickTeam(); ch = true; }
+  }
+  if (Array.isArray(s.pick) && G.settings.teamPick === 'students') {
+    const pt = Math.floor(+s.pick[0]), pn = +s.pick[1] || 0;
+    if (pn !== r.pickN) { r.pickN = pn; if (pt >= 0 && pt < nTeams() && (G.phase === 'lobby' || r.team < 0)) r.team = pt; ch = true; }
   }
   if (Array.isArray(s.chat)) for (const m of s.chat.slice(0, 4)) {
     if (!Array.isArray(m)) continue; const mid = clean(m[0], 12).replace(/[^a-z0-9]/gi, '');
@@ -857,7 +875,7 @@ function buildLive() {
   const solved = {}; for (const [qid, s] of Object.entries(G.solved)) solved[qid] = [s.sid, s.pts];
   const busy = {}; if (G.phase === 'race') for (const [sid, qid] of Object.entries(G.cur)) if (qid && G.roster[sid] && G.roster[sid].online && !G.solved[qid]) busy[qid] = sid;
   const { tot, sol } = teamCounts();
-  return { gid: G.gid, phase: G.phase, endsAt: G.endsAt, set: { teams: nTeams(), per: G.settings.per }, roster, ts: teamScores(), tot, sol, pscore: G.pscore, solved, busy,
+  return { gid: G.gid, phase: G.phase, endsAt: G.endsAt, set: { teams: nTeams(), per: G.settings.per, tp: G.settings.teamPick }, roster, ts: teamScores(), tot, sol, pscore: G.pscore, solved, busy,
     feed: G.feed.slice(0, 5).map(f => [f.sid, f.text, f.pts]), res: G.res, finish: G.finish,
     chat: G.chat.slice(-40).map(m => [m.mid, m.sid, m.name, m.team, m.text]), chatOn: G.chatOn,
     mode: G.settings.mode, opened: G.settings.mode === 'cards' ? Object.fromEntries(Object.entries(G.opened || {}).map(([k, o]) => [k, [o.sid, o.type, o.target]])) : {} };
@@ -996,7 +1014,7 @@ function renderHost() {
   ({ lobby: updLobby, collect: updCollect, sorted: updSorted, race: updRace, end: updEnd })[ph]();
   updateTimer(); renderAIPill(); renderChat();
 }
-function teamColsHTML(id, cls = '') { return `<div class="teamcols ${cls}" id="${id}" style="--n:${nTeams()}">${[...Array(nTeams()).keys()].map(t => `<div class="tcol" style="--c:${TEAMS[t].color}"><div class="thead"><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<span class="cnt" data-cnt="${t}">0</span></div><div class="tbody" data-team="${t}"></div></div>`).join('')}</div>`; }
+function teamColsHTML(id, cls = '') { return `<div class="teamcols ${cls}" id="${id}" style="--n:${nTeams()}">${[...Array(nTeams()).keys()].map(t => `<div class="tcol" style="--c:${TEAMS[t].color}"><div class="thead"><span class="tn">${t + 1}</span><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<span class="cnt" data-cnt="${t}">0</span></div><div class="tbody" data-team="${t}"></div></div>`).join('')}</div>`; }
 function joinURL() {
   if (MODE === 'claude') return ARTIFACT_URL;
   if (!/^https?:$/.test(location.protocol)) return '';
@@ -1029,12 +1047,13 @@ function buildStage(ph, prev) {
     st.innerHTML = `<div class="lobby">
       <section class="card join">${joinInfo}</section>
       <section class="teams-wrap"><div class="row between" style="margin-bottom:12px"><h2 class="light"><span id="pcount">0</span> players</h2>
-        <div class="row"><button class="btn ghost" data-act="shuffle">🔀 Shuffle teams</button><button class="btn ghost" data-act="addBots">🤖 Add 6 demo players</button><button class="btn ghost" data-act="help">❔</button></div></div>
-        <div id="lobbyCols"></div><p class="light small" style="opacity:.8;margin-top:10px">Tap a name to move that student to the next team.</p></section>
+        <div class="row">${G.settings.teamPick === 'students' ? '' : '<button class="btn ghost" data-act="shuffle">🔀 Shuffle teams</button>'}<button class="btn ghost" data-act="addBots">🤖 Add 6 demo players</button><button class="btn ghost" data-act="help">❔</button></div></div>
+        <div id="unass" class="unass" hidden></div><div id="lobbyCols"></div><p class="light small" style="opacity:.8;margin-top:10px">${G.settings.teamPick === 'students' ? 'Students choose their team on their phones. ' : ''}Tap a name to move that student to the next team.</p></section>
       <section class="card settings"><h3>Settings</h3>
         <div class="set"><span>Game mode</span><div class="seg"><button data-act="mode" data-v="race" class="${s.mode !== 'cards' ? 'on' : ''}">🏁 Classic race</button><button data-act="mode" data-v="cards" class="${s.mode === 'cards' ? 'on' : ''}">🃏 Card mode</button></div></div>
         ${s.mode === 'cards' ? `<div class="set"><span>Surprise cards</span><div class="chips">${SUR_TYPES.map(k => `<button data-act="sur" data-k="${k}" class="${s.sur[k] ? 'on' : ''}">${SUR[k].icon} ${SUR[k].name}</button>`).join('')}</div><div class="small" style="margin-top:6px">Opens when a card is picked. Give/steal: the other team is chosen at random.</div></div>` : ''}
         <div class="set"><span>Teams</span>${seg('teams', [2, 3, 4, 5, 6], s.teams)}</div>
+        <div class="set"><span>Who chooses the team?</span><div class="seg"><button data-act="tpick" data-v="students" class="${s.teamPick === 'students' ? 'on' : ''}">🙋 Students</button><button data-act="tpick" data-v="auto" class="${s.teamPick !== 'students' ? 'on' : ''}">🎲 Automatic</button></div></div>
         <div class="set"><span>Questions per student</span>${seg('per', [1, 2, 3, 4, 5, 6, 8], s.per)}</div>
         <div class="set"><span>Question writing time</span>${seg('cmin', [3, 5, 8, 10, 15], s.cmin, '′')}</div>
         <div class="set"><span>Race time</span>${seg('rmin', [3, 5, 8, 10, 15], s.rmin, '′')}</div>
@@ -1097,6 +1116,8 @@ function updLobby() {
   $('#pcount').textContent = ids.filter(s => G.roster[s].online).length;
   const box = $('#lobbyCols');
   if (box.dataset.n !== String(n)) { box.innerHTML = teamColsHTML('lcols'); box.dataset.n = n; }
+  const un = ids.filter(s => !(G.roster[s].team >= 0) && G.roster[s].online);
+  const ub = $('#unass'); if (ub) { ub.hidden = !un.length; ub.innerHTML = `<b>Choosing a team (${un.length}):</b>` + un.map(s => `<button class="chip" data-act="move" data-sid="${esc(s)}">${esc(G.roster[s].name)}</button>`).join(' '); }
   for (let t = 0; t < n; t++) {
     const mem = ids.filter(s => G.roster[s].team === t).sort((a, b) => G.roster[a].seq - G.roster[b].seq);
     box.querySelector(`[data-cnt="${t}"]`).textContent = mem.filter(s => G.roster[s].online).length;
@@ -1177,7 +1198,7 @@ function resultsText() {
 }
 function showHelp() {
   modal(`<h2>How it works</h2><ol class="steps-help">
-    <li>Students join on their phones and are split into teams automatically (tap a name to move someone).</li>
+    <li>Students join on their phones and choose their team (Team 1–6) — or let the board split them automatically. Tap a name on the board to move someone.</li>
     <li><b>Start question writing</b>: each student writes real questions. They pop up on the board.</li>
     <li>When the time is up, the questions fly to the teams — every team gets questions from <b>other</b> teams.</li>
     <li><b>Race</b>: students turn each question into a noun clause (<i>Where does she live?</i> → <i>I don't know where she lives.</i>). Teammates work on different questions at the same time.</li>
@@ -1192,7 +1213,12 @@ function onHostClick(e) {
   const a = b.dataset.act;
   if (a === 'mode') { G.settings.mode = b.dataset.v; H.view = null; markDirty(); }
   else if (a === 'sur') { G.settings.sur[b.dataset.k] = G.settings.sur[b.dataset.k] ? 0 : 1; H.view = null; markDirty(); }
-  else if (a === 'set') { const k = b.dataset.k, v = +b.dataset.v; G.settings[k] = v; if (k === 'teams') rebalance(); H.view = null; markDirty(); }
+  else if (a === 'set') {
+    const k = b.dataset.k, v = +b.dataset.v; G.settings[k] = v;
+    if (k === 'teams') { if (G.settings.teamPick === 'students') { for (const [sid, r] of Object.entries(G.roster)) if (r.team >= v) r.team = isBot(sid) ? pickTeam() : -1; } else rebalance(); }
+    H.view = null; markDirty();
+  }
+  else if (a === 'tpick') { G.settings.teamPick = b.dataset.v; if (b.dataset.v === 'auto') for (const r of Object.values(G.roster)) if (r.team < 0) r.team = pickTeam(); H.view = null; markDirty(); }
   else if (a === 'ai') { G.settings.ai = b.checked; markDirty(); if (b.checked && H.sample && H.ai !== 'on') warmAI(); }
   else if (a === 'startCollect') startCollect();
   else if (a === 'addBots') addBots(6);
@@ -1237,15 +1263,20 @@ async function startHost(makeT, opts) {
 // ===================================================================
 // STUDENT (phone)
 // ===================================================================
-const S = { revealed: {}, chatOut: [], chatOpen: false, chatSeen: {}, chatInit: false, lastChatAt: 0, T: null, sid: null, name: '', code: '', gid: null, qs: [], att: [], cur: null, curSince: 0, pending: null, pendingAt: 0, ping: 0, skipped: {}, done: {}, resInit: false, live: null, qsDoc: null, endsLocal: 0, view: null, lockUntil: 0, lastFb: null };
+const S = { pickT: null, pickN: 0, choosing: false, revealed: {}, chatOut: [], chatOpen: false, chatSeen: {}, chatInit: false, lastChatAt: 0, T: null, sid: null, name: '', code: '', gid: null, qs: [], att: [], cur: null, curSince: 0, pending: null, pendingAt: 0, ping: 0, skipped: {}, done: {}, resInit: false, live: null, qsDoc: null, endsLocal: 0, view: null, lockUntil: 0, lastFb: null };
 function sSave() { LS.set('ncr.s', { gid: S.gid, qs: S.qs }); }
-function sendState() { if (!S.T || !S.name) return; S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, qs: S.qs, att: S.att, cur: S.cur, n: S.ping, chat: S.chatOut.map(m => [m[0], m[1]]) }); }
+function sendState() { if (!S.T || !S.name) return; S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, qs: S.qs, att: S.att, cur: S.cur, n: S.ping, chat: S.chatOut.map(m => [m[0], m[1]]), pick: S.pickT === null ? null : [S.pickT, S.pickN] }); }
 function myRow() { return S.live && S.live.roster ? S.live.roster[S.sid] : null; }
 function myTeam() { const r = myRow(); return r ? r[1] : -1; }
 function allQs() { return (S.qsDoc && S.qsDoc.gid === S.gid && Array.isArray(S.qsDoc.list)) ? S.qsDoc.list : []; }
 function teamList() { const t = myTeam(); return allQs().filter(q => q[2] === t).sort((a, b) => a[3] - b[3]); }
 function qText(qid) { const q = allQs().find(x => x[0] === qid); return q ? q[1] : ''; }
-function sPhase() { if (!S.name || !S.T) return 'join'; if (!S.live || !myRow()) return 'wait'; return S.live.phase; }
+function sPhase() {
+  if (!S.name || !S.T) return 'join'; if (!S.live || !myRow()) return 'wait';
+  const ph = S.live.phase, tp = S.live.set && S.live.set.tp === 'students';
+  if (tp && ph !== 'end' && (myTeam() < 0 || (S.choosing && ph === 'lobby'))) return 'pick';
+  return ph;
+}
 function onPart(part, data, meta) {
   if (part === 'qs') { S.qsDoc = data; renderStudent(); return; }
   if (part !== 'live') return;
@@ -1375,8 +1406,12 @@ function buildS(v) {
       ${MODE === 'p2p' ? `<label class="f" for="jCode">Game code</label><input class="in code-in" id="jCode" maxlength="6" autocomplete="off" value="${esc(S.code)}" placeholder="ABCDE">` : ''}
       <label class="f" for="jName">Your name</label><input class="in" id="jName" maxlength="20" autocomplete="off" value="${esc(S.name)}" placeholder="e.g. Ayşe">
       <div style="height:14px"></div><button class="btn go big">Join ➤</button></form></div>`;
+  } else if (v === 'pick') {
+    st.innerHTML = `<div class="scard"><h2>Choose your team</h2><p class="muted" style="margin:0;font-weight:800">Pick the team your teacher gave your group.</p><div class="tpick" id="tpick"></div>
+      ${S.choosing && t >= 0 ? '<div style="height:12px"></div><button class="btn ghost big" data-act="pickCancel">Cancel</button>' : ''}</div>`;
   } else if (v === 'wait' || v === 'lobby') {
-    st.innerHTML = t >= 0 ? `<div class="scard bigteam" style="${teamStyle(t)}"><div class="em">${TEAMS[t].emoji}</div><p class="muted" style="margin:8px 0 0;font-weight:800">You're in team</p><h1 style="color:var(--c)">${TEAMS[t].name}</h1><div class="mates" id="mates"></div><p class="muted" style="font-weight:800;margin-top:16px">Waiting for your teacher to start…</p></div>`
+    const canChange = L && L.set && L.set.tp === 'students' && v === 'lobby';
+    st.innerHTML = t >= 0 ? `<div class="scard bigteam" style="${teamStyle(t)}"><div class="em">${TEAMS[t].emoji}</div><p class="muted" style="margin:8px 0 0;font-weight:800">You're in team ${t + 1}</p><h1 style="color:var(--c)">${TEAMS[t].name}</h1><div class="mates" id="mates"></div><p class="muted" style="font-weight:800;margin-top:16px">Waiting for your teacher to start…</p>${canChange ? '<button class="btn ghost" data-act="pickAgain">Change team</button>' : ''}</div>`
       : `<div class="scard center"><div class="logo">⏳</div><h2>Hi ${esc(S.name)}!</h2><p class="muted" style="font-weight:800">Connecting to the board… If this takes long, ask your teacher to open the game on the board.</p><button class="btn ghost" data-act="rename">Change name</button></div>`;
   } else if (v === 'collect') {
     st.innerHTML = `<div class="scard"><h2>Write questions ✍️</h2><p class="muted" style="margin:0 0 10px;font-weight:700">Write <b>${L.set.per}</b> real questions. Other teams will turn them into noun clauses!</p>
@@ -1429,6 +1464,13 @@ function updS(v) {
     $('#qCnt').textContent = `${S.qs.length} / ${per} questions` + (S.qs.length >= per ? ' — great! 🎉' : '');
     $('#myQs').innerHTML = S.qs.map(([k, txt]) => `<li><span class="t">${esc(txt)}</span><span class="st ${onBoard.has(S.sid + '_' + k) ? '' : 'wait'}">${onBoard.has(S.sid + '_' + k) ? '✓ on board' : '…sending'}</span><button data-act="delq" data-k="${esc(k)}" aria-label="Delete">✕</button></li>`).join('');
     const full = S.qs.length >= per; $('#qSend').disabled = full; $('#qIn').disabled = full; if (full) $('#qIn').placeholder = 'Done! You can delete one to write a new one.';
+  }
+  if (v === 'pick' && $('#tpick')) {
+    const n = (L.set && L.set.teams) || 4; const html = [...Array(n).keys()].map(i => {
+      const mem = Object.values(L.roster).filter(r => r[1] === i && r[2]).map(r => r[0]);
+      return `<button class="tbtn${S.pickT === i && myTeam() < 0 ? ' sel' : ''}" style="${teamStyle(i)}" data-act="pickTeam" data-t="${i}"><span class="tno">Team ${i + 1}</span><span class="em">${TEAMS[i].emoji}</span><span class="tnm">${TEAMS[i].name}</span><span class="mem">${esc(mem.slice(0, 4).join(', '))}${mem.length > 4 ? ' +' + (mem.length - 4) : ''}</span></button>`;
+    }).join('');
+    const g = $('#tpick'); if (g._h !== html) { g._h = html; g.innerHTML = html; }
   }
   if (v === 'sorted' && $('#nGot')) $('#nGot').textContent = teamList().length;
   if (v === 'race' && $('#cgrid')) {
@@ -1500,6 +1542,9 @@ function onStudentClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
   if (a === 'delq') { S.qs = S.qs.filter(q => q[0] !== b.dataset.k); sSave(); sendState(); renderStudent(); }
   else if (a === 'starter') { const ta = $('#aIn'); if (!ta) return; const s = b.dataset.s; const rest = ta.value.replace(new RegExp('^(' + STARTERS.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\s*', 'i'), ''); ta.value = s + ' ' + rest; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  else if (a === 'pickTeam') { S.pickT = +b.dataset.t; S.pickN++; S.choosing = false; S.view = null; sendState(); toast(`Joining ${TEAMS[S.pickT].emoji} ${TEAMS[S.pickT].name}…`, 1500); renderStudent(); }
+  else if (a === 'pickAgain') { S.choosing = true; S.view = null; renderStudent(); }
+  else if (a === 'pickCancel') { S.choosing = false; S.view = null; renderStudent(); }
   else if (a === 'pick') { if (S.pending) return; S.cur = b.dataset.qid; S.curSince = now(); S.lastFb = null; S.view = null; sendState(); renderStudent(); }
   else if (a === 'cards') { if (S.pending) return; S.cur = null; S.lastFb = null; S.view = null; sendState(); renderStudent(); }
   else if (a === 'skip') { if (S.pending || !S.cur) return; S.skipped[S.cur] = 1; const prev = S.cur; S.cur = null; S.lastFb = null; ensureCur(); if (S.cur === prev) toast('This is your only free question.'); S.view = null; renderStudent(); }
