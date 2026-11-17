@@ -59,6 +59,26 @@ h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;text-wrap:balance}
 .cl{font-weight:900;font-size:13px;line-height:1.35;color:var(--ink);background:var(--gold);border-radius:999px;padding:1px 9px;max-width:100%;text-align:center;overflow-wrap:anywhere}
 .cube.hinted::after{content:"💡";position:absolute;top:-10px;right:-10px;font-size:18px;background:#fff;border-radius:50%;width:28px;height:28px;display:grid;place-items:center;border:2px solid var(--ink)}
 @media (prefers-reduced-motion:reduce){.cube.roll,.cube .wv{animation:none}}
+/* 3D dice */
+.dicerow{display:flex;flex-wrap:wrap;gap:16px 18px;align-items:flex-start}
+.die3{position:relative;width:var(--s);height:var(--s);perspective:calc(var(--s) * 6);flex:none}
+.die3::after{content:"";position:absolute;left:12%;right:12%;bottom:-16%;height:12%;background:#2E254726;border-radius:50%;filter:blur(3px)}
+.dcube{position:relative;width:100%;height:100%;transform-style:preserve-3d;transform:rotateX(-18deg) rotateY(22deg)}
+.die3.idle .dcube{animation:idle 6s linear infinite;animation-delay:calc(var(--dl) * -6)}
+@keyframes idle{from{transform:rotateX(-18deg) rotate3d(1,1,.3,0deg)}to{transform:rotateX(-18deg) rotate3d(1,1,.3,360deg)}}
+.dface{position:absolute;inset:0;background:#fff;border:calc(var(--s) * .04) solid var(--ink);border-radius:16%;display:grid;place-items:center;padding:12%;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:inset 0 calc(var(--s) * -.07) 0 var(--tint)}
+.dface svg{width:100%;height:100%;display:block}
+.dface.f0{transform:translateZ(calc(var(--s) / 2))}.dface.f1{transform:rotateY(180deg) translateZ(calc(var(--s) / 2))}
+.dface.f2{transform:rotateY(90deg) translateZ(calc(var(--s) / 2))}.dface.f3{transform:rotateY(-90deg) translateZ(calc(var(--s) / 2))}
+.dface.f4{transform:rotateX(90deg) translateZ(calc(var(--s) / 2))}.dface.f5{transform:rotateX(-90deg) translateZ(calc(var(--s) / 2))}
+.gdie .dface{background:#FFFBEA;border-style:dashed}
+.die3.hinted::before{content:"💡";position:absolute;top:-14px;right:-14px;z-index:3;font-size:16px;background:#fff;border-radius:50%;width:28px;height:28px;display:grid;place-items:center;border:2px solid var(--ink)}
+.die3[data-act]{cursor:pointer}
+.dlab{position:absolute;left:50%;top:calc(100% + 14px);transform:translateX(-50%);font-weight:900;font-size:12px;background:var(--gold);border-radius:999px;padding:0 8px;white-space:nowrap}
+.pdice{display:flex;justify-content:center;margin:40px 0 36px}
+.gcard .dicerow{gap:12px 12px;padding:4px 0 6px}
+.pdice .dicerow{justify-content:center;gap:36px 44px;max-width:420px}
+@media (prefers-reduced-motion:reduce){.die3.idle .dcube{animation:none}}
 
 /* ---------- board ---------- */
 body.host{overflow:hidden}
@@ -610,11 +630,11 @@ async function ltCheck(text) {
 // ===================================================================
 const H = { T: null, sample: null, ai: 'off', aiCool: 0, view: null, dirty: false, rq: false, lastPub: '', saveAt: 0, saveDue: false, qrFor: null, demoOnly: false, checking: 0, queue: [], bots: {}, chatEls: null };
 let G = null, MODE = null;
-function defaults() { return { teams: 4, set: 'all', n: 6, min: 8, genre: true, ai: true }; }
+function defaults() { return { teams: 4, set: 'all', n: 4, min: 8, genre: true, ai: true }; }
 function freshGame() {
   const prev = G;
   G = { v: 1, gid: rid(6), phase: 'lobby', round: 0, settings: prev ? { ...prev.settings } : defaults(), endsAt: 0,
-    roster: {}, joinSeq: 0, code: prev ? prev.code : null, cubes: {}, genre: {}, hints: {}, drafts: {}, rounds: {}, usedWords: [],
+    roster: {}, joinSeq: 0, code: prev ? prev.code : null, cubes: {}, dice: {}, rolled: {}, genre: {}, hints: {}, drafts: {}, rounds: {}, usedWords: [],
     chat: prev && prev.chat ? prev.chat : [], chatOn: prev ? prev.chatOn !== false : true, seenChat: prev && prev.seenChat ? prev.seenChat : {}, seenSub: {} };
   if (prev) for (const [sid, r] of Object.entries(prev.roster)) G.roster[sid] = { name: r.name, team: r.team, online: r.online, seq: r.seq };
   H.view = null;
@@ -642,7 +662,10 @@ function ingest(s) {
     addMsg(sid, r.name, r.team, text, mid); ch = true;
   }
   const t = r.team;
-  if (s.gid === G.gid && s.r === G.round && G.phase === 'write' && t >= 0 && G.cubes[t]) {
+  if (s.gid === G.gid && s.r === G.round && G.phase === 'write' && t >= 0 && G.dice[t]) {
+    if (Array.isArray(s.roll) && s.roll[0] === G.round && !G.rolled[t]) { doRoll(t, r.name); ch = true; }
+  }
+  if (s.gid === G.gid && s.r === G.round && G.phase === 'write' && t >= 0 && G.rolled[t]) {
     if (Array.isArray(s.h)) for (const w of s.h.slice(0, 8)) if (G.cubes[t].includes(w) && !(G.hints[t] || {})[w]) { (G.hints[t] = G.hints[t] || {})[w] = 1; ch = true; }
     const subs = curSubs();
     if (typeof s.d === 'string' && !subs[t]) {
@@ -660,25 +683,44 @@ function ingest(s) {
 function leave(sid) { const r = G && G.roster[sid]; if (r && r.online) { r.online = false; markDirty(); } }
 
 // ----- rounds -----
-function roll() {
-  const n = nTeams(), k = Math.min(G.settings.n, pool().length);
-  G.round++; G.phase = 'write'; G.cubes = {}; G.genre = {}; G.hints = {}; G.drafts = {}; G.rounds[G.round] = {};
-  const used = new Set(G.usedWords || []);
-  for (let t = 0; t < n; t++) {
-    let fresh = shuffle(pool().filter(w => !used.has(w)));
-    if (fresh.length < k) { used.clear(); fresh = shuffle(pool()); }
-    G.cubes[t] = fresh.slice(0, k); G.cubes[t].forEach(w => used.add(w));
-    G.genre[t] = G.settings.genre ? Math.floor(Math.random() * GENRES.length) : -1;
+function makeDice(n) {
+  const P = pool(); let bag = shuffle(P); const dice = [];
+  for (let i = 0; i < n; i++) {
+    const d = [];
+    while (d.length < 6) {
+      const cand = bag.filter(x => !d.includes(x));
+      if (!cand.length) { if (P.length <= d.length) { d.push(P[d.length % P.length]); continue; } bag = shuffle(P); continue; }
+      const w = cand[0]; bag.splice(bag.indexOf(w), 1); d.push(w);
+    }
+    dice.push(d);
   }
-  G.usedWords = [...used];
+  return dice;
+}
+function roll() {
+  const n = nTeams(), k = Math.max(1, Math.min(G.settings.n, 6));
+  G.round++; G.phase = 'write'; G.cubes = {}; G.dice = {}; G.rolled = {}; G.genre = {}; G.hints = {}; G.drafts = {}; G.rounds[G.round] = {};
+  for (let t = 0; t < n; t++) { G.dice[t] = makeDice(k); G.genre[t] = -1; }
   G.endsAt = now() + G.settings.min * 60000;
-  addMsg('system', '', -1, `🎲 Round ${G.round}! Every group got ${k} new cubes.`, rid(8));
+  addMsg('system', '', -1, `🎲 Round ${G.round}! Every group has ${k} dice. Roll them on your phone!`, rid(8));
   markDirty();
   if (H.sample && G.settings.ai && H.ai !== 'on') warmAI();
+}
+function doRoll(t, who) {
+  const dice = G.dice[t]; if (!dice || G.rolled[t]) return;
+  let faces = dice.map(() => Math.floor(Math.random() * 6));
+  for (let tries = 0; tries < 40; tries++) {
+    const tops = dice.map((d, i) => d[faces[i]]); const dup = tops.findIndex((w, i) => tops.indexOf(w) !== i);
+    if (dup < 0) break; faces[dup] = Math.floor(Math.random() * 6);
+  }
+  G.rolled[t] = faces; G.cubes[t] = dice.map((d, i) => d[faces[i]]);
+  G.genre[t] = G.settings.genre ? Math.floor(Math.random() * GENRES.length) : -1;
+  if (who) addMsg('system', '', -1, `${TEAMS[t].emoji} ${who} rolled the ${TEAMS[t].name}' dice!`, rid(8));
+  markDirty();
 }
 function endWriting() {
   if (G.phase !== 'write') return;
   const subs = curSubs();
+  for (let t = 0; t < nTeams(); t++) if (!G.rolled[t]) doRoll(t, '');
   for (let t = 0; t < nTeams(); t++) if (!subs[t]) {
     const d = G.drafts[t];
     if (d && d.text.trim()) submit(t, d.text, d.by + ' (auto)');
@@ -800,7 +842,7 @@ function buildLive() {
   const roster = {}; for (const [sid, r] of Object.entries(G.roster)) roster[sid] = [r.name, r.team, r.online ? 1 : 0];
   const drafts = {}; for (const [t, d] of Object.entries(G.drafts)) drafts[t] = [d.by, d.text.slice(0, 700), d.sid];
   const subs = {}; for (const [t, s] of Object.entries(curSubs())) subs[t] = pubSub(s);
-  return { gid: G.gid, phase: G.phase, round: G.round, endsAt: G.endsAt, set: { teams: nTeams(), n: G.settings.n }, roster, cubes: G.cubes, genre: G.genre, hints: G.hints, drafts, subs,
+  return { gid: G.gid, phase: G.phase, round: G.round, endsAt: G.endsAt, set: { teams: nTeams(), n: G.settings.n }, roster, cubes: G.cubes, dice: G.dice, rolled: G.rolled, genre: G.genre, hints: G.hints, drafts, subs,
     totals: totals(), chat: G.chat.slice(-40).map(m => [m.mid, m.sid, m.name, m.team, m.text, m.kind || '']), chatOn: G.chatOn };
 }
 function flush() {
@@ -829,9 +871,11 @@ function botsTick() {
   for (const b of Object.values(H.bots)) {
     if (!G.roster[b.sid]) continue;
     if (G.phase !== 'write') { b.text = ''; continue; }
-    if (b.round !== G.round) { b.round = G.round; b.text = ''; b.next = now() + 2000 + Math.random() * 3000; b.lines = shuffle(G.cubes[G.roster[b.sid].team] || []).slice(0, 4 + Math.floor(Math.random() * 3)).map((w, i) => BOT_LINES[(i + b.sid.length) % BOT_LINES.length](w)); b.done = false; }
-    if (b.done || now() < b.next) continue;
     const t = G.roster[b.sid].team;
+    if (b.round !== G.round) { b.round = G.round; b.text = ''; b.next = now() + 1500 + Math.random() * 2500; b.lines = null; b.done = false; }
+    if (b.done || now() < b.next) continue;
+    if (!G.rolled[t]) { ingest({ role: 'student', sid: b.sid, name: b.name, gid: G.gid, r: G.round, roll: [G.round, rid(6)], pick: [t, b.pickN] }); b.next = now() + 3000; continue; }
+    if (!b.lines) b.lines = shuffle(G.cubes[t] || []).map((w, i) => BOT_LINES[(i + b.sid.length) % BOT_LINES.length](w)).concat([BOT_LINES[6]('it')].slice(0, 1));
     if (b.lines.length) { b.text += (b.text ? ' ' : '') + b.lines.shift(); b.next = now() + 2500 + Math.random() * 3500; ingest({ role: 'student', sid: b.sid, name: b.name, gid: G.gid, r: G.round, d: b.text, pick: [t, b.pickN] }); }
     else { b.done = true; ingest({ role: 'student', sid: b.sid, name: b.name, gid: G.gid, r: G.round, d: b.text, sub: [rid(8), b.text], pick: [t, b.pickN] }); }
   }
@@ -896,6 +940,30 @@ function cubeHTML(w, i, o = {}) {
   const tint = TINTS[i % TINTS.length];
   return `<div class="cw"><div class="cube${o.roll ? ' roll' : ''}${o.hinted ? ' hinted' : ''}" style="--tint:${tint};--d:${(i * 0.09).toFixed(2)}s" ${o.attrs || ''} title="${o.showWord ? esc(w) : 'Story cube'}">${svgOf(ICONS[w] || '')}</div>${o.showWord ? `<span class="cl">${esc(w)}</span>` : ''}</div>`;
 }
+const FACE_ROT = [[0, 0], [0, 180], [0, -90], [0, 90], [-90, 0], [90, 0]];
+const TILT = 'rotateX(-18deg) rotateY(22deg) ';
+function dieT(face, sx = 0, sy = 0) { const [x, y] = FACE_ROT[face]; return `${TILT}rotateX(${x + 360 * sx}deg) rotateY(${y + 360 * sy}deg)`; }
+function die3HTML(faces, face, o = {}) {
+  const anim = face != null && o.animate;
+  const tr = face == null ? '' : anim ? `${TILT}rotateX(0deg) rotateY(0deg)` : dieT(face);
+  const fin = anim ? ` data-final="${dieT(face, 2 + Math.floor(Math.random() * 2), 1 + Math.floor(Math.random() * 2))}"` : '';
+  return `<div class="die3${face == null ? ' idle' : ''}${o.genre ? ' gdie' : ''}${o.hinted ? ' hinted' : ''}" style="--s:${o.s || 80}px;--dl:${(o.i || 0) * 0.18}s" ${o.attrs || ''}><div class="dcube" style="${tr ? 'transform:' + tr : ''}"${fin}>${faces.map((f, k) => `<div class="dface f${k}" style="--tint:${TINTS[(k + (o.i || 0)) % TINTS.length]}">${svgOf(f)}</div>`).join('')}</div>${o.label ? `<span class="dlab">${esc(o.label)}</span>` : ''}</div>`;
+}
+function runRolls(root) {
+  const els = [...root.querySelectorAll('.dcube[data-final]')]; if (!els.length) return;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  void root.offsetWidth;
+  els.forEach((c, i) => { requestAnimationFrame(() => requestAnimationFrame(() => {
+    c.style.transition = reduce ? 'none' : `transform ${1.6 + i * 0.18}s cubic-bezier(.15,.85,.25,1.02)`; c.style.transform = c.dataset.final; c.removeAttribute('data-final');
+  })); });
+}
+function diceRow(dice, rolled, cubes, genreIdx, o) {
+  const hints = o.hints || {};
+  let h = dice.map((d, i) => die3HTML(d.map(w => ICONS[w] || ''), rolled ? rolled[i] : null, { s: o.s, i, animate: o.animate, hinted: rolled && !!hints[cubes[i]], label: o.labels && rolled ? cubes[i] : '',
+    attrs: o.tap && rolled ? `data-act="hint" data-w="${esc(cubes[i])}" role="button" tabindex="0" aria-label="${hints[cubes[i]] ? esc(cubes[i]) : 'Die ' + (i + 1) + ', tap for a hint'}"` : `aria-label="Die ${i + 1}"` })).join('');
+  if (genreIdx != null && genreIdx >= 0) h += die3HTML(GENRES.map(g => g.svg), genreIdx, { s: o.s, i: dice.length, genre: true, animate: o.animate, attrs: `aria-label="Story type: ${esc(GENRES[genreIdx].name)}"` });
+  return `<div class="dicerow">${h}</div>`;
+}
 function genreHTML(gi) { if (gi == null || gi < 0) return ''; const g = GENRES[gi]; return `<div class="genretag">${svgOf(g.svg)}<span>${esc(g.name)}<br><span class="small">${esc(g.tip)}</span></span></div>`; }
 function joinURL() {
   if (MODE === 'claude') return ARTIFACT_URL;
@@ -939,13 +1007,13 @@ function lobbyHTML() {
     <section class="card settings"><h3>Settings</h3>
       <div class="set"><span>Groups</span>${seg('teams', [2, 3, 4, 5, 6, 7, 8], s.teams)}</div>
       <div class="set"><span>Words</span>${seg('set', ['ch1', 'ch2', 'all'], s.set, ['Ch 1', 'Ch 2', 'Ch 1 + 2'])}</div>
-      <div class="set"><span>Cubes per group</span>${seg('n', [4, 5, 6], s.n)}</div>
+      <div class="set"><span>Dice per group</span>${seg('n', [3, 4, 5, 6], s.n)}<div class="small" style="margin-top:4px">Each die has 6 words. The words that land face-up are the ones to use.</div></div>
       <div class="set"><span>Writing time</span>${seg('min', [5, 8, 10, 15], s.min, ['5′', '8′', '10′', '15′'])}</div>
-      <div class="set"><label class="check"><input type="checkbox" data-act="genre" ${s.genre ? 'checked' : ''}> <span>Story type cube<br><span class="small">Each group also gets a type: news report, diary, text message…</span></span></label></div>
+      <div class="set"><label class="check"><input type="checkbox" data-act="genre" ${s.genre ? 'checked' : ''}> <span>Story type die<br><span class="small">Each group also gets a type: news report, diary, text message…</span></span></label></div>
       <div class="set">${H.sample ? `<label class="check"><input type="checkbox" data-act="ai" ${s.ai ? 'checked' : ''}> <span>AI checks the stories<br><span class="small">Target words (meaning + form) and grammar. You can change any score on the board.</span></span></label>`
         : `<span class="small">${MODE === 'claude' ? 'Target words are checked automatically. Grammar: you give the band on the board.' : 'Target words are found automatically. Grammar is checked with the free LanguageTool service. You can change any score on the board.'}</span>`}</div>
-      <div class="set"><span>Scoring (10 points)</span><div class="small">Words 6: each cube word used correctly = full points, right meaning but wrong form = half, hint 💡 = half of that. Grammar 4: 0–1 mistakes 4 · 2–3 → 3 · 4–5 → 2 · 6+ → 1.</div></div>
-      <button class="btn big go" data-act="roll" style="width:100%">🎲 Roll the cubes!</button></section></div>`;
+      <div class="set"><span>Scoring (10 points)</span><div class="small">Words 6, shared by the words the dice land on: used correctly = full points, right meaning but wrong form = half, hint 💡 = half of that. Grammar 4: 0–1 mistakes 4 · 2–3 → 3 · 4–5 → 2 · 6+ → 1.</div></div>
+      <button class="btn big go" data-act="roll" style="width:100%">🎲 Give out the dice!</button></section></div>`;
 }
 function updLobby() {
   if (H.qrFor !== joinURL()) { const q = $('#qr'); if (q) { q.innerHTML = qrSvg(joinURL()) || ''; q.hidden = !joinURL(); } H.qrFor = joinURL(); }
@@ -962,7 +1030,7 @@ function playHTML() {
     ${res ? `<button class="btn green big" data-act="roll">🎲 Next round</button><button class="btn ghost" data-act="finish">🏆 Finish game</button>`
       : `<button class="btn ghost" data-act="plus1">+1 min</button><button class="btn stop" data-act="endWrite">Stop writing</button>`}</div>
     <div id="strip"></div>
-    ${res ? '' : '<p class="muted" style="margin:-4px 0 14px;font-weight:700">Look at your cubes, guess the words and use them in one story. Tap a cube on your phone if you need a hint (💡 = half points for that word).</p>'}
+    ${res ? '' : '<p class="muted" style="margin:-4px 0 14px;font-weight:700">Roll your dice on your phone, guess the words that land face-up and use them in one story. Tap a die on your phone for a hint (💡 = half points for that word).</p>'}
     <div class="ggrid" id="ggrid">${[...Array(nTeams()).keys()].map(t => `<article class="gcard" data-g="${t}" style="--c:${TEAMS[t].color}"></article>`).join('')}</div>`;
 }
 function storyHTML(text, res) {
@@ -997,16 +1065,21 @@ function updPlay() {
     const card = document.querySelector(`.gcard[data-g="${t}"]`); if (!card) continue;
     const cubes = G.cubes[t] || [], hints = G.hints[t] || {}, s = subs[t], d = G.drafts[t];
     const reveal = G.phase === 'results';
-    const sig = JSON.stringify([cubes, hints, s && [s.st, s.score, s.res && s.res.words], d && d.text, reveal, teamMembers(t).length]);
+    const rolled = G.rolled[t];
+    const sig = JSON.stringify([cubes, hints, rolled, s && [s.st, s.score, s.res && s.res.words], d && d.text, reveal, teamMembers(t).length]);
     if (H.cardSig[t] === sig) continue;
-    const first = H.cardSig[t] === undefined; H.cardSig[t] = sig;
+    H.cardSig[t] = sig;
+    if (!H.anim) H.anim = {};
+    const ak = G.round + ':' + t; const animate = !!rolled && !H.anim[ak]; if (rolled) H.anim[ak] = 1;
     const m = teamMembers(t).filter(([, r]) => r.online).length;
     let body;
     if (s) body = resultBlock(G.round, t, s, true, G.hints[t]);
-    else body = `<div class="draft${d ? '' : ' empty'}">${d ? `<span class="by typing">${esc(d.by)} is writing</span>${esc(d.text)}` : 'Waiting for the first sentence…'}</div>`;
+    else if (!rolled) body = `<div class="draft empty">🎲 Waiting for the group to roll their dice…</div>`;
+    else body = `<div class="draft${d ? '' : ' empty'}">${d ? `<span class="by typing">${esc(d.by)} is writing</span>${esc(d.text)}` : 'Dice rolled! Waiting for the first sentence…'}</div>`;
     card.innerHTML = `<div class="ghead"><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<small>${m} online${s && s.st === 'done' ? ' · ✅ done' : s ? ' · 📤 sent' : ''}</small></div>
-      <div class="cubes" style="--n:${cubes.length}">${cubes.map((w, i) => cubeHTML(w, i, { roll: first && G.phase === 'write', hinted: !!hints[w], showWord: false, attrs: `title="${reveal || hints[w] ? esc(w) : 'Story cube'}"` })).join('')}</div>
-      ${genreHTML(G.genre[t])}${body}`;
+      ${diceRow(G.dice[t] || [], rolled, cubes, G.genre[t], { s: 48, animate, hints })}
+      ${rolled ? genreHTML(G.genre[t]) : ''}${body}`;
+    runRolls(card);
   }
 }
 function endHTML() {
@@ -1063,7 +1136,7 @@ async function startHost(makeT, opts) {
 const S = { T: null, sid: null, name: '', code: '', live: null, gid: null, round: 0, draft: '', sub: null, h: [], pickT: null, pickN: 0, chatOut: [], chatOpen: false, chatSeen: {}, chatInit: false, lastChatAt: 0, view: null, sendT: 0, endsLocal: 0 };
 function sendState() {
   if (!S.T || !S.name) return;
-  S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, r: S.round, d: S.draft, sub: S.sub, h: S.h, pick: S.pickT === null ? null : [S.pickT, S.pickN], chat: S.chatOut.map(m => [m[0], m[1]]) });
+  S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, r: S.round, d: S.draft, sub: S.sub, h: S.h, roll: S.rollReq, pick: S.pickT === null ? null : [S.pickT, S.pickN], chat: S.chatOut.map(m => [m[0], m[1]]) });
 }
 function sendSoon() { clearTimeout(S.sendT); S.sendT = setTimeout(sendState, 600); }
 function myRow() { return S.live && S.live.roster ? S.live.roster[S.sid] : null; }
@@ -1081,6 +1154,7 @@ function onPart(part, data, meta) {
     const sv = LS.get('sc.d', null);
     S.gid = data.gid; S.round = data.round;
     if (sv && sv.gid === S.gid && sv.r === S.round) { S.draft = sv.d || ''; S.h = sv.h || []; S.sub = sv.sub || null; } else { S.draft = ''; S.h = []; S.sub = null; }
+    S.rollReq = null;
     S.view = null; sendState();
   }
   if (!(meta && meta.fromCache)) S.endsLocal = data.endsAt ? now() + (data.left || 0) : 0;
@@ -1135,7 +1209,7 @@ function renderStudent() {
   if (badge) badge.innerHTML = t >= 0 && TEAMS[t] ? `<span style="font-size:26px">${TEAMS[t].emoji}</span><span>${esc(TEAMS[t].name)}</span>` : '🎲 <span>Story Cubes</span>';
   const st = $('#sstage');
   const sub = L && L.subs ? L.subs[t] : null;
-  const key = v + '|' + (S.sub ? 's' : '') + '|' + (L ? L.round : 0) + '|' + (sub ? sub.st + JSON.stringify(sub.score) + JSON.stringify(sub.res && sub.res.words) : '-') + '|' + (v === 'pick' ? (L && L.set.teams) : '') + '|' + (v === 'write' && L ? JSON.stringify(L.hints[t] || {}) : '') + '|' + (v === 'end' || v === 'results' ? JSON.stringify(L.totals) : '');
+  const key = v + '|' + (S.sub ? 's' : '') + (S.rollReq ? 'r' : '') + '|' + (L && L.rolled ? JSON.stringify(L.rolled[t] || 0) : '') + '|' + (L ? L.round : 0) + '|' + (sub ? sub.st + JSON.stringify(sub.score) + JSON.stringify(sub.res && sub.res.words) : '-') + '|' + (v === 'pick' ? (L && L.set.teams) : '') + '|' + (v === 'write' && L ? JSON.stringify(L.hints[t] || {}) : '') + '|' + (v === 'end' || v === 'results' ? JSON.stringify(L.totals) : '');
   if (S.view === key) { updMates(); sTimer(); return; }
   const keepFocus = document.activeElement && document.activeElement.id === 'storyIn';
   S.view = key;
@@ -1149,19 +1223,27 @@ function renderStudent() {
     const n = L.set.teams; const cnt = Array(n).fill(0); for (const r of Object.values(L.roster)) if (r[1] >= 0 && r[1] < n) cnt[r[1]]++;
     st.innerHTML = `<div class="scard"><h2>Hi ${esc(S.name)}! Choose your group</h2><div class="pickgrid">${[...Array(n).keys()].map(i => `<button data-act="pick" data-t="${i}" style="--c:${TEAMS[i].color}"><span class="em">${TEAMS[i].emoji}</span>${TEAMS[i].name}<small>${cnt[i]} player${cnt[i] === 1 ? '' : 's'}</small></button>`).join('')}</div></div>`;
   } else if (v === 'lobby') {
-    st.innerHTML = `<div class="scard center"><div class="logo">${TEAMS[t].emoji}</div><h2>You're in the ${esc(TEAMS[t].name)}!</h2><p class="muted" style="font-weight:700">Wait for your teacher to roll the cubes. Then look at your cubes, guess the words and write <b>one story</b> together.</p>
+    st.innerHTML = `<div class="scard center"><div class="logo">${TEAMS[t].emoji}</div><h2>You're in the ${esc(TEAMS[t].name)}!</h2><p class="muted" style="font-weight:700">Wait for your teacher to give out the dice. Then roll them, guess the words that land face-up and write <b>one story</b> together.</p>
       <div class="mates" id="mates"></div><button class="btn ghost" data-act="repick">Change group</button></div>`;
   } else if (v === 'write' && !sub && S.sub) {
     st.innerHTML = `<div class="scard center"><div class="logo">📤</div><h2>Sending your story…</h2><p class="muted" style="font-weight:700">Keep this page open.</p><div class="story" style="text-align:left;margin-top:10px">${esc(S.sub[1])}</div></div>`;
+  } else if (v === 'write' && !sub && !(L.rolled && L.rolled[t])) {
+    st.innerHTML = `<div class="scard center"><h2>Roll your dice! 🎲</h2><p class="muted" style="font-weight:700;margin:6px 0 0">One roll per group. The pictures that land face-up are your words.</p></div>
+      <div class="pdice">${diceRow((L.dice && L.dice[t]) || [], null, [], -1, { s: 88 })}</div>
+      <button class="btn go big" data-act="roll" style="width:100%" ${S.rollReq ? 'disabled' : ''}>${S.rollReq ? 'Rolling…' : '🎲 Roll our dice'}</button><div class="mates" id="mates"></div>`;
   } else if (v === 'write' && !sub) {
     const cubes = (L.cubes && L.cubes[t]) || [], hints = L.hints[t] || {};
-    st.innerHTML = `<div class="pcubes">${cubes.map((w, i) => cubeHTML(w, i, { roll: true, hinted: !!hints[w], showWord: !!hints[w], attrs: `data-act="hint" data-w="${esc(w)}" role="button" tabindex="0" aria-label="${hints[w] ? esc(w) : 'Story cube ' + (i + 1) + ', tap for a hint'}"` })).join('')}</div>
+    if (!S.anim) S.anim = {};
+    const ak = L.gid + ':' + L.round; const animate = !S.anim[ak]; S.anim[ak] = 1;
+    st.innerHTML = `<div class="pdice">${diceRow(L.dice[t], L.rolled[t], cubes, L.genre[t], { s: 104, animate, hints, tap: true, labels: false })}</div>
+      ${hints && Object.keys(hints).length ? `<p class="small center" style="font-weight:800;margin:-6px 0 8px">💡 ${cubes.filter(w => hints[w]).map(esc).join(', ')}</p>` : ''}
       <div class="sgenre">${genreHTML(L.genre[t])}</div>
-      <p class="small" style="font-weight:800;margin:0 0 6px">Write <b>one story for your group</b>. Use the words on your cubes. Stuck? Tap a cube for a hint (💡 = half points).</p>
+      <p class="small" style="font-weight:800;margin:0 0 6px">Write <b>one story for your group</b> with the words on your dice. Stuck? Tap a die for a hint (💡 = half points).</p>
       <textarea class="story-in" id="storyIn" placeholder="Once upon a time…" maxlength="1500"></textarea>
       <div class="wc" id="wc">${wordCount(S.draft)} words</div><div class="mates" id="mates"></div>
       <button class="btn green big" data-act="send" style="width:100%;margin-top:8px">📤 Send our story</button>`;
     const ta = $('#storyIn'); ta.value = S.draft; if (keepFocus) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    runRolls(st);
   } else if (v === 'write' || v === 'results') {
     st.innerHTML = `<div class="scard" style="display:flex;flex-direction:column;gap:10px">${sub ? `<h2>${sub.st === 'done' ? 'Your score 🎉' : 'Story sent! 📤'}</h2>${resultBlock(L.round, t, sub, false, L.hints[t])}` : '<h2>Time is up!</h2><p class="muted">Your group did not send a story this round.</p>'}</div>
       ${L.cubes && L.cubes[t] ? `<div class="pcubes" style="margin-top:16px">${L.cubes[t].map((w, i) => cubeHTML(w, i, { showWord: v === 'results' || (sub && sub.st === 'done'), hinted: !!(L.hints[t] || {})[w] })).join('')}</div>` : ''}
@@ -1192,6 +1274,7 @@ function onStudentSubmit(e) {
 function onStudentClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
   if (a === 'pick') { S.pickT = +b.dataset.t; S.pickN++; S.choosing = false; S.view = null; sendState(); toast(`Joining ${TEAMS[S.pickT].emoji} ${TEAMS[S.pickT].name}…`, 1500); renderStudent(); }
+  else if (a === 'roll') { if (S.rollReq) return; S.rollReq = [S.round, rid(6)]; S.view = null; sendState(); renderStudent(); }
   else if (a === 'repick') { S.choosing = true; S.view = null; renderStudent(); }
   else if (a === 'hint') {
     const w = b.dataset.w; const t = myTeam(); if ((S.live.hints[t] || {})[w]) { toast('This cube says: ' + w); return; }
@@ -1218,7 +1301,7 @@ function startStudent(maker) {
   renderStudentShell();
   if (S.name && (MODE !== 'p2p' || (S.code && params.get('room')))) connectStudent();
   renderStudent();
-  setInterval(() => { sTimer(); if (S.T && S.name && S.sub && !(S.live && S.live.subs && S.live.subs[myTeam()])) sendState(); }, 3000);
+  setInterval(() => { sTimer(); const L = S.live, t = myTeam(); if (S.T && S.name && ((S.sub && !(L && L.subs && L.subs[t])) || (S.rollReq && !(L && L.rolled && L.rolled[t])))) sendState(); }, 3000);
   setInterval(sTimer, 500);
 }
 function renderNoAccess() {
