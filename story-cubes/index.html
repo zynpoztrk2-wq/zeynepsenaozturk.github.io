@@ -609,10 +609,10 @@ function localStudentTransport() {
 
 // ---------------- words ----------------
 const TEAMS = [
-  { name: 'Foxes', emoji: '🦊', color: '#FF7A6B' }, { name: 'Whales', emoji: '🐳', color: '#4D9BFF' },
-  { name: 'Frogs', emoji: '🐸', color: '#2FB872' }, { name: 'Bees', emoji: '🐝', color: '#F2B200' },
-  { name: 'Owls', emoji: '🦉', color: '#A77BFF' }, { name: 'Tigers', emoji: '🐯', color: '#FF9A3D' },
-  { name: 'Unicorns', emoji: '🦄', color: '#FF6FC0' }, { name: 'Koalas', emoji: '🐨', color: '#5F8FA8' }
+  { name: 'Group 1', emoji: '🔴', color: '#E5484D' }, { name: 'Group 2', emoji: '🔵', color: '#3B7EF0' },
+  { name: 'Group 3', emoji: '🟢', color: '#1F9D57' }, { name: 'Group 4', emoji: '🟡', color: '#E0A200' },
+  { name: 'Group 5', emoji: '🟣', color: '#8B5CF6' }, { name: 'Group 6', emoji: '🟠', color: '#F2711C' },
+  { name: 'Group 7', emoji: '🟤', color: '#9A5B34' }, { name: 'Group 8', emoji: '⚫', color: '#3F4756' }
 ];
 function tn(t) { const n = (typeof G !== 'undefined' && G && G.names && G.names[t]) || (typeof S !== 'undefined' && S.live && S.live.names && S.live.names[t]); return n || (TEAMS[t] ? TEAMS[t].name : 'Group'); }
 const TINTS = ['#12263A22', '#12263A22', '#12263A22', '#12263A22', '#12263A22', '#12263A22'];
@@ -849,7 +849,7 @@ function ingest(s) {
   if (Array.isArray(s.tname) && +s.tname[0] === t && t >= 0) {
     const k = clean(s.tname[2], 12);
     const nm = clean(s.tname[1], 18).replace(/[<>]/g, '');
-    if (k && !G.seenSub['n' + k]) { G.seenSub['n' + k] = 1; if (nm && nm !== tn(t)) { const old = tn(t); G.names[t] = nm; addMsg('system', '', -1, `${TEAMS[t].emoji} ${old} are now called "${nm}"`, rid(8)); ch = true; } }
+    if (k && !G.seenSub['n' + k]) { G.seenSub['n' + k] = 1; if (nm && nm !== tn(t)) { const old = tn(t); G.names[t] = nm; addMsg('system', '', -1, `${TEAMS[t].emoji} ${old} is now called "${nm}"`, rid(8)); ch = true; } }
   }
   if (s.gid === G.gid && s.r === G.round && G.phase === 'write' && t >= 0 && G.dice[t]) {
     if (Array.isArray(s.roll) && s.roll[0] === G.round && !G.rolled[t]) { doRoll(t, r.name); ch = true; }
@@ -1230,7 +1230,8 @@ function lobbyHTML() {
   const s = G.settings; const url = joinURL();
   let joinInfo;
   if (MODE === 'claude') joinInfo = `<h2>Join the game</h2><div class="qr" id="qr"></div>${url ? `<div class="link">${esc(url)}</div>` : ''}
-      <p class="hint">Students open this link, sign in to Claude and type their name. Share the page with their e-mails first.</p>${H.demoOnly ? '<div class="warnbox">Live connection is not available in this view. Only demo players can join.</div>' : ''}`;
+      <p class="hint">Students open this link, sign in to Claude and type their name. Share the page with their e-mails first.</p>
+      <div class="warnbox">🔑 <b>No room code here.</b> This claude.ai page is your own board (with AI checking). For a room code, playing without accounts, or sharing with other teachers, use the website: <span style="word-break:break-all">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/story-cubes/</span></div>${H.demoOnly ? '<div class="warnbox">Live connection is not available in this view. Only demo players can join.</div>' : ''}`;
   else if (MODE === 'local') joinInfo = `<h2>Local test</h2><p class="hint">Open this page with <b>?local=1&role=student</b> in another tab.</p>`;
   else joinInfo = `<h2>Join the game</h2><div class="qr" id="qr"></div><div class="small">Game code</div><div class="code">${esc(G.code)}</div>${url ? `<div class="link">${esc(url)}</div>` : ''}
       ${url ? '<p class="hint">Scan the QR code or open the link, then type your name and choose your group.</p>' : '<div class="warnbox">This file is opened from your computer, so phones cannot reach it. Open it from the website instead.</div>'}`;
