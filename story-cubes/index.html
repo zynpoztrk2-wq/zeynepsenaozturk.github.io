@@ -81,18 +81,17 @@ h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;text-wrap:balance}
 @media (prefers-reduced-motion:reduce){.die3.idle .dcube{animation:none}}
 
 /* ---------- board ---------- */
-body.host{overflow:hidden}
-.board{height:100%;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--card);border-bottom:3px solid var(--line);flex-wrap:wrap}
+.board{min-height:100%;display:flex;flex-direction:column}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--card);border-bottom:3px solid var(--line);flex-wrap:wrap}
 .brand{font-family:var(--display);font-weight:800;font-size:24px;display:flex;align-items:center;gap:8px}
 .brand small{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:800}
 .topbar .grow{flex:1}
 .timer{font-family:var(--display);font-weight:800;font-size:30px;background:var(--ink);color:#fff;border-radius:14px;padding:0 16px;min-width:96px;text-align:center;font-variant-numeric:tabular-nums}
 .timer.low{background:var(--stop);animation:pulse 1s infinite}
 @keyframes pulse{50%{transform:scale(1.06)}}
-.bodyrow{flex:1;display:flex;min-height:0}
-.stage{flex:1;overflow:auto;padding:18px 22px 28px}
-.chatp{width:300px;flex:none;background:var(--card);border-right:3px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.bodyrow{flex:1;display:flex;align-items:flex-start}
+.stage{flex:1;min-width:0;padding:18px 22px 40px}
+.chatp{width:300px;flex:none;background:var(--card);border-right:3px solid var(--line);display:flex;flex-direction:column;position:sticky;top:var(--tb,62px);height:calc(100vh - var(--tb,62px))}
 .ch-head{display:flex;align-items:center;gap:6px;padding:12px 12px 8px}
 .ch-head h3{flex:1;font-size:20px}
 .ch-head button{border:2px solid var(--line);background:var(--card);border-radius:10px;padding:3px 8px;font-size:13px;font-weight:800}
@@ -237,7 +236,7 @@ textarea.story-in{width:100%;min-height:180px;border:3px solid var(--line);borde
 .hintpop .scard{max-width:360px;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
 .hintpop .cw{width:120px}
 @media (max-width:1100px){.lobby{grid-template-columns:1fr 1fr}.lobby .settings{grid-column:1/-1}}
-@media (max-width:760px){.lobby{grid-template-columns:1fr}.chatp{display:none}body.host{overflow:auto}}
+@media (max-width:760px){.lobby{grid-template-columns:1fr}.chatp{display:none}}
 </style>
 </head>
 <body>
@@ -931,6 +930,8 @@ function renderAIPill() {
   const m = { on: ['ok', '✨ AI checking'], checking: ['warn', '✨ AI starting…'], busy: ['warn', '✨ AI busy, retrying'], off: ['err', 'AI off'], ready: ['warn', '✨ AI ready'] }[H.ai] || ['warn', 'AI'];
   p.className = 'pill ' + m[0]; p.textContent = m[1];
 }
+function syncTopbar() { const tb = $('.topbar'); if (tb) document.documentElement.style.setProperty('--tb', tb.offsetHeight + 'px'); }
+window.addEventListener('resize', () => syncTopbar());
 function updateTimer() {
   const t = $('#timer'); if (!t || !G) return;
   const show = G.phase === 'write' && G.endsAt > 0; t.hidden = !show; if (!show) return;
@@ -989,7 +990,7 @@ function renderHost() {
     if (H.view !== key) { st.innerHTML = playHTML(); H.view = key; H.cardSig = {}; }
     updPlay();
   } else if (ph === 'end') { if (H.view !== 'end') { st.innerHTML = endHTML(); H.view = 'end'; setTimeout(() => confetti(), 200); } }
-  updateTimer(); renderAIPill(); renderChat();
+  updateTimer(); renderAIPill(); renderChat(); syncTopbar();
 }
 function lobbyHTML() {
   const s = G.settings; const url = joinURL();
