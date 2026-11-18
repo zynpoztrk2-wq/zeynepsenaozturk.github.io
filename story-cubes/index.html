@@ -770,7 +770,9 @@ function freshGame() {
   if (prev) for (const [sid, r] of Object.entries(prev.roster)) G.roster[sid] = { name: r.name, team: r.team, online: r.online, seq: r.seq };
   H.view = null;
 }
-function markDirty() { H.dirty = true; if (!H.rq) { H.rq = true; requestAnimationFrame(() => { H.rq = false; renderHost(); }); } }
+// Run soon: on the next frame, or after 60 ms if the browser does not paint frames (e.g. a throttled frame)
+function soon(fn, ms = 60) { let done = false; const go = () => { if (done) return; done = true; fn(); }; try { requestAnimationFrame(go); } catch (e) {} setTimeout(go, ms); }
+function markDirty() { H.dirty = true; if (!H.rq) { H.rq = true; soon(() => { H.rq = false; renderHost(); }); } }
 const nTeams = () => G.settings.teams;
 const curSubs = () => G.rounds[G.round] || (G.rounds[G.round] = {});
 const isBot = sid => sid.startsWith('bot-');
@@ -1102,7 +1104,7 @@ function runRolls(root) {
   const els = [...root.querySelectorAll('.dcube[data-final]')]; if (!els.length) return;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   void root.offsetWidth;
-  els.forEach((c, i) => { requestAnimationFrame(() => requestAnimationFrame(() => {
+  els.forEach((c, i) => { soon(() => soon(() => {
     c.style.transition = reduce ? 'none' : `transform ${1.6 + i * 0.18}s cubic-bezier(.15,.85,.25,1.02)`; c.style.transform = c.dataset.final; c.removeAttribute('data-final');
   })); });
 }
@@ -1307,6 +1309,7 @@ async function startHost(makeT, opts) {
   bootStep('ready');
   recheckPending();
   setInterval(tick, 250); setInterval(flush, 400);
+  setInterval(() => { if (G && !H.view) renderHost(); }, 1000);
   markDirty();
 }
 
