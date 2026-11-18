@@ -632,7 +632,7 @@ let G = null, MODE = null;
 function defaults() { return { teams: 4, set: 'all', n: 4, min: 8, genre: true, ai: true }; }
 function freshGame() {
   const prev = G;
-  G = { v: 1, gid: rid(6), phase: 'lobby', round: 0, settings: prev ? { ...prev.settings } : defaults(), endsAt: 0,
+  G = { v: 2, gid: rid(6), phase: 'lobby', round: 0, settings: prev ? { ...prev.settings } : defaults(), endsAt: 0,
     roster: {}, joinSeq: 0, code: prev ? prev.code : null, cubes: {}, dice: {}, rolled: {}, genre: {}, hints: {}, drafts: {}, rounds: {}, usedWords: [],
     chat: prev && prev.chat ? prev.chat : [], chatOn: prev ? prev.chatOn !== false : true, seenChat: prev && prev.seenChat ? prev.seenChat : {}, seenSub: {} };
   if (prev) for (const [sid, r] of Object.entries(prev.roster)) G.roster[sid] = { name: r.name, team: r.team, online: r.online, seq: r.seq };
@@ -981,6 +981,12 @@ function scorestrip() {
   return `<div class="scorestrip">${order.map((t, i) => `<div class="schip" style="--c:${TEAMS[t].color}"><span class="rk">${i + 1}.</span><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<b>${fmtPts(sc[t])}</b></div>`).join('')}</div>`;
 }
 function renderHost() {
+  try { renderHostInner(); } catch (e) {
+    console.error(e);
+    const st = $('#stage'); if (st) st.innerHTML = `<div class="card center" style="max-width:520px;margin:40px auto"><h2>Something went wrong on the board</h2><p class="muted">${esc(e && e.message)}</p><button class="btn go" data-act="resetGame">Start a fresh game</button></div>`;
+  }
+}
+function renderHostInner() {
   if (!G) return;
   const st = $('#stage'); const ph = G.phase;
   const rp = $('#roundPill'); rp.hidden = !G.round; rp.textContent = 'Round ' + G.round;
@@ -1105,6 +1111,7 @@ function onHostClick(e) {
   else if (a === 'again') { G.phase = 'lobby'; G.round = 0; G.rounds = {}; G.cubes = {}; G.usedWords = []; H.view = null; markDirty(); }
   else if (a === 'newGame') confirmBox('Start a new game? Players and scores will be cleared.', () => { const keep = G.code; G = null; freshGame(); G.roster = {}; G.code = keep; H.bots = {}; H.chatEls = null; $('#chList').innerHTML = ''; markDirty(); }, 'New game');
   else if (a === 'addBots') addBots();
+  else if (a === 'resetGame') { const keep = G && G.code; G = null; freshGame(); G.code = keep || (MODE === 'p2p' ? newCode() : null); H.bots = {}; H.chatEls = null; const l = $('#chList'); if (l) l.innerHTML = ''; markDirty(); }
   else if (a === 'move') { const r = G.roster[b.dataset.sid]; if (r) { r.team = (r.team + 1) % nTeams(); markDirty(); } }
   else if (a === 'cyc') cycleWord(+b.dataset.r, +b.dataset.g, b.dataset.w);
   else if (a === 'gram') adjGram(+b.dataset.r, +b.dataset.g, +b.dataset.d);
@@ -1119,8 +1126,11 @@ async function startHost(makeT, opts) {
   renderHostShell();
   const T = makeT ? makeT() : null; H.T = T;
   const saved = T ? await T.load() : LS.get('sc.host', null);
-  if (saved && saved.v === 1 && saved.gid && saved.settings && now() - (saved.savedAt || 0) < 6 * 3600e3) {
-    G = saved; for (const r of Object.values(G.roster)) r.online = false; G.settings = Object.assign(defaults(), G.settings);
+  if (saved && saved.v === 2 && saved.gid && saved.settings && now() - (saved.savedAt || 0) < 6 * 3600e3) {
+    G = saved; G.roster = G.roster || {}; for (const r of Object.values(G.roster)) r.online = false; G.settings = Object.assign(defaults(), G.settings);
+    for (const k of ['cubes', 'dice', 'rolled', 'genre', 'hints', 'drafts', 'rounds', 'seenChat', 'seenSub']) if (!G[k] || typeof G[k] !== 'object') G[k] = {};
+    if (!Array.isArray(G.chat)) G.chat = [];
+    if (G.phase === 'write' && !Object.keys(G.dice).length) { G.phase = 'lobby'; G.endsAt = 0; }
     if (G.phase !== 'lobby') setTimeout(() => toast('Your game was restored'), 400);
     for (const sid of Object.keys(G.roster)) if (isBot(sid)) delete G.roster[sid];
   } else freshGame();
