@@ -1260,7 +1260,7 @@ function onHostClick(e) {
   else if (a === 'again') { G.phase = 'lobby'; G.round = 0; G.rounds = {}; G.cubes = {}; G.usedWords = []; H.view = null; markDirty(); }
   else if (a === 'newGame') confirmBox('Start a new game? Players and scores will be cleared.', () => { const keep = G.code; G = null; freshGame(); G.roster = {}; G.code = keep; H.bots = {}; H.chatEls = null; $('#chList').innerHTML = ''; markDirty(); }, 'New game');
   else if (a === 'addBots') addBots();
-  else if (a === 'resetGame') { const keep = G && G.code; G = null; freshGame(); G.code = keep || (MODE === 'p2p' ? newCode() : null); H.bots = {}; H.chatEls = null; const l = $('#chList'); if (l) l.innerHTML = ''; markDirty(); }
+  else if (a === 'resetGame') { H.view = null; const keep = G && G.code; G = null; freshGame(); G.code = keep || (MODE === 'p2p' ? newCode() : null); H.bots = {}; H.chatEls = null; const l = $('#chList'); if (l) l.innerHTML = ''; markDirty(); }
   else if (a === 'move') { const r = G.roster[b.dataset.sid]; if (r) { r.team = (r.team + 1) % nTeams(); markDirty(); } }
   else if (a === 'cyc') cycleWord(+b.dataset.r, +b.dataset.g, b.dataset.w);
   else if (a === 'gram') adjGram(+b.dataset.r, +b.dataset.g, +b.dataset.d);
@@ -1271,22 +1271,40 @@ function onHostClick(e) {
   else if (a === 'chatHide') { H.chatHidden = true; renderChat(); }
   else if (a === 'chatShow') { H.chatHidden = false; renderChat(); }
 }
+function bootStep(s) { window.__scStep = s; const b = $('#bootMsg'); if (b) b.textContent = s; }
+function showBoardError(msg) {
+  let bar = $('#errBar');
+  if (!bar) { bar = el('<div id="errBar" style="position:fixed;left:12px;right:12px;bottom:12px;z-index:90;background:#FFE1E3;border:2px solid #E5484D;border-radius:14px;padding:10px 14px;font-weight:800;font-size:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"></div>'); document.body.appendChild(bar); }
+  bar.innerHTML = `<span style="flex:1">⚠️ ${esc(msg)} <span class="small">(step: ${esc(window.__scStep || '?')})</span></span><button class="btn" onclick="this.parentNode.remove()">Close</button>`;
+}
 async function startHost(makeT, opts) {
   H.sample = opts.sample || null; H.demoOnly = !!opts.demoOnly;
   renderHostShell();
-  const T = makeT ? makeT() : null; H.T = T;
-  const saved = T ? await T.load() : LS.get('sc.host', null);
+  $('#stage').innerHTML = '<div class="card center" style="max-width:460px;margin:40px auto"><div class="logo">🎲</div><h2>Starting the board…</h2><p class="small" id="bootMsg"></p></div>';
+  window.addEventListener('error', e => showBoardError((e && e.message) || 'Error'));
+  window.addEventListener('unhandledrejection', e => { const r = e && e.reason; if (r && r.code === 'timeout') return; showBoardError((r && (r.message || r.code)) || 'Error'); });
+  setTimeout(() => { if (!G) { const st = $('#stage'); if (st) st.innerHTML = `<div class="card center" style="max-width:520px;margin:40px auto"><h2>The board is taking too long to start</h2><p class="muted">Step: ${esc(window.__scStep || '?')}</p><button class="btn go" data-act="resetGame">Start a fresh game</button></div>`; } }, 15000);
+  bootStep('connecting');
+  let T = null; try { T = makeT ? makeT() : null; } catch (e) { console.error(e); showBoardError('Live connection failed: ' + (e && e.message)); T = null; }
+  H.T = T;
+  bootStep('loading saved game');
+  const fresh = params.has('reset') || location.hash === '#reset';
+  let saved = null; try { saved = fresh ? null : (T ? await T.load() : LS.get('sc.host', null)); } catch (e) { saved = null; }
+  bootStep('setting up');
   if (saved && saved.v === 2 && saved.gid && saved.settings && now() - (saved.savedAt || 0) < 6 * 3600e3) {
     G = saved; G.roster = G.roster || {}; for (const r of Object.values(G.roster)) r.online = false; G.settings = Object.assign(defaults(), G.settings);
     for (const k of ['cubes', 'dice', 'rolled', 'genre', 'hints', 'drafts', 'rounds', 'seenChat', 'seenSub']) if (!G[k] || typeof G[k] !== 'object') G[k] = {};
     if (!Array.isArray(G.chat)) G.chat = [];
+    G.chatOn = G.chatOn !== false; if (!SETS[G.settings.set]) G.settings.set = 'w10';
     if (G.phase === 'write' && !Object.keys(G.dice).length) { G.phase = 'lobby'; G.endsAt = 0; }
     if (G.phase !== 'lobby') setTimeout(() => toast('Your game was restored'), 400);
     for (const sid of Object.keys(G.roster)) if (isBot(sid)) delete G.roster[sid];
   } else freshGame();
   if (MODE === 'p2p' && !G.code) G.code = newCode();
   H.ai = H.sample ? 'ready' : 'off';
-  if (T) T.listen(ingest, leave); else setPill('connPill', 'connecting', 'Demo only');
+  bootStep('listening');
+  try { if (T) T.listen(ingest, leave); else setPill('connPill', 'connecting', 'Demo only'); } catch (e) { console.error(e); showBoardError('Live connection failed: ' + (e && e.message)); }
+  bootStep('ready');
   recheckPending();
   setInterval(tick, 250); setInterval(flush, 400);
   markDirty();
@@ -1468,6 +1486,7 @@ function renderNoAccess() {
 // BOOT
 // ===================================================================
 async function bootClaude() {
+  $('#app').innerHTML = '<div class="landing"><div class="scard center"><div class="logo">🎲</div><h2>Loading Story Cubes…</h2><p class="small" id="bootMsg">checking who you are</p></div></div>';
   const user = await claude.use('user');
   let isOwner = false; try { isOwner = user ? !!(await user.isOwner()) : false; } catch (e) {}
   const role = (isOwner && location.hash !== '#play') ? 'host' : 'student';
