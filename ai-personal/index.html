@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Personal Speaking Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@500;600;700&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one deck of colour cards on a quiet ground (header, instruction + progress, wrapping grid).
+   Choosing a card opens it large in a dialog; the card flips to a ~1-minute sample answer. */
+:root{
+  --bg:#F5F4F9;
+  --surface:#FFFFFF;
+  --soft:#E9E7F1;
+  --ink:#1E1B2E;
+  --muted:#686480;
+  --line:#DCD9E8;
+  --card-ink:#1E1B2E;
+  --paper:rgba(255,255,255,.72);
+  --accent:#5B3FD6; --accent-ink:#FFFFFF;
+  --k0:#FF8A6B; --k1:#FFC34D; --k2:#3FC4A9; --k3:#6AA6FF; --k4:#A98BF5; --k5:#F27DAE;
+  --good:#1D8A55;
+  --shadow:rgba(30,27,46,.18);
+  --qr-bg:#FFFFFF;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+    --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+  --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html, body{height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.5; overflow:hidden}
+/* App shell: header stays put, the deck scrolls inside its own box, so the page also works in a fixed-size embed (e.g. Canva). */
+.wrap{
+  height:100%; max-width:1240px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 0;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,20px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+
+.k0{--c:var(--k0)} .k1{--c:var(--k1)} .k2{--c:var(--k2)}
+.k3{--c:var(--k3)} .k4{--c:var(--k4)} .k5{--c:var(--k5)}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; min-width:0}
+.mark{display:flex; gap:4px; flex:none}
+.mark i{width:12px; height:28px; border-radius:6px}
+.mark i:nth-child(1){background:var(--k0)} .mark i:nth-child(2){background:var(--k1); height:20px; align-self:flex-end}
+.mark i:nth-child(3){background:var(--k3); height:34px; margin-top:-6px}
+.topic{
+  font:700 .8rem var(--font-body); letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent); border-radius:999px; padding:4px 12px; white-space:nowrap;
+}
+h1{
+  font-family:var(--font-display); font-weight:800; font-optical-sizing:auto;
+  font-size:clamp(1.9rem,3.4vw,2.9rem); line-height:1.05; margin:0; letter-spacing:-.02em; text-wrap:balance;
+}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:1.5px solid var(--line); border-radius:999px;
+  padding:6px 16px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+.tool.hot{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+.row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
+.top, .row{flex:none}
+.instr{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.4vw,1.15rem)*var(--scale)); max-width:75ch}
+.progress{
+  font:600 .9rem var(--font-body); font-variant-numeric:tabular-nums; color:var(--muted);
+  display:flex; align-items:center; gap:10px; white-space:nowrap;
+}
+.meter{width:120px; height:8px; border-radius:99px; background:var(--soft); overflow:hidden}
+.meter i{display:block; height:100%; width:var(--w,0%); background:var(--good); border-radius:99px; transition:width .3s}
+
+/* deck */
+.deck{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr));
+  gap:clamp(14px,1.6vw,20px);
+  align-content:start; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding:8px 8px 24px; margin-inline:-8px;
+  scrollbar-width:thin; scrollbar-color:var(--line) transparent;
+}
+.pick{
+  display:flex; flex-direction:column; gap:12px; text-align:left; min-width:0;
+  padding:16px 16px 18px; border:0; border-radius:20px;
+  background:var(--c); color:var(--card-ink); cursor:pointer;
+  box-shadow:0 1px 2px var(--shadow), 0 14px 24px -18px var(--shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.pick:hover{transform:translateY(-3px); box-shadow:0 2px 4px var(--shadow), 0 20px 30px -18px var(--shadow)}
+.pick:active{transform:translateY(0)}
+.pick .head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.pick .no{font:800 1.9rem/1 var(--font-display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.pick .emo{
+  display:grid; place-items:center; width:38px; height:38px; border-radius:50%;
+  background:var(--paper); font-size:1.2rem; line-height:1; font-family:var(--emoji);
+}
+.pick .pq{font:600 calc(clamp(.96rem,1.2vw,1.06rem)*var(--scale))/1.4 var(--font-body); overflow-wrap:anywhere}
+.stamp{
+  display:none; align-self:flex-start; margin-top:auto;
+  font:700 .76rem var(--font-body); letter-spacing:.06em; text-transform:uppercase; color:var(--good);
+}
+.pick.done{background:var(--soft); color:var(--muted); box-shadow:none}
+.pick.done .emo{background:var(--surface); filter:grayscale(1); opacity:.6}
+.pick.done .stamp{display:block}
+
+/* open card */
+dialog{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(960px, calc(100% - 24px)); max-width:none;
+  max-height:calc(100% - 24px); overflow:visible;
+}
+dialog::backdrop{background:rgba(16,13,30,.6); backdrop-filter:blur(3px)}
+.sheet{
+  display:flex; flex-direction:column; gap:18px;
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+  overflow-y:auto; padding:4px 4px 14px;
+}
+.flip{perspective:1800px}
+.inner{display:grid; transform-style:preserve-3d; transition:transform .65s cubic-bezier(.45,.05,.2,1)}
+.inner.flipped{transform:rotateY(180deg)}
+.face{
+  grid-area:1/1; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  border-radius:28px; box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  padding:clamp(22px,3.8vw,48px); display:flex; flex-direction:column; gap:clamp(14px,2vw,22px); min-width:0;
+}
+.front{background:var(--c); color:var(--card-ink)}
+.face{max-height:calc(100vh - 120px); max-height:calc(100dvh - 120px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin}
+@media (max-width:600px){ .face{max-height:calc(100vh - 200px); max-height:calc(100dvh - 200px)} }
+.back{background:var(--surface); color:var(--ink); transform:rotateY(180deg); border-top:10px solid var(--c)}
+.fhead{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.chip{font:700 .82rem var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:var(--card-ink); opacity:.75}
+.bigemo{
+  display:grid; place-items:center; width:64px; height:64px; border-radius:50%; flex:none;
+  background:var(--paper); font-size:2rem; line-height:1; font-family:var(--emoji);
+}
+.bigq{
+  margin:0; font:700 calc(clamp(1.7rem,3.6vw,2.9rem)*var(--scale))/1.15 var(--font-display);
+  letter-spacing:-.015em; text-wrap:balance; overflow-wrap:anywhere;
+}
+.follow{
+  background:var(--paper); color:var(--card-ink); border-radius:18px;
+  padding:clamp(14px,2vw,22px); display:flex; flex-direction:column; gap:6px;
+}
+.lbl{font:700 .78rem var(--font-body); letter-spacing:.08em; text-transform:uppercase}
+.follow .lbl{opacity:.65}
+.follow p{margin:0; font:600 calc(clamp(1.1rem,2vw,1.55rem)*var(--scale))/1.35 var(--font-body)}
+.backhead{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 16px}
+.backhead .lbl{color:var(--good)}
+.backhead .meta{font:500 .88rem var(--font-body); color:var(--muted); font-variant-numeric:tabular-nums}
+.backq{margin:0; color:var(--muted); font-size:calc(clamp(.98rem,1.4vw,1.12rem)*var(--scale)); font-weight:600}
+.answer{display:flex; flex-direction:column; gap:.8em; max-width:75ch}
+.answer p{margin:0; font-weight:500; font-size:calc(clamp(1.06rem,1.75vw,1.42rem)*var(--scale)); line-height:1.6; text-wrap:pretty}
+
+.bar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1rem,1.45vw,1.15rem)*var(--scale))/1 var(--font-body);
+  border-radius:16px; padding:.8em 1.25em; min-height:54px; cursor:pointer;
+  border:0; background:var(--surface); color:var(--ink);
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.5); transition:transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn.main{flex:0 1 360px; background:var(--accent); color:var(--accent-ink)}
+.timer{
+  font-variant-numeric:tabular-nums; min-width:9.5em; color:var(--card-ink);
+  background:linear-gradient(to right, var(--k1) calc(var(--p,1)*100%), #FFF3D6 0);
+}
+.timer.up{background:var(--k0)}
+@media (max-width:600px){
+  .btn.main{order:-1; flex-basis:100%}
+  .bar .btn:not(.main){flex:1}
+}
+
+/* QR panel */
+#qrDlg{width:min(560px, calc(100% - 24px))}
+.qrpanel{
+  background:var(--surface); color:var(--ink); border-radius:28px;
+  padding:clamp(20px,3.4vw,36px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.4rem,3vw,2rem)/1.15 var(--font-display); letter-spacing:-.015em; text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted); font-size:1rem}
+.qrbox{width:min(440px, 68vmin, 100%); padding:6px; border-radius:16px; background:var(--qr-bg); border:4px solid var(--k3)}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{
+  margin:0; font:600 .9rem var(--font-body); color:var(--muted); overflow-wrap:anywhere;
+  -webkit-user-select:all; user-select:all;
+}
+.qrbtns{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:100%}
+.qrbtns .btn{flex:1 1 160px; box-shadow:none; border:1.5px solid var(--line)}
+.qrbtns .btn.main{border-color:var(--accent)}
+.tool.qr-open{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+/* Short frames (embeds, small laptop screens): tighter chrome so more cards show */
+@media (max-height:700px){
+  .wrap{padding-block:10px 0; gap:8px}
+  h1{font-size:clamp(1.4rem,3vw,2rem)}
+  .mark{transform:scale(.72); transform-origin:left center; margin-right:-8px}
+  .tool{min-height:34px; padding:3px 12px; font-size:.82rem}
+  .instr{font-size:.9rem}
+  .pick{padding:12px 12px 14px; gap:8px; border-radius:16px}
+  .pick .no{font-size:1.5rem}
+  .pick .emo{width:32px; height:32px; font-size:1rem}
+  .face{padding:18px 24px; gap:12px; border-radius:22px}
+  .bigemo{width:48px; height:48px; font-size:1.5rem}
+  .follow{padding:12px 16px}
+  .btn{min-height:44px; padding:.6em 1em}
+  .sheet{gap:12px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .inner, .pick, .btn, .meter i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Speaking Cards</h1>
+      <span class="topic">AI · Personal</span>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="random" type="button">Random card</button>
+      <button class="tool" id="reset" type="button">Reset</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <p class="instr">Choose a card and speak for about one minute. Answer all parts of the question, then flip the card to see a sample answer.</p>
+    <span class="progress"><span class="meter"><i id="meter"></i></span><span id="progress"></span></span>
+  </div>
+
+  <main class="deck" id="deck" aria-label="Speaking cards"></main>
+</div>
+
+<dialog id="dlg" aria-label="Speaking card">
+  <div class="sheet">
+    <div class="flip">
+      <div class="inner" id="inner">
+        <section class="face front" id="front"></section>
+        <section class="face back" id="back" aria-hidden="true"></section>
+      </div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="close" type="button">← All cards</button>
+      <button class="btn timer" id="timer" type="button">Start 1:00</button>
+      <button class="btn main" id="flipBtn" type="button" autofocus>Show sample answer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open the cards</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens this page"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM14 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM18 4h1v1h-1zM21 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM13 5h1v1h-1zM18 5h1v1h-1zM19 5h1v1h-1zM20 5h1v1h-1zM24 5h1v1h-1zM26 5h1v1h-1zM29 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM17 6h1v1h-1zM18 6h1v1h-1zM19 6h1v1h-1zM25 6h1v1h-1zM27 6h1v1h-1zM32 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM12 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM17 7h1v1h-1zM18 7h1v1h-1zM21 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM27 7h1v1h-1zM29 7h1v1h-1zM31 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM14 8h1v1h-1zM15 8h1v1h-1zM17 8h1v1h-1zM18 8h1v1h-1zM19 8h1v1h-1zM21 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM27 8h1v1h-1zM29 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM13 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM21 9h1v1h-1zM25 9h1v1h-1zM26 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM12 11h1v1h-1zM15 11h1v1h-1zM17 11h1v1h-1zM20 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM28 11h1v1h-1zM30 11h1v1h-1zM32 11h1v1h-1zM4 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM17 12h1v1h-1zM20 12h1v1h-1zM23 12h1v1h-1zM26 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM29 12h1v1h-1zM30 12h1v1h-1zM31 12h1v1h-1zM33 12h1v1h-1zM34 12h1v1h-1zM37 12h1v1h-1zM38 12h1v1h-1zM39 12h1v1h-1zM4 13h1v1h-1zM8 13h1v1h-1zM9 13h1v1h-1zM11 13h1v1h-1zM14 13h1v1h-1zM16 13h1v1h-1zM18 13h1v1h-1zM20 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM25 13h1v1h-1zM26 13h1v1h-1zM27 13h1v1h-1zM29 13h1v1h-1zM30 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM35 13h1v1h-1zM36 13h1v1h-1zM37 13h1v1h-1zM38 13h1v1h-1zM39 13h1v1h-1zM4 14h1v1h-1zM5 14h1v1h-1zM7 14h1v1h-1zM10 14h1v1h-1zM14 14h1v1h-1zM15 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM25 14h1v1h-1zM29 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM35 14h1v1h-1zM37 14h1v1h-1zM39 14h1v1h-1zM40 14h1v1h-1zM5 15h1v1h-1zM6 15h1v1h-1zM7 15h1v1h-1zM11 15h1v1h-1zM12 15h1v1h-1zM13 15h1v1h-1zM15 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM27 15h1v1h-1zM28 15h1v1h-1zM30 15h1v1h-1zM36 15h1v1h-1zM37 15h1v1h-1zM40 15h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM12 16h1v1h-1zM17 16h1v1h-1zM18 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM30 16h1v1h-1zM34 16h1v1h-1zM40 16h1v1h-1zM4 17h1v1h-1zM5 17h1v1h-1zM7 17h1v1h-1zM8 17h1v1h-1zM15 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM30 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM33 17h1v1h-1zM35 17h1v1h-1zM37 17h1v1h-1zM39 17h1v1h-1zM5 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM12 18h1v1h-1zM13 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM19 18h1v1h-1zM22 18h1v1h-1zM24 18h1v1h-1zM25 18h1v1h-1zM31 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM35 18h1v1h-1zM36 18h1v1h-1zM37 18h1v1h-1zM39 18h1v1h-1zM40 18h1v1h-1zM6 19h1v1h-1zM7 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM12 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM19 19h1v1h-1zM23 19h1v1h-1zM27 19h1v1h-1zM31 19h1v1h-1zM32 19h1v1h-1zM34 19h1v1h-1zM35 19h1v1h-1zM37 19h1v1h-1zM38 19h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM10 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM26 20h1v1h-1zM29 20h1v1h-1zM30 20h1v1h-1zM33 20h1v1h-1zM34 20h1v1h-1zM36 20h1v1h-1zM38 20h1v1h-1zM4 21h1v1h-1zM6 21h1v1h-1zM14 21h1v1h-1zM18 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM27 21h1v1h-1zM31 21h1v1h-1zM32 21h1v1h-1zM35 21h1v1h-1zM37 21h1v1h-1zM39 21h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM12 22h1v1h-1zM13 22h1v1h-1zM14 22h1v1h-1zM15 22h1v1h-1zM16 22h1v1h-1zM18 22h1v1h-1zM20 22h1v1h-1zM23 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM28 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM33 22h1v1h-1zM38 22h1v1h-1zM40 22h1v1h-1zM6 23h1v1h-1zM8 23h1v1h-1zM11 23h1v1h-1zM13 23h1v1h-1zM15 23h1v1h-1zM18 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM22 23h1v1h-1zM26 23h1v1h-1zM27 23h1v1h-1zM28 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM33 23h1v1h-1zM34 23h1v1h-1zM35 23h1v1h-1zM37 23h1v1h-1zM40 23h1v1h-1zM6 24h1v1h-1zM7 24h1v1h-1zM8 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM14 24h1v1h-1zM15 24h1v1h-1zM16 24h1v1h-1zM18 24h1v1h-1zM21 24h1v1h-1zM26 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM32 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM36 24h1v1h-1zM38 24h1v1h-1zM4 25h1v1h-1zM5 25h1v1h-1zM6 25h1v1h-1zM7 25h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM13 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM26 25h1v1h-1zM27 25h1v1h-1zM29 25h1v1h-1zM30 25h1v1h-1zM31 25h1v1h-1zM36 25h1v1h-1zM38 25h1v1h-1zM39 25h1v1h-1zM7 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM13 26h1v1h-1zM14 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM21 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM31 26h1v1h-1zM32 26h1v1h-1zM35 26h1v1h-1zM36 26h1v1h-1zM37 26h1v1h-1zM39 26h1v1h-1zM40 26h1v1h-1zM4 27h1v1h-1zM8 27h1v1h-1zM11 27h1v1h-1zM12 27h1v1h-1zM13 27h1v1h-1zM15 27h1v1h-1zM16 27h1v1h-1zM20 27h1v1h-1zM21 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM27 27h1v1h-1zM30 27h1v1h-1zM31 27h1v1h-1zM32 27h1v1h-1zM34 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM37 27h1v1h-1zM39 27h1v1h-1zM6 28h1v1h-1zM7 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM12 28h1v1h-1zM14 28h1v1h-1zM15 28h1v1h-1zM18 28h1v1h-1zM19 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM26 28h1v1h-1zM30 28h1v1h-1zM32 28h1v1h-1zM34 28h1v1h-1zM35 28h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM7 29h1v1h-1zM8 29h1v1h-1zM13 29h1v1h-1zM22 29h1v1h-1zM24 29h1v1h-1zM27 29h1v1h-1zM29 29h1v1h-1zM31 29h1v1h-1zM33 29h1v1h-1zM35 29h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM7 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM16 30h1v1h-1zM18 30h1v1h-1zM19 30h1v1h-1zM20 30h1v1h-1zM23 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM33 30h1v1h-1zM36 30h1v1h-1zM37 30h1v1h-1zM38 30h1v1h-1zM39 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM7 31h1v1h-1zM8 31h1v1h-1zM11 31h1v1h-1zM13 31h1v1h-1zM15 31h1v1h-1zM20 31h1v1h-1zM23 31h1v1h-1zM26 31h1v1h-1zM31 31h1v1h-1zM32 31h1v1h-1zM35 31h1v1h-1zM37 31h1v1h-1zM38 31h1v1h-1zM39 31h1v1h-1zM4 32h1v1h-1zM7 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM11 32h1v1h-1zM13 32h1v1h-1zM14 32h1v1h-1zM15 32h1v1h-1zM17 32h1v1h-1zM18 32h1v1h-1zM19 32h1v1h-1zM21 32h1v1h-1zM23 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM37 32h1v1h-1zM38 32h1v1h-1zM39 32h1v1h-1zM40 32h1v1h-1zM12 33h1v1h-1zM14 33h1v1h-1zM17 33h1v1h-1zM19 33h1v1h-1zM20 33h1v1h-1zM23 33h1v1h-1zM24 33h1v1h-1zM25 33h1v1h-1zM27 33h1v1h-1zM28 33h1v1h-1zM29 33h1v1h-1zM30 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM14 34h1v1h-1zM16 34h1v1h-1zM17 34h1v1h-1zM18 34h1v1h-1zM19 34h1v1h-1zM21 34h1v1h-1zM22 34h1v1h-1zM23 34h1v1h-1zM27 34h1v1h-1zM29 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM17 35h1v1h-1zM19 35h1v1h-1zM26 35h1v1h-1zM28 35h1v1h-1zM30 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM39 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM15 36h1v1h-1zM16 36h1v1h-1zM17 36h1v1h-1zM19 36h1v1h-1zM22 36h1v1h-1zM23 36h1v1h-1zM25 36h1v1h-1zM28 36h1v1h-1zM29 36h1v1h-1zM30 36h1v1h-1zM31 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM38 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM16 37h1v1h-1zM18 37h1v1h-1zM24 37h1v1h-1zM25 37h1v1h-1zM26 37h1v1h-1zM27 37h1v1h-1zM32 37h1v1h-1zM33 37h1v1h-1zM34 37h1v1h-1zM40 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM13 38h1v1h-1zM14 38h1v1h-1zM22 38h1v1h-1zM26 38h1v1h-1zM28 38h1v1h-1zM29 38h1v1h-1zM30 38h1v1h-1zM31 38h1v1h-1zM33 38h1v1h-1zM38 38h1v1h-1zM39 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM13 39h1v1h-1zM14 39h1v1h-1zM16 39h1v1h-1zM17 39h1v1h-1zM18 39h1v1h-1zM19 39h1v1h-1zM20 39h1v1h-1zM22 39h1v1h-1zM28 39h1v1h-1zM30 39h1v1h-1zM32 39h1v1h-1zM33 39h1v1h-1zM34 39h1v1h-1zM36 39h1v1h-1zM40 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM15 40h1v1h-1zM16 40h1v1h-1zM17 40h1v1h-1zM18 40h1v1h-1zM23 40h1v1h-1zM24 40h1v1h-1zM27 40h1v1h-1zM32 40h1v1h-1zM34 40h1v1h-1zM35 40h1v1h-1zM37 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/ai-personal/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const CARDS = [
+  {q:"When was the first time you used an AI tool?",
+   f:["What did you use it for?"],
+   a:["The first time I used an AI tool was about three years ago, when I was in high school. Everyone at school was talking about ChatGPT, so one evening I decided to try it myself. At first, I didn't really know what to ask, so I just asked it to tell me a joke and to write a short poem about my cat.",
+      "A few days later, I started using it for something more useful. I had a history project about the Ottoman Empire, and I asked the AI to explain some events in simple language. I was really surprised by how quickly it answered and how clear the explanations were. However, my teacher reminded us that AI can make mistakes, so I checked the information in my textbook as well. Since then, I've used AI tools quite often, but that first experience was really exciting, because it felt like talking to a very clever friend."]},
+  {q:"How often do you use AI in your daily life, and what do you usually ask it to do?",
+   f:[],
+   a:["I use AI almost every day, but usually only for a few minutes at a time. Most of the time, I use it for my studies. For example, when I don't understand a grammar rule, I ask it to explain the rule with simple examples. I also ask it to check my writing and show me my mistakes, although I always try to correct them myself first.",
+      "Outside school, I use AI for small everyday tasks. Sometimes I ask it for recipe ideas when I only have a few ingredients in the fridge. I also use it to plan trips, for instance to make a list of places to visit in a new city. Last week, I even asked it to help me write a polite email to my landlord. I think AI is very practical, but I try not to use it for everything, because I don't want to stop thinking for myself."]},
+  {q:"Have you ever used AI to help you with your English?",
+   f:["How did it help?"],
+   a:["Yes, I use AI quite often to help me with my English, and I think it has been really useful. My favourite way to use it is for speaking practice. I choose a topic, and the AI asks me questions as if it were an examiner. Then I answer, and it gives me feedback on my grammar and suggests better words I could use.",
+      "It has also helped me with writing. After I write a paragraph, I ask the AI to underline my mistakes without correcting them, so I can try to fix them myself. Then I compare my version with its suggestions. This has helped me notice mistakes I make again and again, such as forgetting articles. I also ask it to explain the difference between similar words, like 'make' and 'do'. Of course, it's not perfect, and sometimes its explanations are too long. But it's available at any time, which is very helpful the night before an exam."]},
+  {q:"What is one task you find boring or difficult that you would like AI to do for you?",
+   f:[],
+   a:["One task I find really boring is organising my notes and files. During the semester, I end up with hundreds of notes on my laptop, photos of the board on my phone and handouts in my bag. Before exams, I waste a lot of time looking for the right information, and it makes me stressed.",
+      "I would love an AI tool that could collect all of these automatically, organise them by subject and topic, and create a short summary for each unit. It could also make a revision plan for me, based on my exam dates and how much time I have. I think this would save me hours every week, and I could use that time to actually study instead of searching for papers. However, I wouldn't want AI to do the studying itself, because I know I need to understand the material on my own. I just want help with the boring part."]},
+  {q:"Have you ever received incorrect information from an AI tool?",
+   f:["What happened?"],
+   a:["Yes, I have. Last semester, I was writing a short essay about climate change, and I asked an AI tool to give me some statistics and sources. It gave me a few numbers and the names of two research articles, which looked very professional. I was happy, because it saved me a lot of time.",
+      "However, when I tried to find the articles online, I couldn't find them anywhere. I asked my teacher, and she explained that AI tools sometimes invent information that sounds real, especially sources and numbers. I was quite shocked, because I had almost included those fake sources in my essay. In the end, I found real statistics on official websites and changed my essay. This experience taught me an important lesson. Now I always check important information from AI in reliable sources, and I never copy references from AI without checking them first."]},
+  {q:"Would you prefer to study with an AI tutor or a human teacher?",
+   f:["Why?"],
+   a:["If I had to choose only one, I would prefer a human teacher, although I think an AI tutor can be a great extra tool. A good teacher understands students as people, not just as answers. They can see when I'm confused or tired just by looking at my face, and they know how to motivate me when I want to give up. A teacher can also share real experiences and make lessons more interesting.",
+      "On the other hand, AI tutors have some clear advantages. They are available twenty-four hours a day, they never get tired of answering the same question, and they're usually cheaper than private lessons. For example, when I'm doing homework late at night, an AI tutor can explain something immediately. So, in my opinion, the best option is a combination. I'd like to learn with a human teacher in class and then use an AI tutor for extra practice at home."]},
+  {q:"Have you ever used AI to write a message, prepare a presentation, or complete an assignment?",
+   f:[],
+   a:["Yes, I've used AI for all three, but in different ways. For messages, I sometimes ask AI to help me write formal emails, for example to a teacher or a company, because I'm not always sure about the right tone. I usually write a first version myself and then ask the AI to make it more polite and clear.",
+      "For presentations, AI has been very helpful in the planning stage. Last month, I had to give a presentation about renewable energy, and I asked AI to suggest a structure and some ideas for each slide. Then I did the research and prepared the slides myself. For assignments, I'm more careful. I've used AI to check my grammar and to explain difficult topics, but I don't let it write my assignments for me. Our school has clear rules about this, and I also think it would be pointless, because I wouldn't learn anything. AI is a helper for me, not a replacement."]},
+  {q:"What is something you would never ask AI to do for you?",
+   f:["Why?"],
+   a:["I would never ask AI to make an important personal decision for me, such as choosing my career, my university department or whether to end a friendship. AI can give useful information and list advantages and disadvantages, but it doesn't really know me. It doesn't know my feelings, my family situation or what makes me happy.",
+      "For example, last year I was trying to decide whether to study engineering or psychology. I asked AI for some information about both fields, which was helpful. But in the end, I talked to my parents, my teachers and some university students, because they could understand my personality and my dreams. I think decisions like these should come from our own values and experiences. If I let AI decide, I wouldn't feel responsible for my own life. I also wouldn't ask AI to write personal messages to my close friends, because those messages should come from my heart."]},
+  {q:"If you could have a personal AI assistant for one day, what would you ask it to do?",
+   f:[],
+   a:["If I had a personal AI assistant for one day, I would use it to make my life much more organised. First, I would ask it to plan my whole day in the most efficient way, including my classes, study time and breaks. It could remind me about deadlines and tell me when to leave home so that I'm never late.",
+      "Second, I would ask it to help me with all my boring tasks. It could reply to simple emails, find the cheapest flight tickets for my summer holiday and compare prices for a new laptop I want to buy. It could also order groceries and suggest healthy recipes for the week. Finally, I would ask it to help me practise English for an hour by having a conversation with me and correcting my mistakes. At the end of the day, I would have lots of free time, so I'd probably spend the evening relaxing with my friends, without any stress."]},
+  {q:"Do you think you spend more time using technology now than you did a few years ago?",
+   f:["Why?"],
+   a:["Yes, definitely. I spend much more time using technology now than I did a few years ago. When I was in middle school, I used my phone mainly to call my parents and play a few games. Now, I use my phone and laptop for almost everything, from studying and shopping to banking and staying in touch with friends.",
+      "There are a few reasons for this. First, university life is much more digital. Our assignments, course materials and announcements are all online, so I need to check them every day. Second, new technologies like AI tools have become part of my study routine. Third, social media takes up a lot of my free time, although I'm trying to reduce it. Sometimes my screen time report shows more than seven hours a day, which worries me. That's why I've started to leave my phone in another room while I study and to spend more time outside at weekends."]},
+  {q:"Have you ever felt surprised or impressed by something AI could do?",
+   f:["What was it?"],
+   a:["Yes, I was really impressed a few months ago when my grandmother visited us. She only speaks Turkish, and my cousin's husband, who is from Germany, doesn't speak any Turkish at all. At dinner, they wanted to talk to each other, so my cousin used a translation app on her phone.",
+      "My grandmother spoke into the phone in Turkish, and a few seconds later, the app said the sentence in German with a natural voice. Then it did the same in the other direction. They talked for almost an hour about their families and their hometowns, and everyone was laughing. Of course, there were a few funny mistakes, but they understood each other most of the time. I was surprised, because a few years ago this would have been impossible. It made me realise how AI can break down language barriers and bring people together, not just help us with homework."]},
+  {q:"Would you feel comfortable talking to an AI chatbot about a personal problem?",
+   f:["Why or why not?"],
+   a:["It depends on the problem. For small, everyday problems, I think I would feel quite comfortable. For example, if I felt stressed about exams or didn't know how to deal with a disagreement with a roommate, I might ask a chatbot for some general advice. It's available at any time, it doesn't judge you, and sometimes just writing about a problem helps me organise my thoughts.",
+      "However, for serious or very personal problems, I wouldn't feel comfortable. First, I'm not sure what happens to the information I share, and I worry about my privacy. Second, a chatbot can't really understand my feelings or give me a hug. When I have a serious problem, I prefer to talk to my close friends, my family or, if necessary, a professional counsellor, because they know me and can support me in a real way. So, for me, a chatbot can be a first step, but not a replacement for real people."]},
+  {q:"What is one skill you would like to learn with the help of AI?",
+   f:[],
+   a:["I would really like to learn how to code with the help of AI. Programming is a very useful skill today, and I think it could open many career opportunities for me in the future. I tried to learn it once with online videos, but I gave up after two weeks, because I often got stuck and didn't have anyone to ask for help.",
+      "I think AI could solve this problem. When my code doesn't work, I could show it to an AI tool and ask it to explain my mistake in simple words, instead of just giving me the correct answer. It could also create small projects that match my level, for example a simple app to track my study hours. It's available at any time, so I could practise for thirty minutes every evening. Of course, I would still need to practise a lot by myself, but having a patient helper would make me feel much more motivated."]},
+  {q:"If you could create your own AI application, what would it do?",
+   f:[],
+   a:["If I could create my own AI application, I would design an app that helps students manage stress during exam periods. Many students, including me, feel very anxious before exams, and we often don't plan our time well, which makes the stress even worse.",
+      "The app would have a few main features. First, it would create a personal study plan based on your exam dates, your strengths and weaknesses, and how many hours you can study each day. Second, it would check in with you every evening and ask how your day went. If you felt stressed, it would suggest short breathing exercises or remind you to take a break and go for a walk. Third, it would encourage healthy habits, such as sleeping enough and drinking water. I think this app would be really useful, because it would help students study more effectively and take care of their wellbeing at the same time."]},
+  {q:"Do you think using AI has changed the way you study or work?",
+   f:["How?"],
+   a:["Yes, I think AI has changed the way I study quite a lot, mostly in positive ways. In the past, when I didn't understand a topic, I had to search through many websites or wait until the next lesson to ask my teacher. Now I can ask an AI tool to explain it in simple language, give me examples and even test me with a few questions. This saves me a lot of time.",
+      "AI has also changed how I revise. Before exams, I ask it to create practice questions from my notes, and I try to answer them without looking. I've noticed that this helps me remember information better than just reading. However, I've also noticed a negative change. Sometimes I rely on AI too quickly, before I try to solve a problem myself. So now I have a rule: I think about a question for at least ten minutes before asking AI. I want AI to support my learning, not do the thinking for me."]}
+];
+
+const EMOJI = ["🌱","📅","🗣️","🗂️","⚠️","👩‍🏫","📝","🚫","🤖","📱",
+               "🤯","💬","💻","💡","📚"];
+
+const NCOL = 6;
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+const TIME = 60;
+
+const state = { done:new Set(), scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("spk-ai-personal") || "null");
+  if(s){
+    if(Array.isArray(s.done)) state.done = new Set(s.done.filter(i => Number.isInteger(i) && i >= 0 && i < CARDS.length));
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("spk-ai-personal", JSON.stringify({done:[...state.done], scale:state.scale})); }catch(e){}
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const $ = id => document.getElementById(id);
+const deck = $("deck"), dlg = $("dlg"), inner = $("inner"), front = $("front"), back = $("back");
+const flipBtn = $("flipBtn"), timerBtn = $("timer");
+
+/* deck */
+function renderDeck(){
+  deck.innerHTML = CARDS.map((c,i) => `
+    <button class="pick k${i%NCOL}${state.done.has(i) ? " done" : ""}" type="button" data-i="${i}" aria-label="Card ${i+1}: ${esc(c.q)}">
+      <span class="head"><span class="no">${pad(i+1)}</span><span class="emo" aria-hidden="true">${EMOJI[i]}</span></span>
+      <span class="pq">${esc(c.q)}</span>
+      <span class="stamp">✓ Done</span>
+    </button>`).join("");
+  $("progress").textContent = `${state.done.size} of ${CARDS.length} done`;
+  $("meter").style.setProperty("--w", `${state.done.size / CARDS.length * 100}%`);
+}
+deck.addEventListener("click", e => {
+  const b = e.target.closest(".pick"); if(b) openCard(+b.dataset.i);
+});
+
+/* open card */
+let flipped = false;
+function openCard(i){
+  const c = CARDS[i], col = `k${i%NCOL}`;
+  const words = c.a.join(" ").split(/\s+/).length;
+  front.className = `face front ${col}`;
+  back.className = `face back ${col}`;
+  front.innerHTML = `
+    <div class="fhead"><span class="chip">Card ${pad(i+1)} / ${CARDS.length}</span><span class="bigemo" aria-hidden="true">${EMOJI[i]}</span></div>
+    <h2 class="bigq">${esc(c.q)}</h2>
+    ${c.f.length ? `<div class="follow"><span class="lbl">Follow-up</span>${c.f.map(f => `<p>${esc(f)}</p>`).join("")}</div>` : ""}`;
+  back.innerHTML = `
+    <div class="backhead"><span class="lbl">Sample answer</span><span class="meta">${words} words · about 1 minute</span></div>
+    <p class="backq">${esc(c.q)}</p>
+    <div class="answer">${c.a.map(p => `<p>${esc(p)}</p>`).join("")}</div>`;
+  setFlip(false, true);
+  resetTimer();
+  state.done.add(i);
+  save();
+  if(!dlg.open) dlg.showModal();
+  flipBtn.focus();
+  dlg.querySelector(".sheet").scrollTop = 0;
+}
+function setFlip(v, instant){
+  flipped = v;
+  if(instant){ inner.style.transition = "none"; }
+  inner.classList.toggle("flipped", v);
+  if(instant){ void inner.offsetWidth; inner.style.transition = ""; }
+  front.setAttribute("aria-hidden", v ? "true" : "false");
+  back.setAttribute("aria-hidden", v ? "false" : "true");
+  flipBtn.textContent = v ? "Back to question" : "Show sample answer";
+}
+flipBtn.addEventListener("click", () => setFlip(!flipped));
+$("close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("close", () => { stopTimer(); renderDeck(); });
+dlg.addEventListener("click", e => { if(e.target === dlg) dlg.close(); });
+
+/* one-minute timer */
+let left = TIME, tick = null, endAt = 0;
+function fmt(s){ return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function paintTimer(){
+  const secs = Math.ceil(left);
+  timerBtn.style.setProperty("--p", Math.max(0, left / TIME));
+  timerBtn.classList.toggle("up", left <= 0);
+  timerBtn.textContent = left <= 0 ? "Time’s up · Again"
+    : tick ? `Pause ${fmt(secs)}`
+    : left < TIME ? `Resume ${fmt(secs)}` : "Start 1:00";
+}
+function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } }
+function resetTimer(){ stopTimer(); left = TIME; paintTimer(); }
+timerBtn.addEventListener("click", () => {
+  if(left <= 0){ resetTimer(); }
+  if(tick){ left = Math.max(0, (endAt - Date.now()) / 1000); stopTimer(); paintTimer(); return; }
+  endAt = Date.now() + left * 1000;
+  tick = setInterval(() => {
+    left = Math.max(0, (endAt - Date.now()) / 1000);
+    if(left <= 0) stopTimer();
+    paintTimer();
+  }, 200);
+  paintTimer();
+});
+
+/* tools */
+$("random").addEventListener("click", () => {
+  const all = [...CARDS.keys()];
+  const pool = all.filter(i => !state.done.has(i));
+  const from = pool.length ? pool : all;
+  openCard(from[Math.floor(Math.random() * from.length)]);
+});
+let resetArmed = null;
+const resetBtn = $("reset");
+function disarm(){ resetArmed = null; resetBtn.textContent = "Reset"; resetBtn.classList.remove("hot"); }
+resetBtn.addEventListener("click", () => {
+  if(resetArmed){ clearTimeout(resetArmed); disarm(); state.done.clear(); save(); renderDeck(); return; }
+  resetBtn.textContent = "Tap again to clear"; resetBtn.classList.add("hot");
+  resetArmed = setTimeout(disarm, 3000);
+});
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+$("smaller").addEventListener("click", () => { state.scale = SCALES[Math.max(0, SCALES.indexOf(state.scale) - 1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { state.scale = SCALES[Math.min(SCALES.length - 1, SCALES.indexOf(state.scale) + 1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+applyScale();
+renderDeck();
+</script>
+</body>
+</html>

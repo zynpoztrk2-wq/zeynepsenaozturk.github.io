@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI PROF-Style Speaking Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@500;600;700&display=swap">
+<style>
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one deck of colour cards on a quiet ground (header, instruction + progress, wrapping grid).
+   Choosing a card opens it large in a dialog; the card flips to a ~1-minute sample answer. */
+:root{
+  --bg:#F5F4F9;
+  --surface:#FFFFFF;
+  --soft:#E9E7F1;
+  --ink:#1E1B2E;
+  --muted:#686480;
+  --line:#DCD9E8;
+  --card-ink:#1E1B2E;
+  --paper:rgba(255,255,255,.72);
+  --accent:#5B3FD6; --accent-ink:#FFFFFF;
+  --k0:#FF8A6B; --k1:#FFC34D; --k2:#3FC4A9; --k3:#6AA6FF; --k4:#A98BF5; --k5:#F27DAE;
+  --good:#1D8A55;
+  --shadow:rgba(30,27,46,.18);
+  --qr-bg:#FFFFFF;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --scale:1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+    --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121D; --surface:#211E2E; --soft:#2B2840; --ink:#F2F0FA; --muted:#A9A5C2; --line:#353149;
+  --accent:#A893FF; --accent-ink:#17122E; --good:#5FD69A; --shadow:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html, body{height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.5; overflow:hidden}
+/* App shell: header stays put, the deck scrolls inside its own box, so the page also works in a fixed-size embed (e.g. Canva). */
+.wrap{
+  height:100%; max-width:1240px; margin:0 auto;
+  padding-inline:clamp(16px,3vw,40px);
+  padding-block:clamp(14px,2.2vw,28px) 0;
+  display:flex; flex-direction:column; gap:clamp(12px,1.6vw,20px);
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
+
+.k0{--c:var(--k0)} .k1{--c:var(--k1)} .k2{--c:var(--k2)}
+.k3{--c:var(--k3)} .k4{--c:var(--k4)} .k5{--c:var(--k5)}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px 16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; min-width:0}
+.mark{display:flex; gap:4px; flex:none}
+.mark i{width:12px; height:28px; border-radius:6px}
+.mark i:nth-child(1){background:var(--k0)} .mark i:nth-child(2){background:var(--k1); height:20px; align-self:flex-end}
+.mark i:nth-child(3){background:var(--k3); height:34px; margin-top:-6px}
+.topic{
+  font:700 .8rem var(--font-body); letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent); border-radius:999px; padding:4px 12px; white-space:nowrap;
+}
+h1{
+  font-family:var(--font-display); font-weight:800; font-optical-sizing:auto;
+  font-size:clamp(1.9rem,3.4vw,2.9rem); line-height:1.05; margin:0; letter-spacing:-.02em; text-wrap:balance;
+}
+.tools{display:flex; gap:8px; flex-wrap:wrap}
+.tool{
+  font:600 .92rem var(--font-body); color:var(--ink);
+  background:var(--surface); border:1.5px solid var(--line); border-radius:999px;
+  padding:6px 16px; min-height:42px; min-width:42px; cursor:pointer;
+}
+.tool:hover{border-color:var(--muted)}
+.tool.hot{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+.row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
+.top, .row{flex:none}
+.instr{margin:0; color:var(--muted); font-size:calc(clamp(1rem,1.4vw,1.15rem)*var(--scale)); max-width:75ch}
+.progress{
+  font:600 .9rem var(--font-body); font-variant-numeric:tabular-nums; color:var(--muted);
+  display:flex; align-items:center; gap:10px; white-space:nowrap;
+}
+.meter{width:120px; height:8px; border-radius:99px; background:var(--soft); overflow:hidden}
+.meter i{display:block; height:100%; width:var(--w,0%); background:var(--good); border-radius:99px; transition:width .3s}
+
+/* deck */
+.deck{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr));
+  gap:clamp(14px,1.6vw,20px);
+  align-content:start; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding:8px 8px 24px; margin-inline:-8px;
+  scrollbar-width:thin; scrollbar-color:var(--line) transparent;
+}
+.pick{
+  display:flex; flex-direction:column; gap:12px; text-align:left; min-width:0;
+  padding:16px 16px 18px; border:0; border-radius:20px;
+  background:var(--c); color:var(--card-ink); cursor:pointer;
+  box-shadow:0 1px 2px var(--shadow), 0 14px 24px -18px var(--shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.pick:hover{transform:translateY(-3px); box-shadow:0 2px 4px var(--shadow), 0 20px 30px -18px var(--shadow)}
+.pick:active{transform:translateY(0)}
+.pick .head{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.pick .no{font:800 1.9rem/1 var(--font-display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.pick .emo{
+  display:grid; place-items:center; width:38px; height:38px; border-radius:50%;
+  background:var(--paper); font-size:1.2rem; line-height:1; font-family:var(--emoji);
+}
+.pick .pq{font:600 calc(clamp(.96rem,1.2vw,1.06rem)*var(--scale))/1.4 var(--font-body); overflow-wrap:anywhere}
+.stamp{
+  display:none; align-self:flex-start; margin-top:auto;
+  font:700 .76rem var(--font-body); letter-spacing:.06em; text-transform:uppercase; color:var(--good);
+}
+.pick.done{background:var(--soft); color:var(--muted); box-shadow:none}
+.pick.done .emo{background:var(--surface); filter:grayscale(1); opacity:.6}
+.pick.done .stamp{display:block}
+
+/* open card */
+dialog{
+  border:0; padding:0; background:transparent; color:var(--ink);
+  width:min(960px, calc(100% - 24px)); max-width:none;
+  max-height:calc(100% - 24px); overflow:visible;
+}
+dialog::backdrop{background:rgba(16,13,30,.6); backdrop-filter:blur(3px)}
+.sheet{
+  display:flex; flex-direction:column; gap:18px;
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+  overflow-y:auto; padding:4px 4px 14px;
+}
+.flip{perspective:1800px}
+.inner{display:grid; transform-style:preserve-3d; transition:transform .65s cubic-bezier(.45,.05,.2,1)}
+.inner.flipped{transform:rotateY(180deg)}
+.face{
+  grid-area:1/1; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  border-radius:28px; box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  padding:clamp(22px,3.8vw,48px); display:flex; flex-direction:column; gap:clamp(14px,2vw,22px); min-width:0;
+}
+.front{background:var(--c); color:var(--card-ink)}
+.face{max-height:calc(100vh - 120px); max-height:calc(100dvh - 120px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin}
+@media (max-width:600px){ .face{max-height:calc(100vh - 200px); max-height:calc(100dvh - 200px)} }
+.back{background:var(--surface); color:var(--ink); transform:rotateY(180deg); border-top:10px solid var(--c)}
+.fhead{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.chip{font:700 .82rem var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:var(--card-ink); opacity:.75}
+.bigemo{
+  display:grid; place-items:center; width:64px; height:64px; border-radius:50%; flex:none;
+  background:var(--paper); font-size:2rem; line-height:1; font-family:var(--emoji);
+}
+.bigq{
+  margin:0; font:700 calc(clamp(1.7rem,3.6vw,2.9rem)*var(--scale))/1.15 var(--font-display);
+  letter-spacing:-.015em; text-wrap:balance; overflow-wrap:anywhere;
+}
+.follow{
+  background:var(--paper); color:var(--card-ink); border-radius:18px;
+  padding:clamp(14px,2vw,22px); display:flex; flex-direction:column; gap:6px;
+}
+.lbl{font:700 .78rem var(--font-body); letter-spacing:.08em; text-transform:uppercase}
+.follow .lbl{opacity:.65}
+.follow p{margin:0; font:600 calc(clamp(1.1rem,2vw,1.55rem)*var(--scale))/1.35 var(--font-body)}
+.backhead{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 16px}
+.backhead .lbl{color:var(--good)}
+.backhead .meta{font:500 .88rem var(--font-body); color:var(--muted); font-variant-numeric:tabular-nums}
+.backq{margin:0; color:var(--muted); font-size:calc(clamp(.98rem,1.4vw,1.12rem)*var(--scale)); font-weight:600}
+.answer{display:flex; flex-direction:column; gap:.8em; max-width:75ch}
+.answer p{margin:0; font-weight:500; font-size:calc(clamp(1.06rem,1.75vw,1.42rem)*var(--scale)); line-height:1.6; text-wrap:pretty}
+
+.bar{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
+.btn{
+  font:700 calc(clamp(1rem,1.45vw,1.15rem)*var(--scale))/1 var(--font-body);
+  border-radius:16px; padding:.8em 1.25em; min-height:54px; cursor:pointer;
+  border:0; background:var(--surface); color:var(--ink);
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.5); transition:transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn.main{flex:0 1 360px; background:var(--accent); color:var(--accent-ink)}
+.timer{
+  font-variant-numeric:tabular-nums; min-width:9.5em; color:var(--card-ink);
+  background:linear-gradient(to right, var(--k1) calc(var(--p,1)*100%), #FFF3D6 0);
+}
+.timer.up{background:var(--k0)}
+@media (max-width:600px){
+  .btn.main{order:-1; flex-basis:100%}
+  .bar .btn:not(.main){flex:1}
+}
+
+/* QR panel */
+#qrDlg{width:min(560px, calc(100% - 24px))}
+.qrpanel{
+  background:var(--surface); color:var(--ink); border-radius:28px;
+  padding:clamp(20px,3.4vw,36px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.55);
+  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow-y:auto;
+}
+.qrpanel h2{margin:0; font:800 clamp(1.4rem,3vw,2rem)/1.15 var(--font-display); letter-spacing:-.015em; text-wrap:balance}
+.qrpanel .sub{margin:0; color:var(--muted); font-size:1rem}
+.qrbox{width:min(440px, 68vmin, 100%); padding:6px; border-radius:16px; background:var(--qr-bg); border:4px solid var(--k3)}
+.qrbox svg{display:block; width:100%; height:auto}
+.qrurl{
+  margin:0; font:600 .9rem var(--font-body); color:var(--muted); overflow-wrap:anywhere;
+  -webkit-user-select:all; user-select:all;
+}
+.qrbtns{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:100%}
+.qrbtns .btn{flex:1 1 160px; box-shadow:none; border:1.5px solid var(--line)}
+.qrbtns .btn.main{border-color:var(--accent)}
+.tool.qr-open{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+
+/* Short frames (embeds, small laptop screens): tighter chrome so more cards show */
+@media (max-height:700px){
+  .wrap{padding-block:10px 0; gap:8px}
+  h1{font-size:clamp(1.4rem,3vw,2rem)}
+  .mark{transform:scale(.72); transform-origin:left center; margin-right:-8px}
+  .tool{min-height:34px; padding:3px 12px; font-size:.82rem}
+  .instr{font-size:.9rem}
+  .pick{padding:12px 12px 14px; gap:8px; border-radius:16px}
+  .pick .no{font-size:1.5rem}
+  .pick .emo{width:32px; height:32px; font-size:1rem}
+  .face{padding:18px 24px; gap:12px; border-radius:22px}
+  .bigemo{width:48px; height:48px; font-size:1.5rem}
+  .follow{padding:12px 16px}
+  .btn{min-height:44px; padding:.6em 1em}
+  .sheet{gap:12px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .inner, .pick, .btn, .meter i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Speaking Cards</h1>
+      <span class="topic">AI · PROF-Style</span>
+    </div>
+    <div class="tools">
+      <button class="tool qr-open" id="qrBtn" type="button">QR code</button>
+      <button class="tool" id="random" type="button">Random card</button>
+      <button class="tool" id="reset" type="button">Reset</button>
+      <button class="tool" id="smaller" type="button" aria-label="Smaller text">A−</button>
+      <button class="tool" id="bigger" type="button" aria-label="Larger text">A+</button>
+      <button class="tool" id="fs" type="button">Full screen</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <p class="instr">Choose a card and speak for about one minute. Answer all parts of the question, then flip the card to see a sample answer.</p>
+    <span class="progress"><span class="meter"><i id="meter"></i></span><span id="progress"></span></span>
+  </div>
+
+  <main class="deck" id="deck" aria-label="Speaking cards"></main>
+</div>
+
+<dialog id="dlg" aria-label="Speaking card">
+  <div class="sheet">
+    <div class="flip">
+      <div class="inner" id="inner">
+        <section class="face front" id="front"></section>
+        <section class="face back" id="back" aria-hidden="true"></section>
+      </div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="close" type="button">← All cards</button>
+      <button class="btn timer" id="timer" type="button">Start 1:00</button>
+      <button class="btn main" id="flipBtn" type="button" autofocus>Show sample answer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="qrDlg" aria-label="QR code">
+  <div class="qrpanel">
+    <h2>Scan to open the cards</h2>
+    <p class="sub">Open your phone camera and point it at the code.</p>
+    <div class="qrbox"><svg viewBox="0 0 45 45" class="qr" role="img" aria-label="QR code that opens this page"><rect width="45" height="45" fill="#FFFFFF"/><path fill="#000000" d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM12 4h1v1h-1zM14 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM21 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM34 4h1v1h-1zM35 4h1v1h-1zM36 4h1v1h-1zM37 4h1v1h-1zM38 4h1v1h-1zM39 4h1v1h-1zM40 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM13 5h1v1h-1zM15 5h1v1h-1zM17 5h1v1h-1zM20 5h1v1h-1zM23 5h1v1h-1zM26 5h1v1h-1zM30 5h1v1h-1zM32 5h1v1h-1zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM13 6h1v1h-1zM16 6h1v1h-1zM17 6h1v1h-1zM23 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM29 6h1v1h-1zM34 6h1v1h-1zM36 6h1v1h-1zM37 6h1v1h-1zM38 6h1v1h-1zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM14 7h1v1h-1zM15 7h1v1h-1zM17 7h1v1h-1zM19 7h1v1h-1zM21 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM27 7h1v1h-1zM29 7h1v1h-1zM31 7h1v1h-1zM34 7h1v1h-1zM36 7h1v1h-1zM37 7h1v1h-1zM38 7h1v1h-1zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM12 8h1v1h-1zM14 8h1v1h-1zM17 8h1v1h-1zM20 8h1v1h-1zM23 8h1v1h-1zM25 8h1v1h-1zM29 8h1v1h-1zM30 8h1v1h-1zM32 8h1v1h-1zM34 8h1v1h-1zM36 8h1v1h-1zM37 8h1v1h-1zM38 8h1v1h-1zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM14 9h1v1h-1zM15 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM25 9h1v1h-1zM26 9h1v1h-1zM27 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM32 9h1v1h-1zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h1v1h-1zM35 10h1v1h-1zM36 10h1v1h-1zM37 10h1v1h-1zM38 10h1v1h-1zM39 10h1v1h-1zM40 10h1v1h-1zM13 11h1v1h-1zM14 11h1v1h-1zM16 11h1v1h-1zM18 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM24 11h1v1h-1zM26 11h1v1h-1zM28 11h1v1h-1zM29 11h1v1h-1zM32 11h1v1h-1zM4 12h1v1h-1zM7 12h1v1h-1zM8 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM11 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM14 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM18 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM30 12h1v1h-1zM31 12h1v1h-1zM32 12h1v1h-1zM33 12h1v1h-1zM36 12h1v1h-1zM38 12h1v1h-1zM39 12h1v1h-1zM40 12h1v1h-1zM8 13h1v1h-1zM12 13h1v1h-1zM13 13h1v1h-1zM15 13h1v1h-1zM16 13h1v1h-1zM17 13h1v1h-1zM20 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM25 13h1v1h-1zM27 13h1v1h-1zM28 13h1v1h-1zM29 13h1v1h-1zM30 13h1v1h-1zM31 13h1v1h-1zM33 13h1v1h-1zM35 13h1v1h-1zM36 13h1v1h-1zM37 13h1v1h-1zM38 13h1v1h-1zM39 13h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM13 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM21 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM25 14h1v1h-1zM27 14h1v1h-1zM28 14h1v1h-1zM29 14h1v1h-1zM30 14h1v1h-1zM31 14h1v1h-1zM32 14h1v1h-1zM33 14h1v1h-1zM35 14h1v1h-1zM36 14h1v1h-1zM37 14h1v1h-1zM40 14h1v1h-1zM4 15h1v1h-1zM8 15h1v1h-1zM14 15h1v1h-1zM16 15h1v1h-1zM20 15h1v1h-1zM21 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM26 15h1v1h-1zM30 15h1v1h-1zM32 15h1v1h-1zM33 15h1v1h-1zM36 15h1v1h-1zM37 15h1v1h-1zM38 15h1v1h-1zM39 15h1v1h-1zM40 15h1v1h-1zM4 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM14 16h1v1h-1zM17 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM30 16h1v1h-1zM34 16h1v1h-1zM40 16h1v1h-1zM4 17h1v1h-1zM5 17h1v1h-1zM6 17h1v1h-1zM7 17h1v1h-1zM12 17h1v1h-1zM13 17h1v1h-1zM14 17h1v1h-1zM15 17h1v1h-1zM17 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM22 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM29 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM33 17h1v1h-1zM36 17h1v1h-1zM37 17h1v1h-1zM39 17h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM14 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM19 18h1v1h-1zM20 18h1v1h-1zM22 18h1v1h-1zM23 18h1v1h-1zM24 18h1v1h-1zM25 18h1v1h-1zM29 18h1v1h-1zM31 18h1v1h-1zM32 18h1v1h-1zM33 18h1v1h-1zM34 18h1v1h-1zM36 18h1v1h-1zM37 18h1v1h-1zM38 18h1v1h-1zM39 18h1v1h-1zM40 18h1v1h-1zM5 19h1v1h-1zM6 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM12 19h1v1h-1zM14 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM18 19h1v1h-1zM19 19h1v1h-1zM23 19h1v1h-1zM26 19h1v1h-1zM27 19h1v1h-1zM31 19h1v1h-1zM32 19h1v1h-1zM34 19h1v1h-1zM35 19h1v1h-1zM37 19h1v1h-1zM38 19h1v1h-1zM5 20h1v1h-1zM6 20h1v1h-1zM7 20h1v1h-1zM10 20h1v1h-1zM11 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM26 20h1v1h-1zM27 20h1v1h-1zM28 20h1v1h-1zM29 20h1v1h-1zM34 20h1v1h-1zM38 20h1v1h-1zM39 20h1v1h-1zM4 21h1v1h-1zM5 21h1v1h-1zM11 21h1v1h-1zM13 21h1v1h-1zM16 21h1v1h-1zM18 21h1v1h-1zM31 21h1v1h-1zM33 21h1v1h-1zM35 21h1v1h-1zM37 21h1v1h-1zM38 21h1v1h-1zM4 22h1v1h-1zM10 22h1v1h-1zM13 22h1v1h-1zM14 22h1v1h-1zM16 22h1v1h-1zM20 22h1v1h-1zM23 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM32 22h1v1h-1zM33 22h1v1h-1zM38 22h1v1h-1zM40 22h1v1h-1zM5 23h1v1h-1zM9 23h1v1h-1zM14 23h1v1h-1zM15 23h1v1h-1zM17 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM22 23h1v1h-1zM23 23h1v1h-1zM24 23h1v1h-1zM26 23h1v1h-1zM27 23h1v1h-1zM29 23h1v1h-1zM30 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM33 23h1v1h-1zM34 23h1v1h-1zM36 23h1v1h-1zM37 23h1v1h-1zM40 23h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM8 24h1v1h-1zM10 24h1v1h-1zM11 24h1v1h-1zM16 24h1v1h-1zM17 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM23 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM33 24h1v1h-1zM34 24h1v1h-1zM35 24h1v1h-1zM36 24h1v1h-1zM4 25h1v1h-1zM7 25h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM12 25h1v1h-1zM13 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM26 25h1v1h-1zM27 25h1v1h-1zM29 25h1v1h-1zM30 25h1v1h-1zM31 25h1v1h-1zM36 25h1v1h-1zM38 25h1v1h-1zM39 25h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM7 26h1v1h-1zM9 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM13 26h1v1h-1zM14 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM20 26h1v1h-1zM25 26h1v1h-1zM27 26h1v1h-1zM28 26h1v1h-1zM30 26h1v1h-1zM31 26h1v1h-1zM32 26h1v1h-1zM33 26h1v1h-1zM35 26h1v1h-1zM37 26h1v1h-1zM40 26h1v1h-1zM4 27h1v1h-1zM5 27h1v1h-1zM9 27h1v1h-1zM15 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM30 27h1v1h-1zM31 27h1v1h-1zM33 27h1v1h-1zM34 27h1v1h-1zM35 27h1v1h-1zM36 27h1v1h-1zM37 27h1v1h-1zM38 27h1v1h-1zM5 28h1v1h-1zM7 28h1v1h-1zM10 28h1v1h-1zM11 28h1v1h-1zM15 28h1v1h-1zM17 28h1v1h-1zM19 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM28 28h1v1h-1zM30 28h1v1h-1zM32 28h1v1h-1zM34 28h1v1h-1zM35 28h1v1h-1zM4 29h1v1h-1zM12 29h1v1h-1zM14 29h1v1h-1zM15 29h1v1h-1zM16 29h1v1h-1zM22 29h1v1h-1zM23 29h1v1h-1zM24 29h1v1h-1zM27 29h1v1h-1zM30 29h1v1h-1zM31 29h1v1h-1zM33 29h1v1h-1zM36 29h1v1h-1zM4 30h1v1h-1zM5 30h1v1h-1zM6 30h1v1h-1zM8 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM12 30h1v1h-1zM13 30h1v1h-1zM15 30h1v1h-1zM17 30h1v1h-1zM18 30h1v1h-1zM19 30h1v1h-1zM23 30h1v1h-1zM24 30h1v1h-1zM26 30h1v1h-1zM28 30h1v1h-1zM29 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM32 30h1v1h-1zM33 30h1v1h-1zM35 30h1v1h-1zM36 30h1v1h-1zM37 30h1v1h-1zM39 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM7 31h1v1h-1zM17 31h1v1h-1zM20 31h1v1h-1zM23 31h1v1h-1zM26 31h1v1h-1zM27 31h1v1h-1zM28 31h1v1h-1zM31 31h1v1h-1zM32 31h1v1h-1zM35 31h1v1h-1zM37 31h1v1h-1zM38 31h1v1h-1zM39 31h1v1h-1zM40 31h1v1h-1zM4 32h1v1h-1zM6 32h1v1h-1zM7 32h1v1h-1zM8 32h1v1h-1zM10 32h1v1h-1zM11 32h1v1h-1zM12 32h1v1h-1zM13 32h1v1h-1zM15 32h1v1h-1zM17 32h1v1h-1zM18 32h1v1h-1zM19 32h1v1h-1zM23 32h1v1h-1zM24 32h1v1h-1zM27 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM31 32h1v1h-1zM32 32h1v1h-1zM33 32h1v1h-1zM34 32h1v1h-1zM35 32h1v1h-1zM36 32h1v1h-1zM37 32h1v1h-1zM38 32h1v1h-1zM39 32h1v1h-1zM12 33h1v1h-1zM13 33h1v1h-1zM14 33h1v1h-1zM18 33h1v1h-1zM19 33h1v1h-1zM21 33h1v1h-1zM23 33h1v1h-1zM24 33h1v1h-1zM25 33h1v1h-1zM26 33h1v1h-1zM28 33h1v1h-1zM29 33h1v1h-1zM30 33h1v1h-1zM32 33h1v1h-1zM36 33h1v1h-1zM38 33h1v1h-1zM39 33h1v1h-1zM4 34h1v1h-1zM5 34h1v1h-1zM6 34h1v1h-1zM7 34h1v1h-1zM8 34h1v1h-1zM9 34h1v1h-1zM10 34h1v1h-1zM12 34h1v1h-1zM13 34h1v1h-1zM16 34h1v1h-1zM19 34h1v1h-1zM21 34h1v1h-1zM22 34h1v1h-1zM23 34h1v1h-1zM25 34h1v1h-1zM27 34h1v1h-1zM29 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h1v1h-1zM40 34h1v1h-1zM4 35h1v1h-1zM10 35h1v1h-1zM12 35h1v1h-1zM13 35h1v1h-1zM15 35h1v1h-1zM16 35h1v1h-1zM19 35h1v1h-1zM23 35h1v1h-1zM24 35h1v1h-1zM28 35h1v1h-1zM29 35h1v1h-1zM31 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM39 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h1v1h-1zM7 36h1v1h-1zM8 36h1v1h-1zM10 36h1v1h-1zM12 36h1v1h-1zM13 36h1v1h-1zM14 36h1v1h-1zM19 36h1v1h-1zM20 36h1v1h-1zM22 36h1v1h-1zM30 36h1v1h-1zM31 36h1v1h-1zM32 36h1v1h-1zM33 36h1v1h-1zM34 36h1v1h-1zM35 36h1v1h-1zM36 36h1v1h-1zM40 36h1v1h-1zM4 37h1v1h-1zM6 37h1v1h-1zM7 37h1v1h-1zM8 37h1v1h-1zM10 37h1v1h-1zM12 37h1v1h-1zM15 37h1v1h-1zM17 37h1v1h-1zM23 37h1v1h-1zM24 37h1v1h-1zM25 37h1v1h-1zM26 37h1v1h-1zM27 37h1v1h-1zM32 37h1v1h-1zM33 37h1v1h-1zM34 37h1v1h-1zM40 37h1v1h-1zM4 38h1v1h-1zM6 38h1v1h-1zM7 38h1v1h-1zM8 38h1v1h-1zM10 38h1v1h-1zM16 38h1v1h-1zM18 38h1v1h-1zM21 38h1v1h-1zM22 38h1v1h-1zM26 38h1v1h-1zM27 38h1v1h-1zM28 38h1v1h-1zM29 38h1v1h-1zM31 38h1v1h-1zM36 38h1v1h-1zM38 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM14 39h1v1h-1zM17 39h1v1h-1zM18 39h1v1h-1zM19 39h1v1h-1zM21 39h1v1h-1zM22 39h1v1h-1zM24 39h1v1h-1zM26 39h1v1h-1zM27 39h1v1h-1zM28 39h1v1h-1zM30 39h1v1h-1zM34 39h1v1h-1zM36 39h1v1h-1zM38 39h1v1h-1zM39 39h1v1h-1zM40 39h1v1h-1zM4 40h1v1h-1zM5 40h1v1h-1zM6 40h1v1h-1zM7 40h1v1h-1zM8 40h1v1h-1zM9 40h1v1h-1zM10 40h1v1h-1zM12 40h1v1h-1zM14 40h1v1h-1zM15 40h1v1h-1zM16 40h1v1h-1zM18 40h1v1h-1zM23 40h1v1h-1zM24 40h1v1h-1zM27 40h1v1h-1zM32 40h1v1h-1zM34 40h1v1h-1zM35 40h1v1h-1zM37 40h1v1h-1zM40 40h1v1h-1z"/></svg></div>
+    <p class="qrurl" id="qrUrl">https://zynpoztrk2-wq.github.io/zeynepsenaozturk.github.io/ai-prof-style/</p>
+    <div class="qrbtns">
+      <button class="btn" id="qrCopy" type="button">Copy link</button>
+      <button class="btn main" id="qrClose" type="button">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const CARDS = [
+  {q:"Do you think students learn better when they use AI tools, or do these tools make students too dependent on technology?",
+   f:[],
+   a:["I think it depends on how students use AI tools. When they are used well, AI tools can help students learn better. For example, students can get instant explanations, practise with personalised exercises and receive feedback on their writing at any time. This is especially helpful for students who are shy about asking questions in class or who need extra practice.",
+      "However, there is a real risk of dependence. If students ask AI to solve every problem or write every essay, they don't develop their own thinking and problem-solving skills. They may get good grades on homework, but then struggle in exams or in real life, where AI isn't always available. In my opinion, the key is balance and guidance. Teachers should show students how to use AI as a learning partner, for instance to check their work after they've tried, rather than as a shortcut. So AI can improve learning, but only if students stay actively involved."]},
+  {q:"Should students be allowed to use AI when completing homework assignments?",
+   f:["Why or why not?"],
+   a:["I believe students should be allowed to use AI for homework, but with clear rules. Banning AI completely is unrealistic, because students already use it, and they will need to use it in their future jobs anyway. It's better to teach them how to use it properly than to pretend it doesn't exist.",
+      "However, the rules should depend on the purpose of the assignment. If the goal is to practise writing, students should write the text themselves, and they could use AI only to get feedback afterwards. If the goal is research, AI could help them find ideas, as long as they check the information in reliable sources. Students should also be honest and explain how they used AI in their work. In addition, teachers could design assignments that are harder to complete with AI alone, such as personal reflections or classroom presentations. In this way, AI becomes a learning tool, not a way of cheating."]},
+  {q:"Do you think AI will create more job opportunities than it removes in the future?",
+   f:[],
+   a:["This is a difficult question, and even experts disagree about it. On the one hand, I think AI will remove many jobs, especially those that involve repetitive tasks. For example, some customer service, data entry and translation jobs are already changing, because AI can do parts of them faster and more cheaply.",
+      "On the other hand, history shows that new technologies usually create new types of jobs as well. When computers became common, many traditional jobs disappeared, but completely new careers appeared, such as web designers and software developers. Similarly, AI is already creating jobs in areas like data analysis and cybersecurity, and there will probably be jobs in the future that we can't even imagine today. In my opinion, AI may create as many jobs as it removes in the long term, but the transition will be difficult. Many workers will need to learn new skills, so governments and companies should invest in training programmes."]},
+  {q:"Is it better for companies to use AI to reduce costs or to continue employing human workers?",
+   f:[],
+   a:["I don't think companies have to choose only one option. In my opinion, the best approach is to use AI to support human workers rather than to replace them completely. Of course, I understand why companies want to use AI. It can work twenty-four hours a day, it doesn't get tired, and it can reduce costs, which is important for staying competitive.",
+      "However, replacing too many workers with AI can create serious problems. Unemployment could increase, which would hurt families and the economy, because people without jobs can't buy products. Also, many customers still prefer to deal with real people, especially when they have a complicated problem. Human workers bring creativity, empathy and judgement that AI doesn't have. For example, a bank could use AI to answer simple questions online, while human staff deal with complex cases and give personal advice. This way, the company saves money, keeps its customers happy and protects its employees."]},
+  {q:"Do you think people will become less creative if they use AI too often?",
+   f:[],
+   a:["Yes, I think there is a real risk that people could become less creative if they rely on AI too much. Creativity is like a muscle; if we don't use it, it becomes weaker. If people ask AI to write their stories, design their posters or come up with all their ideas, they may stop practising the difficult but important process of thinking creatively themselves.",
+      "Another problem is that AI usually produces content based on what already exists, so if everyone uses the same tools, a lot of work may start to look and sound similar. However, I don't think AI is necessarily bad for creativity. Used in the right way, it can actually inspire people. For example, a writer might ask AI for a few unusual ideas and then develop them in their own way, or a musician might use AI to experiment with new sounds. So it depends on whether people use AI as a starting point or as a replacement for their own imagination."]},
+  {q:"Should schools teach students how to use AI responsibly?",
+   f:["Why?"],
+   a:["Yes, I strongly believe schools should teach students how to use AI responsibly. AI tools are already part of students' lives, whether schools like it or not. If students don't learn how to use them properly, they may use them in harmful ways, for example by cheating on assignments or by believing incorrect information.",
+      "Schools could teach several important things. First, students should learn that AI can make mistakes and sometimes invents information, so they need to check facts in reliable sources. Second, they should understand issues like privacy, so they know not to share personal information carelessly. Third, they should learn about honesty and when using AI is acceptable in their schoolwork. Finally, schools can teach students how to use AI effectively, for instance how to ask good questions and how to use it to support their learning. These skills will be essential in their future jobs, so it makes sense to start learning them at school."]},
+  {q:"Would you trust advice from an AI system more than advice from an experienced person?",
+   f:["Why or why not?"],
+   a:["In most situations, I would trust advice from an experienced person more than advice from an AI system, although it depends on the topic. An experienced person has real-life knowledge that AI doesn't have. For example, if I wanted career advice, a professional who has worked in that field for twenty years could tell me about challenges and opportunities that are not written anywhere online. They can also understand my personality and my situation.",
+      "Another reason is that AI can sometimes give answers that sound very confident but are actually wrong, and it's often difficult to know where its information comes from. On the other hand, AI can be useful for certain types of advice, such as quick facts or general information, and it's available at any time. Also, experienced people can sometimes be biased or out of date. So, in my opinion, the best approach is to use AI to collect general information and then discuss important decisions with an experienced person."]},
+  {q:"Do you think AI will make education more equal, or will it increase the gap between rich and poor students?",
+   f:[],
+   a:["I think AI has the potential to make education more equal, but in reality, it may increase the gap if nothing is done. On the positive side, AI tools can give every student a kind of personal tutor. A student in a small village who can't afford private lessons could still get explanations, practice exercises and feedback from a free AI tool. This could reduce some of the advantages that rich students have.",
+      "However, there are some serious problems. Not all students have a good computer, a smartphone or a reliable internet connection at home. In addition, the most advanced AI tools are often expensive, so wealthy families can pay for better versions. Students from richer backgrounds may also get more guidance from parents and schools about how to use AI effectively. Therefore, I believe governments and schools should make sure all students have access to devices, the internet and AI training. Otherwise, AI could make existing inequalities even worse."]},
+  {q:"Should companies be allowed to use people's personal information to improve AI systems?",
+   f:[],
+   a:["In my opinion, companies should only be allowed to use people's personal information if people clearly agree to it and if strict rules protect their privacy. I understand that AI systems need large amounts of data to improve, and personal data can make them more accurate and useful. For example, health data could help AI detect diseases earlier.",
+      "However, personal information is very sensitive. If it's stolen or misused, people could become victims of fraud, discrimination or manipulation. The problem is that many people don't read the long terms and conditions, so they don't really know how their data is being used. That's why I believe companies should explain clearly, in simple language, what data they collect and why. People should be able to say no without losing access to the service, and data should be anonymous whenever possible. Finally, governments need strong laws and big fines for companies that break these rules."]},
+  {q:"Do you think AI-generated art and music are as valuable as art and music created by humans?",
+   f:[],
+   a:["Personally, I don't think AI-generated art and music are as valuable as works created by humans, although they can be impressive. For me, the value of art comes not only from how it looks or sounds, but also from the human experience behind it. When I listen to a song written after a painful break-up, or look at a painting created during a war, I feel a connection with the artist's emotions and life story. AI doesn't have real feelings or experiences, so its work feels emptier to me.",
+      "Another issue is that AI learns from millions of works created by human artists, often without their permission, which raises questions about fairness and copyright. On the other hand, I accept that AI art can be beautiful, and many people enjoy it. It can also be a useful tool for artists who combine it with their own ideas. So AI art may have some value, but I believe human creativity will always be more meaningful."]},
+  {q:"Is it more important for AI technology to develop quickly or to develop safely?",
+   f:[],
+   a:["I believe it's more important for AI to develop safely, even if this means it develops a bit more slowly. AI is becoming very powerful, and it's already used in important areas like healthcare, finance and transport. If it develops too quickly without proper testing, mistakes could have serious consequences. For example, a faulty AI system in a hospital could give a wrong diagnosis, or a self-driving car could cause an accident.",
+      "There are also risks such as the spread of false information, privacy problems and AI being used for criminal purposes. These problems are much easier to prevent than to fix after they happen. Of course, I understand that speed is important too. Faster development can bring benefits earlier, such as new medical treatments, and companies and countries are competing with each other. But in my opinion, the best approach is responsible progress: developing AI step by step, with careful testing and clear rules, so that people can trust it."]},
+  {q:"Do you think AI will improve communication between people or reduce face-to-face interaction?",
+   f:[],
+   a:["I think AI will do both, depending on how people use it. On the positive side, AI can improve communication in many ways. Translation tools allow people who speak different languages to understand each other almost instantly, which is great for travel, business and international friendships. AI can also help people with disabilities communicate more easily, for example by turning speech into text.",
+      "On the other hand, AI could reduce face-to-face interaction. Some people already spend more time talking to chatbots and using apps than talking to the people around them. If AI becomes even more realistic and entertaining, some people, especially lonely or shy people, might prefer it to real relationships, because it's easier and always available. However, real human connection is very important for our happiness and mental health. So I think we should use AI to connect with more people, but we should also make sure we keep spending quality time with friends and family in person."]},
+  {q:"Should people be informed when they are communicating with AI instead of a real person?",
+   f:[],
+   a:["Yes, absolutely. I think people have the right to know whether they are communicating with AI or with a real person. The main reason is honesty. If a company pretends that a chatbot is a human, it's deceiving its customers, and this could damage trust once people find out.",
+      "Knowing that you're talking to AI also helps you make better decisions. For example, you might be more careful about sharing personal information, or you might check its advice more carefully, because you know AI can make mistakes. It also matters emotionally. Some people might develop feelings of trust towards someone they believe is a real person, and finding out later that it was AI could be very upsetting. In addition, AI can now create very realistic voices and videos, which can be used to trick people. So clear labels and rules about AI communication are important to protect people from manipulation and fraud."]},
+  {q:"Do you think young people are better prepared for an AI-driven future than older generations?",
+   f:[],
+   a:["In many ways, yes, I think young people are better prepared. They have grown up surrounded by technology, so they usually learn new apps and tools very quickly and feel comfortable experimenting with them. Many students already use AI for studying, and they will probably find it natural to use AI in their future jobs. Young people are also generally more flexible and open to change.",
+      "However, I don't think being comfortable with technology is enough. Older generations often have important skills that young people are still developing, such as experience, patience, good judgement and strong communication skills. These skills will be very valuable in an AI-driven world, because people will need to evaluate AI's answers and make wise decisions. Also, some young people rely too heavily on technology and may struggle to think independently. So I believe both groups have strengths, and they can learn a lot from each other."]},
+  {q:"Who should be responsible when an AI system makes a serious mistake: the company that developed it or the person who used it?",
+   f:[],
+   a:["I think responsibility should usually be shared, but the company that developed the AI system should carry the main responsibility. Companies design, train and sell these systems, and they earn money from them. They know much more about how the system works and what its limitations are than ordinary users do. Therefore, they should test their products carefully and clearly warn users about possible risks.",
+      "However, users also have some responsibility, especially professionals. For example, if a doctor follows an AI system's diagnosis without checking it and the patient is harmed, the doctor should also be responsible, because they're expected to use their professional judgement. Similarly, if someone uses AI in a way the company clearly warned against, the user should be responsible. In my opinion, the answer depends on the situation, so governments need clear laws that explain who is responsible in different cases. This would protect people and encourage both companies and users to be more careful."]},
+  {q:"Do you think AI could make people less independent when solving everyday problems?",
+   f:[],
+   a:["Yes, I think there's a real risk that AI could make people less independent. Today, many people already rely on technology for simple tasks. For example, a lot of people can't find their way around a city without a map app, and some people can't do simple calculations without a phone. If people start asking AI to solve every small problem, from writing a short message to deciding what to cook, they may lose confidence in their own abilities.",
+      "This could be a problem when AI isn't available or makes a mistake. People who have never practised solving problems themselves might feel helpless. Also, problem-solving skills are important for our brain and our personal development. However, AI doesn't have to make us dependent. If we use it to learn how to solve problems, rather than just to get answers, it can actually make us more capable. So the important thing is to use AI wisely and to keep challenging ourselves."]},
+  {q:"Should employers encourage their workers to use AI, even if it could change their responsibilities?",
+   f:[],
+   a:["Yes, I think employers should encourage their workers to use AI, but they should do it carefully and fairly. AI can help workers become more productive by doing repetitive tasks, such as writing reports, organising data or answering simple emails. This gives workers more time for creative and human tasks, which are often more interesting and valuable.",
+      "However, changing responsibilities can make workers feel anxious, especially if they're worried about losing their jobs. That's why employers should provide proper training, so that workers feel confident using AI tools. They should also communicate clearly about how roles will change and involve workers in these decisions. For example, a company could ask its employees which tasks they would like AI to help with. Employers should also make sure that using AI doesn't simply mean more work for the same pay. If it's managed well, AI can make jobs better rather than threatening them, and both companies and employees can benefit."]},
+  {q:"Do you think the benefits of AI in healthcare are greater than the possible risks?",
+   f:[],
+   a:["Overall, I believe the benefits of AI in healthcare are greater than the risks, as long as it's used carefully. AI can analyse medical images, such as X-rays and scans, very quickly, and it can help doctors notice diseases like cancer at an early stage. It can also reduce doctors' paperwork, so they have more time for their patients. In addition, AI could help people in rural areas get medical advice when there are not enough doctors.",
+      "However, the risks shouldn't be ignored. AI systems can make mistakes, and in healthcare, mistakes can cost lives. Some systems may also be less accurate for certain groups of people if they were trained on limited data. Patient privacy is another serious concern, because medical information is extremely sensitive. That's why I think AI should support doctors, not replace them. Final decisions should always be made by qualified professionals, and AI tools should be carefully tested and regulated before they're used in hospitals."]},
+  {q:"Will AI make people's lives less stressful, or will it create new problems?",
+   f:[],
+   a:["I think AI will do both. On the one hand, it can make many parts of life less stressful. It can take care of boring and time-consuming tasks, like organising schedules, answering emails or filling in forms. It can also help people find information quickly and solve problems more easily. For example, students can get help with homework at any time, and busy parents can plan meals and shopping more efficiently.",
+      "On the other hand, AI may create new sources of stress. Many people are worried about losing their jobs to AI, which causes anxiety about the future. Fake news, fake videos and online scams created with AI can make it harder to know what to trust. Also, if AI makes work faster, employers might expect people to do even more in the same amount of time. So, in my opinion, AI is a tool, and whether it reduces or increases stress depends on how individuals, companies and governments decide to use it."]},
+  {q:"In your opinion, what is the most important skill people should develop to succeed in a world where AI is widely used?",
+   f:[],
+   a:["In my opinion, the most important skill is critical thinking. In a world full of AI tools, it will be very easy to get information and answers in seconds. However, not all of this information will be correct, and some of it may even be deliberately misleading. People will need to question what they read, check sources, compare different views and make their own judgements, instead of accepting everything AI tells them.",
+      "Critical thinking is also important for using AI effectively. To get useful results, people need to ask clear questions, evaluate the answers and decide how to use them in real situations. AI can produce information, but humans still need to decide what is true, what is important and what is right. Of course, other skills will also matter, such as creativity, communication and adaptability. But without critical thinking, people could easily become too dependent on AI or be manipulated by it. That's why I believe schools should develop this skill from an early age."]}
+];
+
+const EMOJI = ["🎓","📄","💼","🏢","🎨","🏫","🤝","⚖️","🔒","🎵",
+               "🛡️","💬","🏷️","👵","❓","🧩","👔","🏥","😌","🧠"];
+
+const NCOL = 6;
+const SCALES = [.88, 1, 1.15, 1.3, 1.45];
+const TIME = 60;
+
+const state = { done:new Set(), scale:1 };
+try{
+  const s = JSON.parse(localStorage.getItem("spk-ai-prof") || "null");
+  if(s){
+    if(Array.isArray(s.done)) state.done = new Set(s.done.filter(i => Number.isInteger(i) && i >= 0 && i < CARDS.length));
+    if(SCALES.includes(s.scale)) state.scale = s.scale;
+  }
+}catch(e){}
+function save(){
+  try{ localStorage.setItem("spk-ai-prof", JSON.stringify({done:[...state.done], scale:state.scale})); }catch(e){}
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const $ = id => document.getElementById(id);
+const deck = $("deck"), dlg = $("dlg"), inner = $("inner"), front = $("front"), back = $("back");
+const flipBtn = $("flipBtn"), timerBtn = $("timer");
+
+/* deck */
+function renderDeck(){
+  deck.innerHTML = CARDS.map((c,i) => `
+    <button class="pick k${i%NCOL}${state.done.has(i) ? " done" : ""}" type="button" data-i="${i}" aria-label="Card ${i+1}: ${esc(c.q)}">
+      <span class="head"><span class="no">${pad(i+1)}</span><span class="emo" aria-hidden="true">${EMOJI[i]}</span></span>
+      <span class="pq">${esc(c.q)}</span>
+      <span class="stamp">✓ Done</span>
+    </button>`).join("");
+  $("progress").textContent = `${state.done.size} of ${CARDS.length} done`;
+  $("meter").style.setProperty("--w", `${state.done.size / CARDS.length * 100}%`);
+}
+deck.addEventListener("click", e => {
+  const b = e.target.closest(".pick"); if(b) openCard(+b.dataset.i);
+});
+
+/* open card */
+let flipped = false;
+function openCard(i){
+  const c = CARDS[i], col = `k${i%NCOL}`;
+  const words = c.a.join(" ").split(/\s+/).length;
+  front.className = `face front ${col}`;
+  back.className = `face back ${col}`;
+  front.innerHTML = `
+    <div class="fhead"><span class="chip">Card ${pad(i+1)} / ${CARDS.length}</span><span class="bigemo" aria-hidden="true">${EMOJI[i]}</span></div>
+    <h2 class="bigq">${esc(c.q)}</h2>
+    ${c.f.length ? `<div class="follow"><span class="lbl">Follow-up</span>${c.f.map(f => `<p>${esc(f)}</p>`).join("")}</div>` : ""}`;
+  back.innerHTML = `
+    <div class="backhead"><span class="lbl">Sample answer</span><span class="meta">${words} words · about 1 minute</span></div>
+    <p class="backq">${esc(c.q)}</p>
+    <div class="answer">${c.a.map(p => `<p>${esc(p)}</p>`).join("")}</div>`;
+  setFlip(false, true);
+  resetTimer();
+  state.done.add(i);
+  save();
+  if(!dlg.open) dlg.showModal();
+  flipBtn.focus();
+  dlg.querySelector(".sheet").scrollTop = 0;
+}
+function setFlip(v, instant){
+  flipped = v;
+  if(instant){ inner.style.transition = "none"; }
+  inner.classList.toggle("flipped", v);
+  if(instant){ void inner.offsetWidth; inner.style.transition = ""; }
+  front.setAttribute("aria-hidden", v ? "true" : "false");
+  back.setAttribute("aria-hidden", v ? "false" : "true");
+  flipBtn.textContent = v ? "Back to question" : "Show sample answer";
+}
+flipBtn.addEventListener("click", () => setFlip(!flipped));
+$("close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("close", () => { stopTimer(); renderDeck(); });
+dlg.addEventListener("click", e => { if(e.target === dlg) dlg.close(); });
+
+/* one-minute timer */
+let left = TIME, tick = null, endAt = 0;
+function fmt(s){ return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function paintTimer(){
+  const secs = Math.ceil(left);
+  timerBtn.style.setProperty("--p", Math.max(0, left / TIME));
+  timerBtn.classList.toggle("up", left <= 0);
+  timerBtn.textContent = left <= 0 ? "Time’s up · Again"
+    : tick ? `Pause ${fmt(secs)}`
+    : left < TIME ? `Resume ${fmt(secs)}` : "Start 1:00";
+}
+function stopTimer(){ if(tick){ clearInterval(tick); tick = null; } }
+function resetTimer(){ stopTimer(); left = TIME; paintTimer(); }
+timerBtn.addEventListener("click", () => {
+  if(left <= 0){ resetTimer(); }
+  if(tick){ left = Math.max(0, (endAt - Date.now()) / 1000); stopTimer(); paintTimer(); return; }
+  endAt = Date.now() + left * 1000;
+  tick = setInterval(() => {
+    left = Math.max(0, (endAt - Date.now()) / 1000);
+    if(left <= 0) stopTimer();
+    paintTimer();
+  }, 200);
+  paintTimer();
+});
+
+/* tools */
+$("random").addEventListener("click", () => {
+  const all = [...CARDS.keys()];
+  const pool = all.filter(i => !state.done.has(i));
+  const from = pool.length ? pool : all;
+  openCard(from[Math.floor(Math.random() * from.length)]);
+});
+let resetArmed = null;
+const resetBtn = $("reset");
+function disarm(){ resetArmed = null; resetBtn.textContent = "Reset"; resetBtn.classList.remove("hot"); }
+resetBtn.addEventListener("click", () => {
+  if(resetArmed){ clearTimeout(resetArmed); disarm(); state.done.clear(); save(); renderDeck(); return; }
+  resetBtn.textContent = "Tap again to clear"; resetBtn.classList.add("hot");
+  resetArmed = setTimeout(disarm, 3000);
+});
+function applyScale(){ document.documentElement.style.setProperty("--scale", state.scale); }
+$("smaller").addEventListener("click", () => { state.scale = SCALES[Math.max(0, SCALES.indexOf(state.scale) - 1)]; applyScale(); save(); });
+$("bigger").addEventListener("click", () => { state.scale = SCALES[Math.min(SCALES.length - 1, SCALES.indexOf(state.scale) + 1)]; applyScale(); save(); });
+
+const fsBtn = $("fs");
+if(!document.fullscreenEnabled || !document.documentElement.requestFullscreen){ fsBtn.hidden = true; }
+fsBtn.addEventListener("click", () => {
+  if(document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+  else{ document.documentElement.requestFullscreen().catch(() => { fsBtn.hidden = true; }); }
+});
+document.addEventListener("fullscreenchange", () => {
+  fsBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+/* QR code */
+const qrDlg = $("qrDlg"), qrCopy = $("qrCopy");
+$("qrBtn").addEventListener("click", () => { qrDlg.showModal(); $("qrClose").focus(); });
+$("qrClose").addEventListener("click", () => qrDlg.close());
+qrDlg.addEventListener("click", e => { if(e.target === qrDlg) qrDlg.close(); });
+qrCopy.addEventListener("click", () => {
+  const text = $("qrUrl").textContent.trim();
+  const done = ok => { qrCopy.textContent = ok ? "Copied" : "Link selected"; setTimeout(() => { qrCopy.textContent = "Copy link"; }, 2000); };
+  const selectIt = () => { const r = document.createRange(); r.selectNodeContents($("qrUrl")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); done(false); };
+  try{ navigator.clipboard.writeText(text).then(() => done(true), selectIt); }catch(e){ selectIt(); }
+});
+
+applyScale();
+renderDeck();
+</script>
+</body>
+</html>
