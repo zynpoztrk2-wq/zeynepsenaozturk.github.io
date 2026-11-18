@@ -295,6 +295,7 @@ textarea.story-in{width:100%;min-height:180px;border:3px solid var(--line);borde
 .msg.teacher{background:#ECEBFF}
 .chat-tab{box-shadow:0 4px 12px #0006}
 .topbar .pill{color:var(--ink)}.topbar .pill.ok{color:#137A4D}.topbar .pill.warn{color:#8A6000}.topbar .pill.err{color:var(--bad)}
+.topbar .btn.ghost{background:transparent;color:#fff;border-color:#FFFFFF55}
 </style>
 </head>
 <body>
@@ -1108,7 +1109,7 @@ function botsTick() {
 function renderHostShell() {
   document.body.className = 'host';
   $('#app').innerHTML = `<div class="board">
-    <header class="topbar"><div class="brand">🎲 Story Cubes <small id="brandSet">Prep-C · Week 10</small></div><div class="grow"></div><span class="pill" id="roundPill" hidden></span><span class="pill" id="aiPill" hidden></span><span class="pill" id="connPill" hidden></span><div class="timer" id="timer" hidden></div><button class="btn go" id="tbRoll" data-act="roll" hidden>🎲 Give out the dice!</button></header>
+    <header class="topbar"><div class="brand">🎲 Story Cubes <small id="brandSet">Prep-C · Week 10</small></div><div class="grow"></div><span class="pill" id="roomPill" hidden></span><span class="pill" id="roundPill" hidden></span><span class="pill" id="aiPill" hidden></span><span class="pill" id="connPill" hidden></span><div class="timer" id="timer" hidden></div><button class="btn ghost" id="tbNew" data-act="newGame" title="Clear players and scores and start again">⟲ New game</button><button class="btn go" id="tbRoll" data-act="roll" hidden>🎲 Give out the dice!</button></header>
     <div class="bodyrow">
       <aside class="chatp" id="chatp"><div class="ch-head"><h3>💬 Class chat</h3><button data-act="chatLock" id="chLock"></button><button data-act="chatClear" title="Delete all messages">🗑</button><button data-act="chatHide" title="Hide the chat">◀</button></div>
         <div class="ch-off" id="chOff" hidden>Chat is closed for students</div><div class="ch-list" id="chList"></div>
@@ -1214,6 +1215,7 @@ function renderHostInner() {
   if (!G) return;
   const st = $('#stage'); const ph = G.phase;
   const bs = $('#brandSet'); if (bs) bs.textContent = 'Prep-C · ' + (SETS[G.settings.set] || 'Week 10');
+  const rm = $('#roomPill'); if (rm) { rm.hidden = !(MODE === 'p2p' && G.code); rm.textContent = '🔑 Room ' + (G.code || ''); }
   const rp = $('#roundPill'); rp.hidden = !G.round; rp.textContent = 'Round ' + G.round;
   const tr = $('#tbRoll'); tr.hidden = !(ph === 'lobby' || ph === 'results'); tr.textContent = ph === 'results' ? '🎲 Next round' : '🎲 Give out the dice!';
   if (ph === 'lobby') { if (H.view !== 'lobby') { st.innerHTML = lobbyHTML(); H.view = 'lobby'; H.qrFor = null; } updLobby(); }
@@ -1342,7 +1344,7 @@ function onHostClick(e) {
   else if (a === 'plus1') { G.endsAt += 60000; markDirty(); }
   else if (a === 'finish') confirmBox('Finish the game and show the winners?', () => { G.phase = 'end'; markDirty(); }, 'Finish');
   else if (a === 'again') { G.phase = 'lobby'; G.round = 0; G.rounds = {}; G.cubes = {}; G.usedWords = []; H.view = null; markDirty(); }
-  else if (a === 'newGame') confirmBox('Start a new game? Players and scores will be cleared.', () => { const keep = G.code; G = null; freshGame(); G.roster = {}; G.code = keep; H.bots = {}; H.chatEls = null; $('#chList').innerHTML = ''; markDirty(); }, 'New game');
+  else if (a === 'newGame') confirmBox('Start a new game? Players, group names and scores will be cleared. The room code stays the same.', () => { const keep = G.code; G = null; freshGame(); G.roster = {}; G.names = {}; G.code = keep; H.bots = {}; H.chatEls = null; $('#chList').innerHTML = ''; markDirty(); }, 'New game');
   else if (a === 'addBots') addBots();
   else if (a === 'resetName') { const g = +b.dataset.g; delete G.names[g]; markDirty(); }
   else if (a === 'resetGame') { H.view = null; const keep = G && G.code; G = null; freshGame(); G.code = keep || (MODE === 'p2p' ? newCode() : null); H.bots = {}; H.chatEls = null; const l = $('#chList'); if (l) l.innerHTML = ''; markDirty(); }
