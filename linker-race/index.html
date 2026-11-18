@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linker Race</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Board (projector): solid bar with clock, live scoreboard rows, feed of checked sentences. Phone: one item at a time with instant feedback. */
+  --bg:#e7ebf3; --panel:#ffffff; --ink:#151936; --muted:#596080; --line:#d3d9e6; --hi:#ffcd2e;
+  --ok:#12a150; --bad:#e5433b; --warn:#f5a524;
+  --display:"Bricolage Grotesque","Arial Black",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{font-size:17px}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.4;-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+[hidden]{display:none!important}
+h1,h2,h3{font-family:var(--display);font-weight:800;margin:0;letter-spacing:-.015em;line-height:1.05}
+.lab{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.hint{margin:0;color:var(--muted);font-size:.92rem}
+.muted{color:var(--muted)}
+.center{text-align:center}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.grow{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border:2.5px solid var(--ink);border-radius:12px;background:var(--panel);color:var(--ink);font-weight:700;cursor:pointer;box-shadow:0 4px 0 var(--ink);transition:transform .08s,box-shadow .08s;white-space:nowrap}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.primary{background:var(--hi)}
+.btn.big{width:100%;font-family:var(--display);font-weight:800;font-size:1.3rem;padding:14px 20px}
+.btn.small{padding:6px 12px;font-size:.9rem;box-shadow:0 3px 0 var(--ink)}
+.btn.sq{width:48px;height:48px;padding:0;font-size:1.4rem}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:0 4px 0 var(--ink)}
+.card{background:var(--panel);border:2.5px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);padding:18px 20px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.14);white-space:nowrap}
+.pill::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.pill.ok::before{background:#3ddc84}.pill.err::before{background:#ff6b5e}
+.phone .pill,.landing .pill{background:#fff;border:2px solid var(--line)}
+.seg{display:inline-flex;flex-wrap:wrap;border:2.5px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;padding:9px 14px;font-weight:700;cursor:pointer}
+.seg button+button{border-left:2.5px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.fieldv{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.mins{display:inline-flex;align-items:center;gap:12px}
+.mins output{font-family:var(--display);font-weight:800;font-size:2.4rem;line-height:1;min-width:2.2ch;text-align:center;font-variant-numeric:tabular-nums}
+.stripe{display:flex;gap:5px}
+.stripe i{display:block;width:34px;height:9px;border-radius:3px}
+
+/* Board */
+.bar{background:var(--ink);color:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:12px clamp(14px,3vw,36px)}
+.brand{display:flex;flex-direction:column;line-height:1.15}
+.brand b{font-family:var(--display);font-weight:800;font-size:1.6rem;letter-spacing:-.015em}
+.brand span{color:#b8bed8;font-size:.9rem}
+.bar .btn{border-color:#fff;box-shadow:0 4px 0 rgba(255,255,255,.3)}
+.bar .btn.small{box-shadow:0 3px 0 rgba(255,255,255,.3)}
+.clock{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,4.6vw,3.4rem);line-height:1;font-variant-numeric:tabular-nums;background:#fff;color:var(--ink);border-radius:16px;padding:6px 20px;min-width:5ch;text-align:center}
+.clock.paused{background:var(--hi)}
+.clock.low{background:var(--bad);color:#fff;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.62}}
+
+.lobby{display:grid;grid-template-columns:minmax(250px,310px) minmax(0,1fr) minmax(260px,330px);gap:22px;padding:22px clamp(14px,3vw,36px) 40px;align-items:start;max-width:1500px;margin:0 auto}
+@media (max-width:1050px){.lobby{grid-template-columns:1fr 1fr}.groupsarea{grid-column:1/-1;order:3}}
+@media (max-width:640px){.lobby{grid-template-columns:1fr}}
+.joincard{display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.joincard h2{font-size:1.5rem}
+.qr{width:100%;max-width:250px;aspect-ratio:1;background:#fff;border-radius:14px;overflow:hidden;display:grid;place-items:center;color:var(--muted);font-weight:700;font-size:.9rem;padding:4px}
+.qr svg{width:100%;height:100%;display:block}
+.code{font-family:var(--display);font-weight:800;font-size:3rem;letter-spacing:.14em;line-height:1}
+.link{font-size:.78rem;word-break:break-all;background:var(--bg);border-radius:10px;padding:6px 10px;user-select:all;font-weight:700;max-width:100%}
+.groupsarea{display:flex;flex-direction:column;gap:14px}
+.groupsarea h2{font-size:2.1rem;display:flex;align-items:baseline;gap:12px}
+.groupsarea h2 small{font-family:var(--body);font-size:1rem;color:var(--muted);font-weight:700;letter-spacing:0}
+.gtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.gt{position:relative;background:var(--tc);color:var(--tt);border-radius:20px;padding:16px 18px;box-shadow:0 6px 0 rgba(21,25,54,.85);font-family:var(--display);font-weight:800;font-size:1.5rem;line-height:1.1;overflow-wrap:anywhere;min-height:88px;display:flex;align-items:flex-end;animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+.gt.off{opacity:.45}
+.gt .x{position:absolute;top:8px;right:8px;border:0;background:color-mix(in srgb,var(--tt) 20%,transparent);color:var(--tt);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:.9rem}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.empty{border:2.5px dashed #b9c1d4;border-radius:20px;padding:28px;text-align:center;color:var(--muted);font-weight:700;margin:0}
+.settings{display:flex;flex-direction:column;gap:16px}
+.settings h2{font-size:1.5rem}
+
+.race{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr);gap:22px;padding:22px clamp(14px,3vw,36px) 40px;max-width:1600px;margin:0 auto;align-items:start}
+@media (max-width:980px){.race{grid-template-columns:1fr}}
+.sb{position:relative}
+.srow{position:absolute;left:0;right:0;display:grid;grid-template-columns:3rem minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--tc);color:var(--tt);border-radius:20px;padding:10px 22px;box-shadow:0 6px 0 rgba(21,25,54,.85);transition:top .6s cubic-bezier(.2,.8,.2,1)}
+.srow .rk{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1}
+.srow .nm{font-family:var(--display);font-weight:800;font-size:1.55rem;line-height:1.1;overflow-wrap:anywhere}
+.srow .pg{height:12px;border-radius:999px;background:color-mix(in srgb,var(--tt) 26%,transparent);overflow:hidden;margin-top:8px}
+.srow .pg i{display:block;height:100%;width:0;background:var(--tt);border-radius:inherit;transition:width .4s ease}
+.srow .sm{font-weight:700;font-size:.9rem;opacity:.85;margin-top:4px;font-variant-numeric:tabular-nums}
+.srow .sc{font-family:var(--display);font-weight:800;font-size:3.3rem;line-height:1;font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
+.srow .sc.bump{animation:bump .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes bump{40%{transform:scale(1.3)}}
+.feed{display:flex;flex-direction:column;gap:10px}
+.feed h3{font-size:1.35rem}
+#feed{display:flex;flex-direction:column;gap:8px}
+.chk{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;border-radius:14px;padding:10px 12px;background:var(--bg);border-left:7px solid var(--tc)}
+.chk.new{animation:slide .4s ease}
+@keyframes slide{from{transform:translateX(16px);opacity:0}}
+.chk .mk{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:800;background:var(--ok)}
+.chk.bad .mk{background:var(--bad)}
+.chk .meta{font-size:.8rem;color:var(--muted);font-weight:700}
+.chk .sent{font-size:1.02rem;font-weight:700;overflow-wrap:anywhere;line-height:1.3}
+.chk .fbm{font-size:.85rem;color:var(--muted)}
+.chk.bad .fbm{color:#a8281f}
+.flip{border:2px solid var(--line);background:#fff;border-radius:10px;font-weight:800;font-size:.78rem;padding:4px 8px;cursor:pointer;white-space:nowrap}
+.flip:hover{border-color:var(--ink)}
+
+.end{max-width:1300px;margin:0 auto;padding:26px clamp(14px,3vw,36px) 48px;display:flex;flex-direction:column;gap:20px}
+.reason{margin:0;font-weight:700;font-size:1.15rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+.winner{font-size:clamp(3rem,8vw,6rem);line-height:.98;letter-spacing:-.035em;text-wrap:balance}
+.winner span{background:var(--tc);color:var(--tt);padding:0 .16em;border-radius:.14em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.tie{margin:0;color:var(--muted);font-size:1.1rem}
+.podium{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.podium li{display:grid;grid-template-columns:2.6rem minmax(150px,1.1fr) minmax(0,2fr) auto;align-items:center;gap:16px;background:var(--panel);border:2.5px solid var(--ink);border-radius:18px;padding:12px 18px;box-shadow:0 5px 0 var(--ink)}
+.podium li.first{background:var(--tc);color:var(--tt)}
+.place{font-family:var(--display);font-weight:800;font-size:1.9rem;line-height:1}
+.pname{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:1.5rem;line-height:1.1;overflow-wrap:anywhere}
+.sw{flex:none;width:18px;height:18px;border-radius:5px;background:var(--tc)}
+.first .sw{background:var(--tt)}
+.pbar{height:18px;border-radius:999px;background:var(--bg);overflow:hidden}
+.first .pbar{background:color-mix(in srgb,var(--tt) 25%,transparent)}
+.pbar i{display:block;height:100%;width:var(--w);background:var(--tc);border-radius:inherit;animation:grow .9s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--k) * .09s)}
+.first .pbar i{background:var(--tt)}
+@keyframes grow{from{width:0}}
+.pscore{font-family:var(--display);font-weight:800;font-size:2.1rem;line-height:1;font-variant-numeric:tabular-nums}
+.pscore small{font-size:.5em;opacity:.65;margin-left:2px}
+@media (max-width:640px){.podium li{grid-template-columns:2.2rem minmax(0,1fr) auto}.pbar{grid-column:1/-1;grid-row:2}}
+.review{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:12px}
+.rv{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.rvh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rvh .n{display:inline-grid;place-items:center;min-width:30px;height:26px;padding:0 6px;border-radius:8px;background:var(--ink);color:#fff;font-size:.8rem;font-weight:700}
+.rvh b{font-family:var(--display);font-weight:800;font-size:1.2rem}
+.rvh .v{color:var(--muted)}
+.rvs{display:flex;gap:8px;align-items:baseline;font-size:1rem}
+.rvs .sw{width:12px;height:12px;border-radius:4px;transform:translateY(1px)}
+.rvs.none{color:var(--muted);font-style:italic}
+
+/* Phone */
+.phone{max-width:560px;margin:0 auto;padding:14px 14px 40px;display:flex;flex-direction:column;gap:14px;min-height:100vh}
+.pcard{background:#fff;border:2.5px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);padding:18px}
+.joinp{display:flex;flex-direction:column;gap:12px;margin-top:6vh}
+.joinp h1{font-size:2.6rem}
+.joinp form{display:flex;flex-direction:column;gap:8px}
+.in{width:100%;border:2.5px solid var(--line);border-radius:14px;padding:12px 14px;font-size:1.15rem;font-weight:700;background:#fff;outline:none}
+.in:focus{border-color:var(--ink)}
+.code-in{text-transform:uppercase;letter-spacing:.2em;font-family:var(--display);font-weight:800;font-size:1.6rem;text-align:center}
+.gtbig{background:var(--tc);color:var(--tt);border-radius:22px;padding:22px 20px;box-shadow:0 6px 0 rgba(21,25,54,.85);font-family:var(--display);font-weight:800;font-size:2.2rem;line-height:1.05;overflow-wrap:anywhere;min-height:110px;display:flex;align-items:flex-end}
+.ptop{position:sticky;top:8px;z-index:5;display:flex;align-items:center;gap:10px;background:var(--tc);color:var(--tt);border-radius:18px;padding:10px 12px 10px 16px;box-shadow:0 5px 0 rgba(21,25,54,.85)}
+.ptop .nm{font-family:var(--display);font-weight:800;font-size:1.2rem;flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.1}
+.ptop .ps{font-family:var(--display);font-weight:800;font-size:1.35rem;font-variant-numeric:tabular-nums}
+.ptop .pt{font-family:var(--display);font-weight:800;font-size:1.3rem;background:#fff;color:var(--ink);border-radius:10px;padding:2px 10px;font-variant-numeric:tabular-nums}
+.ptop .pt.low{background:var(--bad);color:#fff}
+.rankline{margin:0;font-weight:700;color:var(--muted);text-align:center}
+.pausedb{background:var(--hi);border-radius:14px;padding:10px 14px;font-weight:800;text-align:center}
+.strip{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-width:42px;height:38px;border-radius:10px;border:2px solid var(--line);background:#fff;font-weight:800;cursor:pointer;font-variant-numeric:tabular-nums}
+.chip.cur{border-color:var(--ink);box-shadow:0 3px 0 var(--ink)}
+.chip.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.chip.ok.cur{border-color:var(--ink)}
+.chip.bad{background:#ffe1de;border-color:var(--bad);color:#a8281f}
+.chip.wait{background:#fff3cd;border-color:var(--warn)}
+.icard .inum{color:var(--muted);font-weight:700;font-size:.9rem}
+.icard .ilk{font-family:var(--display);font-weight:800;font-size:2.5rem;line-height:1;margin-top:2px}
+.icard .iv{font-size:1.35rem;font-weight:700;margin-top:6px}
+.icard .sep{color:var(--muted)}
+.icard textarea{min-height:120px;resize:vertical;line-height:1.35;margin:14px 0 12px;display:block}
+.icard .done{margin:14px 0 12px;padding:12px 14px;border-radius:14px;background:#effaf3;border:2px solid var(--ok);font-weight:700;font-size:1.1rem}
+.fb{margin-top:12px;border-radius:14px;padding:12px 14px;font-weight:700;font-size:1.05rem;line-height:1.35}
+.fb b{display:block;font-family:var(--display);font-size:1.3rem;margin-bottom:2px}
+.fb.ok{background:#dcfce7;color:#14532d}
+.fb.bad{background:#ffe4e1;color:#8a1c12}
+.fb.wait{background:#f1f3f8;color:var(--muted)}
+.shake{animation:shake .42s}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+
+/* Shared bits */
+.landing{max-width:560px;margin:0 auto;padding:10vh 16px 40px;display:flex;flex-direction:column;gap:14px}
+.landing h1{font-size:3.2rem}
+.landing ol{margin:0;padding-left:1.2em;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(21,25,54,.55);display:grid;place-items:center;padding:16px}
+.mbox{background:#fff;border:2.5px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);padding:22px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
+.mbox .qr{max-width:320px}
+.mmsg{font-size:1.2rem;font-weight:700;margin:0}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:60;background:var(--ink);color:#fff;font-weight:700;padding:12px 18px;border-radius:14px;max-width:92vw;text-align:center;animation:drop .3s}
+@keyframes drop{from{transform:translate(-50%,-20px);opacity:0}}
+.spin{display:inline-block;width:16px;height:16px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .8s linear infinite;vertical-align:-3px;margin-right:6px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.confetti{position:fixed;top:-20px;width:12px;height:18px;z-index:40;pointer-events:none;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"><p class="center muted" style="margin-top:20vh">Loading…</p></div>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+'use strict';
+/* Linker Race — classroom game for a GitHub Pages site.
+   Board (teacher) = host: keeps the game state and checks every sentence with grammar rules.
+   Phones (one per group) join with a room code over PeerJS (WebRTC) and send their sentences. */
+
+// ---------------- utils ----------------
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const INVIS = new RegExp('[' + [[0, 0x1f], [0x7f, 0x9f], [0x200b, 0x200f], [0x2028, 0x202e], [0x2060, 0x206f], [0xfeff, 0xfeff]].map(r => r.map(c => '\\u' + c.toString(16).padStart(4, '0')).join('-')).join('') + ']', 'g');
+const clean = (s, max = 200) => String(s ?? '').replace(INVIS, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+const ALPH = 'abcdefghijkmnpqrstuvwxyz23456789';
+const rid = (n = 8) => { const a = crypto.getRandomValues(new Uint8Array(n)); let s = ''; for (const x of a) s += ALPH[x % ALPH.length]; return s; };
+const CODE_ALPH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const newCode = () => { const a = crypto.getRandomValues(new Uint8Array(5)); let s = ''; for (const x of a) s += CODE_ALPH[x % CODE_ALPH.length]; return s; };
+const now = () => Date.now();
+const fmt = ms => { const s = Math.ceil(Math.max(0, ms) / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const ord = n => n + ((n % 100 > 10 && n % 100 < 14) ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th'));
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const params = new URLSearchParams(location.search);
+function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+function toast(msg, ms = 2600) { const t = el(`<div class="toast">${esc(msg)}</div>`); document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+function modal(html) { const m = el(`<div class="modal"><div class="mbox">${html}</div></div>`); document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) m.remove(); }); return m; }
+function confirmBox(msg, fn, yes) { const m = modal(`<p class="mmsg">${esc(msg)}</p><div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" data-ok>${esc(yes)}</button></div>`); m.querySelector('[data-ok]').onclick = () => { m.remove(); fn(); }; }
+function confetti(n = 90) { const cs = ['#e5433b', '#1d6ee6', '#10a067', '#f7b21b', '#7a4de0', '#e0418a', '#0e9bab', '#f06a28']; for (let i = 0; i < n; i++) { const c = el('<i class="confetti"></i>'); c.style.left = Math.random() * 100 + 'vw'; c.style.background = cs[i % cs.length]; c.style.animationDuration = 2.2 + Math.random() * 2.2 + 's'; c.style.animationDelay = Math.random() * .8 + 's'; document.body.appendChild(c); setTimeout(() => c.remove(), 5500); } }
+function shake(node) { if (!node) return; node.classList.remove('shake'); void node.offsetWidth; node.classList.add('shake'); }
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const PILL = {};
+function setPill(id, state, text) { PILL[id] = [state, text]; applyPill(id); }
+function applyPill(id) { const p = document.getElementById(id), v = PILL[id]; if (!p || !v) return; p.className = 'pill ' + (v[0] === 'online' ? 'ok' : v[0] === 'offline' ? 'err' : ''); p.textContent = v[1]; p.hidden = false; }
+
+/*CHECKER-START*/
+// ---------------- items ----------------
+const ITEMS = [
+[1,'although','prepare','forget'],[2,'whereas','prefer','enjoy'],[3,'however','promise','cancel'],[4,'nevertheless','struggle','continue'],
+[5,'despite','experience','succeed'],[6,'because of','oversleep','miss'],[7,'thanks to','practise','improve'],[8,'since','feel','leave'],
+[9,'unless','revise','fail'],[10,'otherwise','hurry','miss'],[11,'so that','save','buy'],[12,'in case','rain','carry'],
+[13,'consequently','ignore','worsen'],[14,"that's why",'feel','refuse'],[15,'moreover','support','encourage'],[16,'furthermore','reduce','improve'],
+[17,'in fact','seem','perform'],[18,'instead','drive','walk'],[19,'although','disagree','respect'],[20,'whereas','work','relax'],
+[21,'however','invest','lose'],[22,'nevertheless','face','overcome'],[23,'despite','train','lose'],[24,'because of','break down','arrive'],
+[25,'thanks to','cooperate','complete'],[26,'since','increase','introduce'],[27,'unless','apologize','forgive'],[28,'otherwise','wear','freeze'],
+[29,'so that','explain','understand'],[30,'in case','forget','write'],[31,'consequently','neglect','decline'],[32,"that's why",'misunderstand','argue'],
+[33,'moreover','provide','motivate'],[34,'furthermore','promote','create'],[35,'in fact','claim','prove'],[36,'instead','complain','suggest'],
+[37,'although','know','hesitate'],[38,'whereas','depend','choose'],[39,'however','aim','achieve'],[40,'nevertheless','doubt','attempt'],
+[41,'despite','revise','make'],[42,'because of','miscommunicate','delay'],[43,'thanks to','participate','develop'],[44,'since','lack','apply'],
+[45,'unless','reduce','increase'],[46,'otherwise','back up','lose'],[47,'so that','organize','find'],[48,'in case','become','contact'],
+[49,'consequently','underestimate','fail'],[50,"that's why",'face','relocate']
+];
+const IT = {}; for (const [n, l, a, b] of ITEMS) IT[n] = { n, l, a, b };
+const SETS = { '1': [1, 18], '2': [19, 36], '3': [37, 50], 'all': [1, 50] };
+const TYPE = { 'although': 'conj', 'whereas': 'conj', 'since': 'conj', 'unless': 'conj', 'so that': 'conj', 'in case': 'conj',
+  'however': 'adv', 'nevertheless': 'adv', 'consequently': 'adv', "that's why": 'adv', 'moreover': 'adv', 'furthermore': 'adv', 'in fact': 'adv', 'otherwise': 'adv', 'instead': 'adv',
+  'despite': 'prep', 'because of': 'prep', 'thanks to': 'prep' };
+
+// ---------------- rule checker ----------------
+const LINK = { 'although': [['although']], 'whereas': [['whereas']], 'however': [['however']], 'nevertheless': [['nevertheless']],
+  'despite': [['despite'], ['in', 'spite', 'of']], 'because of': [['because', 'of']], 'thanks to': [['thanks', 'to']], 'since': [['since']],
+  'unless': [['unless']], 'otherwise': [['otherwise']], 'so that': [['so', 'that']], 'in case': [['in', 'case']], 'consequently': [['consequently']],
+  "that's why": [["that's", 'why'], ['that', 'is', 'why'], ['thats', 'why']], 'moreover': [['moreover']], 'furthermore': [['furthermore']],
+  'in fact': [['in', 'fact']], 'instead': [['instead']] };
+const COMMA_AFTER = new Set(['however', 'nevertheless', 'consequently', 'moreover', 'furthermore', 'in fact']);
+const NEG = new Set(['not', 'never', "don't", "doesn't", "didn't", "won't", "can't", 'cannot', "isn't", "aren't", "wasn't", "weren't", "haven't", "hasn't", "hadn't", "shouldn't", "wouldn't", "couldn't", 'dont', 'doesnt', 'didnt', 'wont', 'cant']);
+const AUX_FIN = new Set(['am', 'is', 'are', 'was', 'were', 'has', 'have', 'had', 'do', 'does', 'did', 'will', 'would', 'can', 'could', 'shall', 'should', 'may', 'might', 'must',
+  "won't", "can't", "couldn't", "wouldn't", "shouldn't", "didn't", "doesn't", "don't", "isn't", "aren't", "wasn't", "weren't", "hasn't", "haven't", "hadn't"]);
+const SUBJ = new Set(['i', 'he', 'she', 'we', 'they']);
+const AMBIG = new Set(['you', 'it', 'there']);
+const DET = new Set(['the', 'a', 'an', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'this', 'that', 'these', 'those', 'some', 'many', 'much', 'every', 'each', 'all']);
+const IRREG_PAST = new Set(['was', 'were', 'had', 'did', 'went', 'came', 'made', 'took', 'got', 'saw', 'said', 'felt', 'left', 'bought', 'lost', 'broke', 'overcame', 'overslept',
+  'knew', 'chose', 'found', 'became', 'wrote', 'drove', 'wore', 'froze', 'understood', 'misunderstood', 'forgave', 'forgot', 'began', 'ran', 'gave', 'thought', 'told',
+  'kept', 'met', 'paid', 'sent', 'spent', 'stood', 'taught', 'won', 'fell', 'grew', 'heard', 'held', 'slept', 'spoke', 'woke', 'ate', 'drank', 'flew', 'meant', 'sold', 'brought', 'caught']);
+const ED_ADJ = new Set(['tired', 'bored', 'interested', 'excited', 'worried', 'scared', 'surprised', 'pleased', 'satisfied', 'disappointed', 'experienced', 'skilled', 'talented',
+  'advanced', 'limited', 'required', 'qualified', 'crowded', 'married', 'need', 'speed', 'indeed', 'hundred', 'learned', 'used', 'related', 'detailed', 'balanced',
+  'complicated', 'educated', 'organized', 'organised', 'motivated', 'prepared', 'delayed', 'unexpected', 'expected', 'red']);
+const NOUNABLE = new Set(['experience', 'support', 'increase', 'delay', 'doubt', 'contact', 'respect', 'work', 'lack', 'struggle', 'rain', 'neglect']);
+const EXTRA = { forget: ['forgot', 'forgotten'], feel: ['felt', 'feelings'], leave: ['left'], save: ['savings'], buy: ['bought', 'buyer'], rain: ['rainy', 'rainfall'],
+  drive: ['drove', 'driven', 'driver'], work: ['worker', 'workers', 'workplace'], lose: ['lost', 'loss', 'losses', 'loser'],
+  'break down': ['broke', 'broken', 'breakdown', 'breakdowns'], overcome: ['overcame'], oversleep: ['overslept'], make: ['made'],
+  know: ['knew', 'known', 'knowledge'], choose: ['chose', 'chosen', 'choice', 'choices'], find: ['found'], become: ['became'],
+  write: ['wrote', 'written', 'writer'], wear: ['wore', 'worn'], freeze: ['froze', 'frozen'], understand: ['understood'], misunderstand: ['misunderstood'],
+  forgive: ['forgave', 'forgiven'], prove: ['proven', 'proof'], explain: ['explanation', 'explanations'], provide: ['provision'], fail: ['failure', 'failures'],
+  argue: ['argument', 'arguments'], apply: ['application', 'applications'], 'back up': ['backup', 'backups'] };
+const PREFIX = { practise: 'practi', organize: 'organi', apologize: 'apolog', succeed: 'succe', worsen: 'wors' };
+const PRAISE = ['Nice sentence.', 'Well done.', 'Great linking.', 'Good job.'];
+
+function tokenize(text) {
+  const s = String(text || '').replace(/İ/g, 'I').replace(/ı/g, 'i').replace(/[’‘`´ʼ]/g, "'").replace(/\s+/g, ' ');
+  const out = []; const re = /([A-Za-z0-9À-ɏ]+(?:['\-][A-Za-z0-9À-ɏ]+)*)|([,.;:!?…])/g; let m;
+  while ((m = re.exec(s))) { if (m[1]) out.push({ w: m[1].toLowerCase() }); else out.push({ p: m[2] === '…' ? '.' : m[2] }); }
+  return out;
+}
+function inflect(b) {
+  const f = new Set([b]);
+  if (/(s|x|z|ch|sh|o)$/.test(b)) f.add(b + 'es'); else if (/[^aeiou]y$/.test(b)) f.add(b.slice(0, -1) + 'ies'); else f.add(b + 's');
+  if (b.endsWith('e')) f.add(b + 'd'); else if (/[^aeiou]y$/.test(b)) f.add(b.slice(0, -1) + 'ied'); else f.add(b + 'ed');
+  f.add(ingOf(b));
+  if (/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(b)) { const d = b + b.slice(-1); f.add(d + 'ed'); f.add(d + 'ing'); }
+  return f;
+}
+function ingOf(b) { if (b.endsWith('ie')) return b.slice(0, -2) + 'ying'; if (b.endsWith('e') && !b.endsWith('ee')) return b.slice(0, -1) + 'ing'; return b + 'ing'; }
+const VF = {};
+function verbForms(v) {
+  if (VF[v]) return VF[v];
+  const parts = v.split(' '), head = parts[0];
+  const forms = inflect(head); (EXTRA[v] || []).forEach(x => forms.add(x));
+  let pre = PREFIX[v] || null;
+  if (!pre && parts.length === 1) { const s = /e$/.test(head) ? head.slice(0, -1) : /[^aeiou]y$/.test(head) ? head.slice(0, -1) : head; if (s.length >= 5) pre = s; }
+  return (VF[v] = { forms, pre });
+}
+function usesVerb(words, v) { const { forms, pre } = verbForms(v); return words.some(w => { const x = w.replace(/-/g, ''); return forms.has(x) || (pre && x.startsWith(pre)); }); }
+function findSeq(toks, seqs) {
+  for (let i = 0; i < toks.length; i++) for (const sq of seqs) {
+    let ok = true; for (let k = 0; k < sq.length; k++) { const t = toks[i + k]; if (!t || t.w !== sq[k]) { ok = false; break; } }
+    if (ok) return { start: i, end: i + sq.length };
+  }
+  return null;
+}
+const isEdPast = w => w.length > 4 && w.endsWith('ed') && !ED_ADJ.has(w);
+const isFiniteW = w => AUX_FIN.has(w) || IRREG_PAST.has(w) || isEdPast(w);
+const SUBJ_CONTR = /^(i|he|she|we|they|you|it|there)'(m|s|re|ve|d|ll)$/;
+
+/* Returns {ok, label, fb}. label: Correct | Punctuation | Form | Linker use | Tense | Task */
+function checkSentence(it, raw) {
+  const R = (ok, label, fb) => ({ ok, label, fb });
+  const P = fb => R(false, 'Punctuation', fb), F = fb => R(false, 'Form', fb), M = fb => R(false, 'Linker use', fb), T = fb => R(false, 'Tense', fb), K = fb => R(false, 'Task', fb);
+  const toks = tokenize(raw);
+  const words = toks.filter(t => t.w).map(t => t.w);
+  const L = it.l, Lc = cap(L);
+  if (words.length < 5) return K('Write a full sentence.');
+  const found = findSeq(toks, LINK[L]);
+  if (!found) {
+    if (L === 'because of' && words.includes('because')) return M('Use "because of" + a noun or -ing here.');
+    return K(`Use the linker "${L}".`);
+  }
+  const miss = [it.a, it.b].filter(v => !usesVerb(words, v));
+  if (miss.length === 2) return K(`Use both verbs: "${it.a}" and "${it.b}".`);
+  if (miss.length === 1) return K(`Use the verb "${miss[0]}" too.`);
+  let { start, end } = found; let kind = TYPE[L], Ln = L;
+  const after0 = toks[end];
+  if (L === 'despite' && end - start === 1 && after0 && after0.w === 'of') return M('Say "despite" or "in spite of", not "despite of".');
+  if ((L === 'instead' || L === 'in case') && after0 && after0.w === 'of') { kind = 'prep'; Ln = L + ' of'; end++; }
+  const isB = t => !!(t && t.p && '.!?;'.includes(t.p));
+  let segStart = 0; for (let i = start - 1; i >= 0; i--) if (isB(toks[i])) { segStart = i + 1; break; }
+  let segEnd = toks.length; for (let i = end; i < toks.length; i++) if (isB(toks[i])) { segEnd = i; break; }
+  const wc = (a, b) => { let c = 0; for (let i = a; i < b; i++) if (toks[i].w) c++; return c; };
+  const ws = (a, b) => toks.slice(a, b).filter(t => t.w).map(t => t.w);
+  let comma = -1; for (let i = end; i < segEnd; i++) if (toks[i].p === ',') { comma = i; break; }
+  const prev = toks[start - 1], next = toks[end];
+  const beforeSeg = wc(segStart, start), beforeAll = wc(0, start), afterSeg = wc(end, segEnd);
+  const phrase = ws(end, comma < 0 ? segEnd : comma);
+  const atStart = beforeSeg === 0;
+  const mainFirst = comma >= 0 ? ws(comma + 1, segEnd)[0] : null;
+  const bases = [it.a.split(' ')[0], it.b.split(' ')[0]];
+  const good = () => R(true, 'Correct', PRAISE[(String(raw).length + it.n) % PRAISE.length]);
+
+  if (kind === 'conj') {
+    if (next && next.p === ',') return P(`No comma right after "${L}".`);
+    if (atStart && mainFirst && ['but', 'so', 'yet', 'however'].includes(mainFirst)) return M(`Don't add "${mainFirst}". "${Lc}" already links the two clauses.`);
+    if ((L === 'although' || L === 'whereas') && ws(end, segEnd).includes('but')) return M(`Don't use "${L}" and "but" together.`);
+    if (L === 'unless' && phrase.slice(0, 5).some(w => NEG.has(w))) return M('"Unless" already means "if … not". Remove the negative.');
+    if (L === 'in case' && phrase.some(w => w === 'will' || w === "won't" || w.endsWith("'ll"))) return T('After "in case", use the present tense, not "will".');
+    if (L === 'so that') { const w0 = phrase[0]; if (w0 === 'to' || bases.includes(w0)) return F('Use "so that" + subject + can/could: "so that I can …".'); }
+    if (atStart) {
+      if (comma < 0) return beforeAll > 0 ? M(`"${Lc} …" can't stand alone. Join it to the other clause with a comma.`) : P(`Put a comma between the two clauses: "${Lc} …, …".`);
+      if (wc(end, comma) < 2) return K(`Write a full clause after "${L}".`);
+      if (wc(comma + 1, segEnd) < 2) return K('Add the main clause after the comma.');
+    } else if (beforeSeg < 2 || afterSeg < 2) return K(`Write two clauses joined by "${L}".`);
+    return good();
+  }
+  if (kind === 'adv') {
+    const why = L === "that's why";
+    if (L === 'instead' && (!next || isB(next)) && beforeSeg >= 2) return good();
+    if (atStart) {
+      if (beforeAll < 2) return K(`Write the first idea, then "${Lc}": "… . ${Lc}${why ? '' : ','} …"`);
+      if (why) { if (next && next.p === ',') return P('No comma after "That\'s why".'); }
+      else if (COMMA_AFTER.has(L) && !(next && next.p === ',')) return P(`Put a comma after "${Lc}".`);
+      if (afterSeg < 2) return K(`Write a full clause after "${Lc}".`);
+      return good();
+    }
+    if (why && prev && prev.w === 'and' && afterSeg >= 2) return good();
+    if (segStart > 0 && prev && prev.p === ',' && (!next || next.p === ',' || isB(next))) return good();
+    return P(why ? 'Start a new sentence: "… . That\'s why …".' : `Start a new sentence: "… . ${Lc}, …" (or "…; ${L}, …").`);
+  }
+  // prepositions: despite, because of, thanks to, instead of, in case of
+  const LnC = cap(Ln);
+  if (!next || next.p) return F(`Put a noun or -ing form right after "${Ln}".`);
+  const [w0, w1, w2] = phrase;
+  const clauseMsg = `"${Ln}" + noun / -ing, not a full clause. Try "${Ln} …ing".`;
+  if (SUBJ.has(w0) || SUBJ_CONTR.test(w0 || '')) return F(clauseMsg);
+  if (AMBIG.has(w0) && w1 && isFiniteW(w1)) return F(clauseMsg);
+  if (w1 && AUX_FIN.has(w1) && !DET.has(w0)) return F(clauseMsg);
+  if (DET.has(w0) && w2 && isFiniteW(w2)) return F(clauseMsg);
+  if (w0 === 'to' || (bases.includes(w0) && !NOUNABLE.has(w0))) {
+    const b = w0 === 'to' ? w1 : w0;
+    return F(`Use -ing or a noun after "${Ln}": "${Ln} ${b && bases.includes(b) ? ingOf(b) : '…ing'} …".`);
+  }
+  if (atStart) {
+    if (comma < 0) return beforeAll > 0 ? M(`"${LnC} …" is not a sentence. Join it to a clause.`) : P(`Put a comma after the "${LnC} …" part.`);
+    if (mainFirst && ['but', 'so', 'yet'].includes(mainFirst)) return M(`Don't add "${mainFirst}" after "${LnC} …".`);
+    if (wc(comma + 1, segEnd) < 2) return K('Add the main clause after the comma.');
+  } else if (beforeSeg < 2) return K(`Write a full sentence with "${Ln}".`);
+  return good();
+}
+/*CHECKER-END*/
+
+// Sample answers, used by the demo groups on the board.
+const BANK = {
+ 1: 'Although I prepared well for the exam, I forgot some important formulas.',
+ 2: 'My brother prefers staying at home, whereas I enjoy going out with friends.',
+ 3: 'She promised to come to my party. However, she cancelled at the last minute.',
+ 4: 'He struggled with the new language. Nevertheless, he continued to study every day.',
+ 5: 'Despite experiencing many problems, the team succeeded in the end.',
+ 6: 'Because of oversleeping, I missed the first lesson.',
+ 7: 'Thanks to practising every day, my English improved a lot.',
+ 8: 'Since I felt sick, I left the meeting early.',
+ 9: 'Unless you revise your notes, you will fail the test.',
+ 10: 'We need to hurry. Otherwise, we will miss the bus.',
+ 11: 'I am saving money so that I can buy a new laptop.',
+ 12: 'I always carry an umbrella in case it rains.',
+ 13: "He ignored the doctor's advice. Consequently, his health worsened.",
+ 14: "I felt very tired. That's why I refused the invitation.",
+ 15: 'My parents support my decisions. Moreover, they encourage me to try new things.',
+ 16: 'Cycling reduces air pollution. Furthermore, it improves your health.',
+ 17: 'He seems shy. In fact, he performs on stage every weekend.',
+ 18: "I didn't drive to work today. Instead, I walked.",
+ 19: 'Although I disagree with her, I respect her opinion.',
+ 20: 'My father works on Saturdays, whereas my mother relaxes at home.',
+ 21: 'They invested a lot of money in the company. However, they lost everything.',
+ 22: 'She faced many difficulties. Nevertheless, she overcame all of them.',
+ 23: 'Despite training hard, our team lost the match.',
+ 24: 'Because of the breakdown of our car, we arrived two hours late.',
+ 25: 'Thanks to cooperating with each other, we completed the project on time.',
+ 26: 'Since the number of students increased, the school introduced a new timetable.',
+ 27: "Unless you apologize, she won't forgive you.",
+ 28: 'Wear a warm coat. Otherwise, you will freeze outside.',
+ 29: 'The teacher explained the rule again so that everyone could understand it.',
+ 30: 'I wrote down her phone number in case I forgot it.',
+ 31: 'The company neglected its customers. Consequently, its sales declined.',
+ 32: "They misunderstood each other. That's why they argued.",
+ 33: 'The school provides free books. Moreover, it motivates students with prizes.',
+ 34: 'The festival promotes local culture. Furthermore, it creates jobs for young people.',
+ 35: 'He claims that he is the best player. In fact, he proved it in the last match.',
+ 36: "Don't just complain about the problem. Instead, suggest a solution.",
+ 37: 'Although she knew the answer, she hesitated to speak.',
+ 38: 'Some students depend on their parents, whereas others choose to work part-time.',
+ 39: "We aimed to finish early. However, we didn't achieve our goal.",
+ 40: 'I doubted my abilities. Nevertheless, I attempted the difficult climb.',
+ 41: 'Despite revising my essay twice, I made a few mistakes.',
+ 42: 'Because of miscommunication with the supplier, the company delayed the delivery.',
+ 43: 'Thanks to participating in the debate club, I developed my speaking skills.',
+ 44: "Since he lacked experience, he didn't apply for the job.",
+ 45: 'Unless we reduce our costs, prices will increase.',
+ 46: 'Back up your files regularly. Otherwise, you might lose them.',
+ 47: 'I organize my desk every evening so that I can find things easily.',
+ 48: 'In case you become ill, contact your teacher immediately.',
+ 49: 'We underestimated the difficulty of the task. Consequently, we failed.',
+ 50: "The family faced serious financial problems. That's why they relocated to a smaller city."
+};
+
+const SET_LABEL = { '1': 'Set 1 · items 1–18', '2': 'Set 2 · items 19–36', '3': 'Set 3 · items 37–50', 'all': 'All 50 items' };
+const COLORS = [['#e5433b', '#ffffff'], ['#1d6ee6', '#ffffff'], ['#10a067', '#ffffff'], ['#f7b21b', '#151936'], ['#7a4de0', '#ffffff'], ['#e0418a', '#ffffff'], ['#0e9bab', '#ffffff'], ['#f06a28', '#ffffff']];
+const colorOf = i => { const c = COLORS[(i || 0) % COLORS.length]; return `--tc:${c[0]};--tt:${c[1]}`; };
+const setItemsOf = set => { const [a, b] = SETS[set] || SETS['1']; return ITEMS.filter(x => x[0] >= a && x[0] <= b).map(x => IT[x[0]]); };
+function qrSvg(text) { try { if (!text || typeof qrcode !== 'function') return ''; const q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ''; } }
+
+// ---------------- connection (PeerJS) ----------------
+let peerLib = null;
+function loadPeer() {
+  if (peerLib) return peerLib;
+  peerLib = new Promise((res, rej) => {
+    if (window.Peer) return res(window.Peer);
+    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+    s.onload = () => res(window.Peer); s.onerror = () => rej(new Error('PeerJS failed to load')); document.head.appendChild(s);
+  });
+  return peerLib;
+}
+function peerOpts() {
+  const o = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
+  if (params.get('ph')) { o.host = params.get('ph'); o.port = +(params.get('pp') || 9000); o.path = params.get('pa') || '/'; o.secure = params.get('ps') === '1'; }
+  return o;
+}
+const hostPeerId = code => 'linkerrace-' + String(code).toLowerCase();
+function p2pHostTransport(getCode, onCodeChange) {
+  const latest = {}; const conns = new Map(); const states = new Map();
+  let peer = null, onState = null, onLeave = null, tries = 0;
+  const T = {
+    publish(part, data) { latest[part] = data; for (const c of conns.keys()) if (c.open) { try { c.send({ t: 'p', p: part, d: data }); } catch (e) {} } },
+    listen(st, lv) { onState = st; onLeave = lv; open(); },
+    replay() { for (const s of states.values()) onState(s); }
+  };
+  function open() {
+    try { if (peer) peer.destroy(); } catch (e) {}
+    setPill('connPill', 'connecting', 'Opening room…');
+    peer = new window.Peer(hostPeerId(getCode()), peerOpts());
+    peer.on('open', () => { tries = 0; setPill('connPill', 'online', 'Room open'); });
+    peer.on('error', e => {
+      if (e.type === 'unavailable-id') { tries++; if (tries > 4) { onCodeChange(newCode()); tries = 0; } setTimeout(open, 2500); }
+      else if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(e.type)) { setPill('connPill', 'offline', 'No connection'); setTimeout(() => { if (peer && peer.disconnected && !peer.destroyed) { try { peer.reconnect(); } catch (x) {} } }, 3000); }
+    });
+    peer.on('disconnected', () => { setPill('connPill', 'connecting', 'Reconnecting…'); setTimeout(() => { try { if (!peer.destroyed) peer.reconnect(); } catch (x) {} }, 1500); });
+    peer.on('connection', conn => {
+      conn.on('open', () => { conns.set(conn, null); for (const k in latest) { try { conn.send({ t: 'p', p: k, d: latest[k] }); } catch (e) {} } });
+      conn.on('data', m => { if (m && m.t === 'st' && m.s && typeof m.s.sid === 'string') { conns.set(conn, m.s.sid); states.set(m.s.sid, m.s); onState(m.s); } });
+      const gone = () => { if (!conns.has(conn)) return; const sid = conns.get(conn); conns.delete(conn); if (sid && ![...conns.values()].includes(sid)) { states.delete(sid); onLeave(sid); } };
+      conn.on('close', gone); conn.on('error', gone);
+    });
+  }
+  return T;
+}
+function p2pStudentTransport(code) {
+  let peer = null, conn = null, latest = null, onPart = null, timer = null;
+  const T = {
+    send(st) { latest = st; if (conn && conn.open) { try { conn.send({ t: 'st', s: st }); } catch (e) {} } },
+    subscribe(fn) { onPart = fn; start(); }
+  };
+  function later(ms) { clearTimeout(timer); timer = setTimeout(connect, ms); }
+  function start() {
+    setPill('sConn', 'connecting', 'Connecting…');
+    peer = new window.Peer(peerOpts());
+    peer.on('open', () => connect());
+    peer.on('error', e => { if (e.type === 'peer-unavailable') { setPill('sConn', 'offline', 'Room not found. Check the code.'); later(3000); } else { setPill('sConn', 'connecting', 'Connecting…'); later(3000); } });
+    peer.on('disconnected', () => setTimeout(() => { try { if (!peer.destroyed) peer.reconnect(); } catch (x) {} }, 1500));
+  }
+  function connect() {
+    if (!peer || peer.disconnected || (conn && conn.open)) { if (peer && peer.disconnected) later(2000); return; }
+    try { if (conn) conn.close(); } catch (e) {}
+    const c = conn = peer.connect(hostPeerId(code), { reliable: true });
+    c.on('open', () => { setPill('sConn', 'online', 'Connected'); if (latest) c.send({ t: 'st', s: latest }); });
+    c.on('data', m => { if (m && m.t === 'p' && onPart) onPart(m.p, m.d); });
+    c.on('close', () => { if (c !== conn) return; setPill('sConn', 'connecting', 'Reconnecting…'); later(1500); });
+    c.on('error', () => {});
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && peer && !(conn && conn.open)) later(200); });
+  return T;
+}
+
+// ===================================================================
+// BOARD (teacher)
+// ===================================================================
+const H = { T: null, view: null, rq: false, pubT: null, saveT: null, bots: {}, lastScore: {}, feedSeen: new Set(), qrFor: null, lastBeat: 0, ac: null };
+let G = null;
+function freshG() {
+  return { v: 1, gid: rid(6), code: newCode(), phase: 'lobby', set: '1', minutes: 20, endsAt: 0, left: 0, paused: false,
+    roster: {}, solved: {}, res: {}, seen: {}, checks: [], all: [], endReason: '', finisher: null };
+}
+const gItems = () => setItemsOf(G.set);
+const inSet = n => { const [a, b] = SETS[G.set]; return n >= a && n <= b; };
+const score = sid => Object.keys(G.solved[sid] || {}).length;
+const timeLeft = () => G.phase !== 'race' ? G.left : G.paused ? G.left : Math.max(0, G.endsAt - now());
+function ranking() {
+  return Object.keys(G.roster).sort((x, y) => score(y) - score(x) || (G.roster[x].lastAt || Infinity) - (G.roster[y].lastAt || Infinity) || G.roster[x].joinedAt - G.roster[y].joinedAt);
+}
+function nextColor() { const used = new Set(Object.values(G.roster).map(r => r.color)); for (let i = 0; i < COLORS.length; i++) if (!used.has(i)) return i; return Object.keys(G.roster).length % COLORS.length; }
+
+function markDirty() {
+  if (!H.rq) { H.rq = true; requestAnimationFrame(() => { H.rq = false; renderHost(); }); }
+  if (!H.pubT) H.pubT = setTimeout(() => { H.pubT = null; publish(); }, 120);
+  if (!H.saveT) H.saveT = setTimeout(() => { H.saveT = null; LS.set('lr.host', G); }, 1200);
+}
+function buildLive() {
+  const roster = {}; for (const [sid, r] of Object.entries(G.roster)) roster[sid] = [r.name, r.color, score(sid)];
+  return { gid: G.gid, phase: G.phase, set: G.set, code: G.code, left: timeLeft(), paused: G.paused, total: gItems().length, roster, rank: ranking(), res: G.res, endReason: G.endReason, finisher: G.finisher };
+}
+function publish() { H.lastBeat = now(); if (H.T) H.T.publish('live', buildLive()); }
+
+function ingest(s) {
+  if (!s || typeof s.sid !== 'string' || s.sid.length > 40) return;
+  const sid = s.sid, name = clean(s.name, 18);
+  if (!name) return;
+  let r = G.roster[sid];
+  if (!r) { r = G.roster[sid] = { name, color: nextColor(), joinedAt: now(), lastAt: 0, online: true }; markDirty(); }
+  else { if (r.name !== name) { r.name = name; markDirty(); } if (!r.online) { r.online = true; markDirty(); } }
+  if (G.phase !== 'race' || s.gid !== G.gid || !Array.isArray(s.att)) return;
+  for (const a of s.att.slice(-60)) {
+    if (!Array.isArray(a)) continue;
+    const [aid, n, text] = a;
+    if (typeof aid !== 'string' || aid.length > 20 || G.seen[aid]) continue;
+    G.seen[aid] = 1;
+    if (!IT[n] || !inSet(n)) continue;
+    judge(sid, aid, IT[n], clean(text, 300));
+    if (G.phase !== 'race') return;
+  }
+}
+function leave(sid) { const r = G.roster[sid]; if (r && r.online && !H.bots[sid]) { r.online = false; markDirty(); } }
+function judge(sid, aid, it, text) {
+  if (!text) return;
+  const solved = G.solved[sid] || (G.solved[sid] = {}), res = G.res[sid] || (G.res[sid] = {});
+  if (solved[it.n]) return;
+  const r = checkSentence(it, text);
+  if (r.ok) { solved[it.n] = aid; G.roster[sid].lastAt = now(); }
+  res[it.n] = [r.ok ? 'ok' : 'bad', r.label, r.fb, aid];
+  const c = { aid, sid, item: it.n, text, ok: r.ok, label: r.label, fb: r.fb, by: 'rules' };
+  G.checks.unshift(c); if (G.checks.length > 40) G.checks.length = 40;
+  G.all.push(c); if (G.all.length > 3000) G.all.shift();
+  markDirty();
+  if (r.ok && score(sid) >= gItems().length) endGame('finished', sid);
+}
+function flip(aid) {
+  const c = G.all.find(x => x.aid === aid) || G.checks.find(x => x.aid === aid); if (!c || !G.roster[c.sid]) return;
+  const sid = c.sid, n = c.item, solved = G.solved[sid] || (G.solved[sid] = {}), res = G.res[sid] || (G.res[sid] = {});
+  const ok = !c.ok;
+  const upd = { ok, label: 'Teacher', fb: ok ? 'Your teacher accepted this sentence.' : 'Your teacher marked this sentence wrong. Try again.', by: 'teacher' };
+  for (const list of [G.all, G.checks]) for (const x of list) if (x.aid === aid) Object.assign(x, upd);
+  if (ok) { if (!solved[n]) { solved[n] = aid; G.roster[sid].lastAt = now(); } res[n] = ['ok', upd.label, upd.fb, aid]; }
+  else { if (solved[n] === aid) delete solved[n]; if (!solved[n]) res[n] = ['bad', upd.label, upd.fb, aid]; }
+  markDirty();
+  if (ok && G.phase === 'race' && score(sid) >= gItems().length) endGame('finished', sid);
+}
+function startRace() {
+  Object.assign(G, { gid: rid(6), phase: 'race', solved: {}, res: {}, seen: {}, checks: [], all: [], endReason: '', finisher: null, paused: false, left: 0, endsAt: now() + G.minutes * 60000 });
+  for (const r of Object.values(G.roster)) r.lastAt = 0;
+  H.lastScore = {}; H.feedSeen = new Set();
+  for (const b of Object.values(H.bots)) b.next = now() + 3000 + Math.random() * 4000;
+  markDirty(); publish();
+}
+function endGame(reason, sid) {
+  if (G.phase !== 'race') return;
+  G.left = timeLeft(); G.phase = 'end'; G.endReason = reason; G.finisher = sid || null; G.paused = false;
+  markDirty(); publish(); chime(); setTimeout(() => confetti(), 250);
+}
+function togglePause() {
+  if (G.phase !== 'race') return;
+  if (G.paused) { G.endsAt = now() + G.left; G.paused = false; } else { G.left = timeLeft(); G.paused = true; }
+  markDirty(); publish();
+}
+function tick() {
+  if (G.phase === 'race' && !G.paused && timeLeft() <= 0) { endGame('time'); return; }
+  updClock(); botsTick();
+  if (now() - H.lastBeat > 2000) publish();
+}
+function ensureAudio() { try { if (!H.ac) { const A = window.AudioContext || window.webkitAudioContext; if (A) H.ac = new A(); } if (H.ac && H.ac.state === 'suspended') H.ac.resume(); } catch (e) {} }
+function chime() { try { const ac = H.ac; if (!ac) return; const t0 = ac.currentTime + .02; [523.25, 659.25, 783.99, 1046.5].forEach((f, k) => { const o = ac.createOscillator(), g = ac.createGain(), t = t0 + k * .14; o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.22, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .55); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .6); }); } catch (e) {} }
+
+// demo groups
+const BOT_NAMES = ['Demo Owls', 'Demo Foxes', 'Demo Bees', 'Demo Sharks', 'Demo Pandas', 'Demo Tigers'];
+function addBots(n) {
+  for (let k = 0; k < n; k++) {
+    const used = new Set(Object.values(G.roster).map(r => r.name));
+    const name = BOT_NAMES.find(x => !used.has(x)) || ('Demo ' + rid(3));
+    const sid = 'bot' + rid(6);
+    H.bots[sid] = { sid, name, next: now() + 3000 + Math.random() * 4000 };
+    ingest({ sid, name, gid: G.gid, att: [] });
+  }
+}
+function botsTick() {
+  if (G.phase !== 'race' || G.paused) return;
+  for (const b of Object.values(H.bots)) {
+    if (!G.roster[b.sid]) { delete H.bots[b.sid]; continue; }
+    if (now() < b.next) continue;
+    b.next = now() + 6000 + Math.random() * 9000;
+    const open = gItems().filter(it => !(G.solved[b.sid] || {})[it.n]); if (!open.length) continue;
+    const it = open[Math.floor(Math.random() * open.length)];
+    let txt = BANK[it.n]; if (Math.random() < .3) txt = txt.replace(/,/g, '').replace(/\. (\w)/, (m, c) => ', ' + c.toLowerCase());
+    ingest({ sid: b.sid, name: b.name, gid: G.gid, att: [['b' + rid(8), it.n, txt]] });
+  }
+}
+
+function joinURL() {
+  if (!/^https?:$/.test(location.protocol)) return '';
+  const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('room', G.code);
+  for (const k of ['ph', 'pp', 'pa', 'ps']) if (params.get(k)) u.searchParams.set(k, params.get(k));
+  return u.toString();
+}
+const barHTML = sub => `<header class="bar"><div class="brand"><b>Linker Race</b><span>${esc(sub)}</span></div>`;
+function buildLobby() {
+  return `${barHTML('One phone per group')}<span class="grow"></span><span class="pill" id="connPill" hidden></span></header>
+  <main class="lobby">
+    <section class="card joincard"><h2>Join on a phone</h2><div class="qr" id="qr"></div><span class="lab">Room code</span><div class="code" id="code"></div><div class="link" id="link"></div>
+      <p class="hint">Scan the QR code and type your group name. Groups can also join late.</p></section>
+    <section class="groupsarea"><h2>Groups <small id="gcount"></small></h2><div class="gtiles" id="gtiles"></div><p class="empty" id="gempty">Waiting for groups to join…</p></section>
+    <section class="card settings" id="settings"></section>
+  </main>`;
+}
+function settingsHTML() {
+  return `<h2>Race</h2>
+    <div class="fieldv"><span class="lab">Items</span><div class="seg" role="group" aria-label="Items">${['1', '2', '3', 'all'].map(k => `<button data-act="set" data-v="${k}" aria-pressed="${G.set === k}">${k === 'all' ? 'All 50' : 'Set ' + k}</button>`).join('')}</div>
+      <p class="hint">${SET_LABEL[G.set]} · ${gItems().length} sentences per group</p></div>
+    <div class="fieldv"><span class="lab">Time</span><div class="mins"><button class="btn sq" data-act="mins" data-d="-5" aria-label="Five minutes less" ${G.minutes <= 5 ? 'disabled' : ''}>−</button><output>${G.minutes}</output><span>minutes</span><button class="btn sq" data-act="mins" data-d="5" aria-label="Five minutes more" ${G.minutes >= 60 ? 'disabled' : ''}>+</button></div></div>
+    <button class="btn primary big" id="startBtn" data-act="start">Start the race</button>
+    <p class="hint">Each correct sentence is 1 point. The race ends when time runs out or a group gets every sentence right.</p>
+    <div class="row"><button class="btn small" data-act="demo">+ 2 demo groups</button><button class="btn small" data-act="clearGroups">Remove all groups</button></div>`;
+}
+function updLobby() {
+  const url = joinURL();
+  if (H.qrFor !== url + G.code) { H.qrFor = url + G.code; $('#qr').innerHTML = qrSvg(url) || 'Open this page from the website to show a QR code.'; }
+  $('#code').textContent = G.code; $('#link').textContent = url || location.href; $('#link').hidden = !url;
+  const box = $('#gtiles'), sids = Object.keys(G.roster).sort((a, b) => G.roster[a].joinedAt - G.roster[b].joinedAt);
+  const have = new Map([...box.children].map(c => [c.dataset.sid, c]));
+  for (const [sid, c] of have) if (!G.roster[sid]) c.remove();
+  for (const sid of sids) {
+    const r = G.roster[sid]; let c = have.get(sid);
+    if (!c) { c = el(`<div class="gt" data-sid="${esc(sid)}"><span class="gn"></span><button class="x" data-act="kick" data-sid="${esc(sid)}" aria-label="Remove this group">✕</button></div>`); box.appendChild(c); }
+    c.setAttribute('style', colorOf(r.color)); c.querySelector('.gn').textContent = r.name; c.classList.toggle('off', !r.online);
+  }
+  $('#gempty').hidden = sids.length > 0; $('#gcount').textContent = sids.length ? `${sids.length} joined` : '';
+  const sb = $('#startBtn'); if (sb) sb.disabled = !sids.length;
+}
+function buildRace() {
+  return `${barHTML(SET_LABEL[G.set])}<button class="btn small" data-act="showJoin">Join code: ${esc(G.code)}</button><span class="pill" id="connPill" hidden></span><span class="grow"></span>
+    <output class="clock" id="clock"></output><button class="btn" id="pauseBtn" data-act="pause">Pause</button><button class="btn" data-act="end">End race</button></header>
+  <main class="race">
+    <section><div class="sb" id="sb"></div><p class="empty" id="sbempty" hidden>No groups yet. Click “Join code” to show the QR code.</p></section>
+    <aside class="card feed"><h3>Latest sentences</h3><div id="feed"><p class="hint">Sentences appear here as groups send them.</p></div><p class="hint">The rules check form only. If a decision is wrong, click ✓ right or ✗ wrong.</p></aside>
+  </main>`;
+}
+function updRace() {
+  const sb = $('#sb'); if (!sb) return;
+  const order = ranking(), n = order.length, tot = gItems().length;
+  const rh = Math.max(66, Math.min(118, Math.floor((window.innerHeight - 160) / Math.max(n, 1)) - 14)), gap = 14;
+  sb.style.height = (n * (rh + gap)) + 'px'; $('#sbempty').hidden = n > 0;
+  const have = new Map([...sb.children].map(c => [c.dataset.sid, c]));
+  for (const [sid, c] of have) if (!G.roster[sid]) c.remove();
+  order.forEach((sid, i) => {
+    const r = G.roster[sid], sc = score(sid); let c = have.get(sid);
+    if (!c) { c = el(`<div class="srow" data-sid="${esc(sid)}"><span class="rk"></span><div><div class="nm"></div><div class="pg"><i></i></div><div class="sm"></div></div><span class="sc"></span></div>`); c.style.top = (i * (rh + gap)) + 'px'; sb.appendChild(c); }
+    c.setAttribute('style', `${colorOf(r.color)};top:${i * (rh + gap)}px;height:${rh}px`);
+    c.querySelector('.rk').textContent = i + 1; c.querySelector('.nm').textContent = r.name;
+    c.querySelector('.pg i').style.width = (tot ? 100 * sc / tot : 0) + '%';
+    c.querySelector('.sm').textContent = `${sc} of ${tot}` + (sc >= tot ? ' · all done!' : '') + (r.online ? '' : ' · offline');
+    const s = c.querySelector('.sc');
+    if (H.lastScore[sid] !== undefined && sc > H.lastScore[sid]) { s.classList.remove('bump'); void s.offsetWidth; s.classList.add('bump'); }
+    s.textContent = sc; H.lastScore[sid] = sc;
+  });
+  const list = G.checks.slice(0, 8);
+  if (list.length) $('#feed').innerHTML = list.map(c => {
+    const r = G.roster[c.sid], it = IT[c.item], key = c.aid + c.ok, fresh = !H.feedSeen.has(key); H.feedSeen.add(key);
+    const msg = c.ok ? (c.by === 'teacher' ? 'Accepted by the teacher' : 'Correct') : (c.label + ': ' + c.fb);
+    return `<div class="chk ${c.ok ? 'ok' : 'bad'}${fresh ? ' new' : ''}" style="${r ? colorOf(r.color) : ''}"><span class="mk">${c.ok ? '✓' : '✗'}</span><div><div class="meta"><b>${esc(r ? r.name : '?')}</b> · #${it.n} ${esc(it.l)}</div><div class="sent">${esc(c.text)}</div><div class="fbm">${esc(msg)}</div></div><button class="flip" data-act="flip" data-aid="${esc(c.aid)}">${c.ok ? '✗ wrong' : '✓ right'}</button></div>`;
+  }).join('');
+}
+function updClock() {
+  const c = $('#clock'); if (!c) return;
+  const ms = timeLeft(); c.textContent = fmt(ms);
+  c.classList.toggle('paused', G.paused); c.classList.toggle('low', !G.paused && ms <= 60000);
+  const p = $('#pauseBtn'); if (p) p.textContent = G.paused ? 'Resume' : 'Pause';
+}
+function buildEnd() {
+  const order = ranking(), tot = gItems().length, top = order[0], topSc = top ? score(top) : 0;
+  const tie = order.length > 1 && topSc > 0 && score(order[1]) === topSc;
+  const fin = G.roster[G.finisher];
+  const reason = G.endReason === 'time' ? 'Time’s up' : G.endReason === 'finished' && fin ? `${fin.name} got every sentence right` : 'Race over';
+  return `${barHTML(SET_LABEL[G.set])}<span class="grow"></span><span class="pill" id="connPill" hidden></span></header>
+  <main class="end">
+    <p class="reason">${esc(reason)}</p>
+    ${topSc > 0 ? `<h1 class="winner"><span style="${colorOf(G.roster[top].color)}">${esc(G.roster[top].name)}</span> wins!</h1>` : '<h1 class="winner">No points this round</h1>'}
+    ${tie ? `<p class="tie">Tie on ${topSc} points. ${esc(G.roster[top].name)} got there first.</p>` : ''}
+    <ol class="podium">${order.map((sid, k) => { const r = G.roster[sid], sc = score(sid); return `<li class="${k === 0 && sc > 0 ? 'first' : ''}" style="${colorOf(r.color)};--w:${tot ? Math.round(100 * sc / tot) : 0}%;--k:${k}"><span class="place">${k + 1}</span><span class="pname"><i class="sw"></i>${esc(r.name)}</span><span class="pbar"><i></i></span><span class="pscore">${sc}<small>/${tot}</small></span></li>`; }).join('')}</ol>
+    <div class="row"><button class="btn primary" data-act="again">Play again</button>${G.set === '1' || G.set === '2' ? `<button class="btn" data-act="nextSet">Next: Set ${+G.set + 1}</button>` : ''}<button class="btn" data-act="review">Show all sentences</button><button class="btn" data-act="lobby">Back to lobby</button></div>
+    <section class="review" id="review" hidden></section>
+  </main>`;
+}
+function reviewHTML() {
+  const order = ranking(), byAid = new Map(G.all.map(c => [c.aid, c]));
+  return gItems().map(it => {
+    const acc = order.filter(sid => (G.solved[sid] || {})[it.n]).map(sid => [sid, (byAid.get(G.solved[sid][it.n]) || {}).text || '']);
+    return `<div class="rv"><div class="rvh"><span class="n">${it.n}</span><b>${esc(it.l)}</b><span class="v">${esc(it.a)} / ${esc(it.b)}</span></div>${acc.length ? acc.map(([sid, t]) => `<div class="rvs" style="${colorOf(G.roster[sid].color)}"><i class="sw"></i><span>${esc(t)}</span></div>`).join('') : '<div class="rvs none">No correct sentence for this item.</div>'}</div>`;
+  }).join('');
+}
+function showJoinModal() {
+  const url = joinURL();
+  modal(`<h2>Join the race</h2><div class="qr">${qrSvg(url) || 'Open this page from the website to show a QR code.'}</div><span class="lab">Room code</span><div class="code">${esc(G.code)}</div>${url ? `<div class="link">${esc(url)}</div>` : ''}<button class="btn" data-close>Close</button>`);
+}
+function renderHost() {
+  if (H.view !== G.phase) {
+    H.view = G.phase;
+    $('#app').innerHTML = G.phase === 'lobby' ? buildLobby() : G.phase === 'race' ? buildRace() : buildEnd();
+    if (G.phase === 'lobby') { H.qrFor = null; $('#settings').innerHTML = settingsHTML(); }
+    applyPill('connPill'); window.scrollTo(0, 0);
+  }
+  if (G.phase === 'lobby') updLobby();
+  else if (G.phase === 'race') { updRace(); updClock(); }
+}
+function onHostClick(e) {
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  ensureAudio();
+  const a = b.dataset.act;
+  if (a === 'set') { G.set = b.dataset.v; $('#settings').innerHTML = settingsHTML(); markDirty(); }
+  else if (a === 'mins') { G.minutes = Math.min(60, Math.max(5, G.minutes + Number(b.dataset.d))); $('#settings').innerHTML = settingsHTML(); markDirty(); }
+  else if (a === 'start' || a === 'again') startRace();
+  else if (a === 'nextSet') { G.set = String(+G.set + 1); startRace(); }
+  else if (a === 'lobby') { G.phase = 'lobby'; G.gid = rid(6); markDirty(); publish(); }
+  else if (a === 'pause') togglePause();
+  else if (a === 'end') confirmBox('End the race now?', () => endGame('manual'), 'End race');
+  else if (a === 'flip') flip(b.dataset.aid);
+  else if (a === 'kick') { const sid = b.dataset.sid; delete G.roster[sid]; delete H.bots[sid]; markDirty(); }
+  else if (a === 'clearGroups') confirmBox('Remove all groups from the room?', () => { G.roster = {}; H.bots = {}; markDirty(); }, 'Remove');
+  else if (a === 'demo') addBots(2);
+  else if (a === 'showJoin') showJoinModal();
+  else if (a === 'review') { const r = $('#review'); if (r.hidden) { r.innerHTML = reviewHTML(); r.hidden = false; b.textContent = 'Hide sentences'; r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } else { r.hidden = true; b.textContent = 'Show all sentences'; } }
+}
+function startHost() {
+  document.body.className = 'host';
+  const saved = LS.get('lr.host', null);
+  G = Object.assign(freshG(), saved && saved.v === 1 ? saved : {});
+  if (!SETS[G.set]) G.set = '1';
+  for (const r of Object.values(G.roster)) r.online = false;
+  H.T = p2pHostTransport(() => G.code, c => { G.code = c; H.qrFor = null; markDirty(); });
+  H.T.listen(ingest, leave);
+  document.addEventListener('click', onHostClick);
+  renderHost(); publish();
+  setInterval(tick, 250);
+  window.addEventListener('resize', () => { if (G.phase === 'race') updRace(); });
+}
+
+// ===================================================================
+// PHONE (group)
+// ===================================================================
+const S = { sid: null, name: '', code: '', gid: null, att: [], cur: null, drafts: {}, live: null, endsLocal: 0, T: null, view: null, sig: '', adv: null, okSeen: {}, badSeen: '', cheered: false };
+function sSave() { LS.set('lr.s', { gid: S.gid, att: S.att, cur: S.cur }); }
+function sendState() { if (S.T && S.name) S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, att: S.att.slice(-40) }); }
+const meRow = () => S.live && S.live.roster ? S.live.roster[S.sid] : null;
+const myRes = n => { const r = S.live && S.live.res && S.live.res[S.sid]; return r ? r[n] : null; };
+function lastAtt(n) { for (let i = S.att.length - 1; i >= 0; i--) if (S.att[i][1] === n) return S.att[i]; return null; }
+function status(n) { const r = myRes(n), a = lastAtt(n); if (r && r[0] === 'ok') return 'ok'; if (a && (!r || r[3] !== a[0])) return 'wait'; return r ? 'bad' : ''; }
+const sItems = () => S.live ? setItemsOf(S.live.set) : [];
+function nextOpen(from) {
+  const its = sItems(); if (!its.length) return null;
+  const i0 = Math.max(0, its.findIndex(i => i.n === from));
+  for (let k = 1; k <= its.length; k++) { const it = its[(i0 + k) % its.length]; if (status(it.n) === '' || status(it.n) === 'bad') return it.n; }
+  for (let k = 1; k <= its.length; k++) { const it = its[(i0 + k) % its.length]; if (status(it.n) !== 'ok') return it.n; }
+  return null;
+}
+function sView() {
+  if (!S.name || !S.T) return 'join';
+  if (!S.live || !meRow()) return 'connecting';
+  return S.live.phase === 'race' ? 'race' : S.live.phase === 'end' ? 'end' : 'wait';
+}
+function onPart(part, d) {
+  if (part !== 'live' || !d || typeof d !== 'object') return;
+  if (d.gid !== S.gid) { S.gid = d.gid; S.att = []; S.drafts = {}; S.cur = null; S.okSeen = {}; S.badSeen = ''; S.cheered = false; sSave(); sendState(); }
+  S.live = d; S.endsLocal = now() + (d.left || 0);
+  if (d.phase === 'race') {
+    const its = sItems();
+    if (!S.cur || !its.some(i => i.n === S.cur)) { S.cur = (its.find(i => status(i.n) !== 'ok') || its[0] || {}).n || null; }
+    if (S.cur) {
+      const st = status(S.cur), r = myRes(S.cur);
+      if (st === 'ok' && !S.okSeen[S.cur]) { const from = S.cur; clearTimeout(S.adv); S.adv = setTimeout(() => { if (S.cur === from && status(from) === 'ok') { const nx = nextOpen(from); if (nx) { S.cur = nx; sSave(); renderStudent(); } } }, 1600); }
+      if (st === 'bad' && r && S.badSeen !== r[3]) { S.badSeen = r[3]; S.needShake = true; }
+    }
+    for (const it of its) if (status(it.n) === 'ok') S.okSeen[it.n] = 1;
+  }
+  renderStudent();
+}
+function sBuild(v) {
+  const me = meRow(), style = me ? colorOf(me[1]) : '';
+  if (v === 'join') {
+    const needCode = !params.get('room');
+    return `<div class="phone"><div class="pcard joinp"><div class="stripe" aria-hidden="true">${COLORS.map(c => `<i style="background:${c[0]}"></i>`).join('')}</div><h1>Linker Race</h1><p class="hint">One phone per group. Type your group name to join.</p>
+      <form id="joinF">${needCode ? `<label class="lab" for="codeIn">Room code</label><input class="in code-in" id="codeIn" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(S.code)}">` : ''}
+      <label class="lab" for="nameIn">Group name</label><input class="in" id="nameIn" maxlength="18" autocomplete="off" spellcheck="false" placeholder="e.g. The Linkers" value="${esc(S.name || LS.get('lr.name', ''))}">
+      <button class="btn primary big" type="submit">Join the race</button></form></div></div>`;
+  }
+  if (v === 'connecting') return `<div class="phone"><div class="pcard center joinp"><h2><span class="spin"></span>Connecting…</h2><p class="hint">Room ${esc(S.code)}</p><div><span class="pill" id="sConn"></span></div><button class="btn small" data-act="rejoin">Change room code or name</button></div></div>`;
+  if (v === 'wait') return `<div class="phone" style="${style}"><div class="gtbig" id="gname"></div><div class="pcard center"><h2>You're in!</h2><p class="hint" style="margin-top:6px">Waiting for the teacher to start the race…</p><p style="margin:12px 0 0"><button class="btn small" data-act="rename">Change group name</button></p></div><div class="center"><span class="pill" id="sConn"></span></div></div>`;
+  if (v === 'race') return `<div class="phone" style="${style}">
+      <header class="ptop"><span class="nm" id="pnm"></span><span class="ps" id="ps"></span><span class="pt" id="pt"></span></header>
+      <p class="rankline" id="rankline"></p><div class="pausedb" id="pausedb" hidden>Paused by the teacher</div>
+      <div class="strip" id="strip"></div><section class="pcard icard" id="icard"></section>
+      <div class="center"><span class="pill" id="sConn"></span></div></div>`;
+  return `<div class="phone" style="${style}"><div class="gtbig" id="gname"></div><div class="pcard center"><span class="lab">Race over</span><h1 id="erank" style="font-size:2.6rem;margin-top:6px"></h1><p id="escore" style="font-weight:700;font-size:1.2rem;margin:8px 0 0"></p><p class="hint" id="ewin" style="margin-top:6px"></p></div></div>`;
+}
+function icardHTML() {
+  const it = IT[S.cur]; if (!it) return '<p class="hint">No items.</p>';
+  const st = status(it.n), r = myRes(it.n), paused = S.live.paused;
+  let fb = '';
+  if (st === 'ok') fb = `<div class="fb ok"><b>✓ ${r && r[1] === 'Teacher' ? 'Accepted' : 'Correct!'} +1</b>${esc(r ? r[2] : '')}</div>`;
+  else if (st === 'wait') fb = '<div class="fb wait"><span class="spin"></span>Checking…</div>';
+  else if (st === 'bad' && r) fb = `<div class="fb bad"><b>✗ ${esc(r[1])}</b>${esc(r[2])}</div>`;
+  const acc = st === 'ok' && r ? (S.att.find(a => a[0] === r[3]) || [])[2] : '';
+  const body = st === 'ok'
+    ? `<div class="done">${esc(acc || 'Solved.')}</div><button class="btn primary big" data-act="nextItem">Next item →</button>`
+    : `<label class="lab" for="sIn" hidden>Your sentence</label><textarea class="in" id="sIn" rows="4" maxlength="300" placeholder="One sentence with “${esc(it.l)}”, “${esc(it.a)}” and “${esc(it.b)}”." ${st === 'wait' || paused ? 'disabled' : ''}></textarea><button class="btn primary big" data-act="send" ${st === 'wait' || paused ? 'disabled' : ''}>Send</button>`;
+  return `<div class="inum">Item ${it.n}</div><div class="ilk">${esc(it.l)}</div><div class="iv">${esc(it.a)} <span class="sep">/</span> ${esc(it.b)}</div>${body}${fb}`;
+}
+function sUpdate(v) {
+  const me = meRow(), L = S.live;
+  if (v === 'wait' || v === 'end') { const g = $('#gname'); if (g) g.textContent = S.name; }
+  if (v === 'race') {
+    const tot = L.total || sItems().length, sc = me ? me[2] : 0, rk = (L.rank || []).indexOf(S.sid) + 1;
+    $('#pnm').textContent = S.name; $('#ps').textContent = `${sc}/${tot}`;
+    $('#rankline').textContent = rk && sc > 0 ? `You're ${ord(rk)} of ${L.rank.length} groups` : `${L.rank.length} groups in the race`;
+    $('#pausedb').hidden = !L.paused;
+    $('#strip').innerHTML = sItems().map(it => { const st = status(it.n); return `<button class="chip ${st}${it.n === S.cur ? ' cur' : ''}" data-act="item" data-n="${it.n}" aria-label="Item ${it.n}${st === 'ok' ? ', solved' : ''}">${st === 'ok' ? '✓' : it.n}</button>`; }).join('');
+    const sig = [S.cur, status(S.cur), (myRes(S.cur) || [])[3] || '', L.paused].join('|');
+    if (sig !== S.sig) {
+      const ta = $('#sIn'), hadFocus = ta && document.activeElement === ta;
+      S.sig = sig; const card = $('#icard'); card.innerHTML = icardHTML();
+      const nt = $('#sIn');
+      if (nt) { nt.value = S.drafts[S.cur] || ''; if (hadFocus && !nt.disabled) nt.focus(); }
+      if (S.needShake) { S.needShake = false; shake(card); }
+    }
+    sTimer();
+  }
+  if (v === 'end') {
+    const rk = (L.rank || []).indexOf(S.sid) + 1, tot = L.total, sc = me ? me[2] : 0, w = L.rank && L.rank[0] && L.roster[L.rank[0]];
+    $('#erank').textContent = rk ? `${ord(rk)} place` : 'Race over';
+    $('#escore').textContent = `${sc} of ${tot} sentences correct`;
+    $('#ewin').textContent = w && w[2] > 0 ? (L.rank[0] === S.sid ? 'Your group won! 🎉' : `Winner: ${w[0]}`) : '';
+    if (rk === 1 && sc > 0 && !S.cheered) { S.cheered = true; confetti(); }
+  }
+}
+function renderStudent() {
+  const v = sView();
+  if (v !== S.view) {
+    S.view = v; S.sig = '';
+    $('#app').innerHTML = sBuild(v); applyPill('sConn');
+    if (v === 'join') { const f = $('#codeIn') && !$('#codeIn').value ? $('#codeIn') : $('#nameIn'); if (f) f.focus(); }
+  }
+  if (v !== 'join' && v !== 'connecting') sUpdate(v);
+}
+function sTimer() {
+  const p = $('#pt'); if (!p || !S.live) return;
+  const ms = S.live.paused ? S.live.left : S.endsLocal - now();
+  p.textContent = fmt(ms); p.classList.toggle('low', !S.live.paused && ms <= 60000);
+}
+function sendItem() {
+  const ta = $('#sIn'); if (!ta || !S.cur) return;
+  const t = clean(ta.value, 300);
+  if (t.split(' ').length < 3) { shake($('#icard')); toast('Write a full sentence first.'); return; }
+  S.drafts[S.cur] = ta.value;
+  S.att.push(['a' + rid(8), S.cur, t]); if (S.att.length > 40) S.att = S.att.slice(-40);
+  sSave(); sendState(); renderStudent();
+}
+function onStudentClick(e) {
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (a === 'send') sendItem();
+  else if (a === 'item') { S.cur = +b.dataset.n; sSave(); renderStudent(); }
+  else if (a === 'nextItem') { const nx = nextOpen(S.cur); if (nx) { S.cur = nx; sSave(); renderStudent(); } else toast('All items are solved. Well done!'); }
+  else if (a === 'rename') { S.name = ''; S.view = null; renderStudent(); }
+  else if (a === 'rejoin') { LS.del('lr.code'); const u = new URL(location.href); u.searchParams.delete('room'); u.hash = 'join'; location.href = u.toString(); }
+}
+function onStudentSubmit(e) {
+  if (e.target.id !== 'joinF') return;
+  e.preventDefault();
+  const ci = $('#codeIn'); const code = (ci ? ci.value : S.code).replace(/\s/g, '').toUpperCase();
+  const name = clean($('#nameIn').value, 18);
+  if (code.length !== 5) { toast('Type the 5-character room code from the board.'); return; }
+  if (!name) { toast('Type your group name.'); $('#nameIn').focus(); return; }
+  if (S.T && code !== S.code) { LS.set('lr.code', code); LS.set('lr.name', name); const u = new URL(location.href); u.searchParams.set('room', code); location.href = u.toString(); return; }
+  S.name = name; S.code = code; LS.set('lr.name', name); LS.set('lr.code', code);
+  if (!S.T) { S.T = p2pStudentTransport(code); S.T.subscribe(onPart); }
+  sendState(); renderStudent();
+}
+function onStudentInput(e) { if (e.target.id === 'sIn' && S.cur) S.drafts[S.cur] = e.target.value; }
+function onStudentKey(e) { if (e.target.id === 'sIn' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendItem(); } }
+function startStudent() {
+  document.body.className = 'student';
+  S.sid = LS.get('lr.sid', null); if (!S.sid) { S.sid = 's' + rid(9); LS.set('lr.sid', S.sid); }
+  const savedCode = LS.get('lr.code', '');
+  S.code = (params.get('room') || savedCode || '').toUpperCase();
+  const ss = LS.get('lr.s', null);
+  const resume = !!(LS.get('lr.name', '') && S.code && S.code === savedCode);
+  if (resume) { S.name = LS.get('lr.name', ''); if (ss) { S.gid = ss.gid; S.att = ss.att || []; S.cur = ss.cur || null; } }
+  document.addEventListener('click', onStudentClick);
+  document.addEventListener('submit', onStudentSubmit);
+  document.addEventListener('input', onStudentInput);
+  document.addEventListener('keydown', onStudentKey);
+  if (resume) { S.T = p2pStudentTransport(S.code); S.T.subscribe(onPart); sendState(); }
+  renderStudent();
+  setInterval(sTimer, 500);
+}
+
+// ===================================================================
+// BOOT
+// ===================================================================
+function landing() {
+  $('#app').innerHTML = `<div class="landing"><div class="stripe" aria-hidden="true">${COLORS.map(c => `<i style="background:${c[0]}"></i>`).join('')}</div><h1>Linker Race</h1>
+    <p class="hint" style="font-size:1.05rem">Groups write one sentence for each linker and two verbs. Every sentence is checked at once, and the scoreboard updates live.</p>
+    <button class="btn primary big" id="goHost">I'm the teacher: open the board</button><button class="btn big" id="goJoin">Join a game</button>
+    <ol><li>Open the board on the classroom computer.</li><li>Each group scans the QR code with one phone and types a group name.</li><li>Press Start. The race ends when time runs out or a group gets every sentence right.</li></ol></div>`;
+  $('#goHost').onclick = () => { const u = new URL(location.href); u.searchParams.set('role', 'host'); location.href = u.toString(); };
+  $('#goJoin').onclick = () => startStudent();
+}
+async function boot() {
+  try { await loadPeer(); }
+  catch (e) { $('#app').innerHTML = '<div class="landing"><div class="pcard center"><h2>Could not load the connection library.</h2><p class="hint" style="margin-top:8px">Check the internet connection and reload the page.</p></div></div>'; return; }
+  const asStudent = params.has('room') || location.hash === '#join';
+  const saved = LS.get('lr.host', null);
+  const role = params.get('role') || (asStudent ? 'student' : (saved && saved.gid ? 'host' : null));
+  if (role === 'host') return startHost();
+  if (role === 'student') return startStudent();
+  landing();
+}
+boot();
+</script>
+</body>
+</html>
