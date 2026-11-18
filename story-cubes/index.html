@@ -884,7 +884,7 @@ function botsTick() {
 function renderHostShell() {
   document.body.className = 'host';
   $('#app').innerHTML = `<div class="board">
-    <header class="topbar"><div class="brand">🎲 Story Cubes <small>Prep-C · Week 10</small></div><div class="grow"></div><span class="pill" id="roundPill" hidden></span><span class="pill" id="aiPill" hidden></span><span class="pill" id="connPill" hidden></span><div class="timer" id="timer" hidden></div></header>
+    <header class="topbar"><div class="brand">🎲 Story Cubes <small>Prep-C · Week 10</small></div><div class="grow"></div><span class="pill" id="roundPill" hidden></span><span class="pill" id="aiPill" hidden></span><span class="pill" id="connPill" hidden></span><div class="timer" id="timer" hidden></div><button class="btn go" id="tbRoll" data-act="roll" hidden>🎲 Give out the dice!</button></header>
     <div class="bodyrow">
       <aside class="chatp" id="chatp"><div class="ch-head"><h3>💬 Class chat</h3><button data-act="chatLock" id="chLock"></button><button data-act="chatClear" title="Delete all messages">🗑</button><button data-act="chatHide" title="Hide the chat">◀</button></div>
         <div class="ch-off" id="chOff" hidden>Chat is closed for students</div><div class="ch-list" id="chList"></div>
@@ -984,6 +984,7 @@ function renderHost() {
   if (!G) return;
   const st = $('#stage'); const ph = G.phase;
   const rp = $('#roundPill'); rp.hidden = !G.round; rp.textContent = 'Round ' + G.round;
+  const tr = $('#tbRoll'); tr.hidden = !(ph === 'lobby' || ph === 'results'); tr.textContent = ph === 'results' ? '🎲 Next round' : '🎲 Give out the dice!';
   if (ph === 'lobby') { if (H.view !== 'lobby') { st.innerHTML = lobbyHTML(); H.view = 'lobby'; H.qrFor = null; } updLobby(); }
   else if (ph === 'write' || ph === 'results') {
     const key = ph + G.round;
@@ -1097,7 +1098,7 @@ function onHostClick(e) {
   if (a === 'set') { const k = b.dataset.k; let v = b.dataset.v; if (k !== 'set') v = +v; G.settings[k] = v; if (k === 'teams') for (const r of Object.values(G.roster)) if (r.team >= v) r.team = -1; H.view = null; markDirty(); }
   else if (a === 'genre') { G.settings.genre = b.checked; markDirty(); }
   else if (a === 'ai') { G.settings.ai = b.checked; if (b.checked) warmAI(); markDirty(); }
-  else if (a === 'roll') { if (G.phase === 'lobby' && !Object.keys(G.roster).length) { confirmBox('Nobody has joined yet. Roll the cubes anyway?', roll, 'Roll'); return; } roll(); }
+  else if (a === 'roll') { if (G.phase === 'lobby' && !Object.keys(G.roster).length) { confirmBox('Nobody has joined yet. Give out the dice anyway?', roll, 'Give out the dice'); return; } roll(); }
   else if (a === 'endWrite') confirmBox('Stop writing now? Groups that did not send their story will be checked with what they have written so far.', endWriting, 'Stop');
   else if (a === 'plus1') { G.endsAt += 60000; markDirty(); }
   else if (a === 'finish') confirmBox('Finish the game and show the winners?', () => { G.phase = 'end'; markDirty(); }, 'Finish');
