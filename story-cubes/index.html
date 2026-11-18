@@ -246,6 +246,11 @@ textarea.story-in{width:100%;min-height:180px;border:3px solid var(--line);borde
 .hintpop .cw{width:120px}
 @media (max-width:1100px){.lobby{grid-template-columns:1fr 1fr}.lobby .settings{grid-column:1/-1}}
 @media (max-width:760px){.lobby{grid-template-columns:1fr}.chatp{display:none}}
+
+.exbox{margin-top:8px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 12px}
+.exbox summary{font-weight:900;cursor:pointer;font-size:14px}
+.exbox .ex{white-space:pre-line;font-size:15px;line-height:1.5;margin:8px 0 6px;padding:10px 12px;background:var(--bg);border-radius:10px}
+.mini{border:0;background:var(--bg);border-radius:8px;width:22px;height:22px;font-size:12px;font-weight:900;padding:0;margin-left:4px}
 </style>
 </head>
 <body>
@@ -532,12 +537,12 @@ const ICONS = {
     <path d="M30 44h42v18c0 10-8 16-21 16s-21-6-21-16z" fill="#FFD3A6" ${S4}/><path d="M72 52l10-8c4-3 8 2 5 6l-15 16" fill="#FFD3A6" ${S4}/>${face(51, 60, .5, 'flat')}`
 };
 const GENRES = [
-  { id: 'news', task: '5–7 sentences. Say what happened, where, who was there and why it matters.', start: 'Yesterday in Istanbul,', name: 'News report', tip: 'Tell what happened, like a journalist.', svg: `<rect x="14" y="16" width="72" height="68" rx="8" fill="#fff" ${S4}/><rect x="22" y="24" width="56" height="12" rx="3" fill="#4DA3FF"/><rect x="22" y="44" width="24" height="20" rx="3" fill="#FFC23D"/><path d="M52 46h26M52 54h26M52 62h18M22 72h56" stroke="#C3CAD9" stroke-width="4" stroke-linecap="round"/>` },
-  { id: 'diary', task: 'Write about your day and how you felt. Use the past tense.', start: 'Dear diary, today', name: 'Diary entry', tip: 'Write it as “Dear diary, today…”.', svg: `<rect x="20" y="12" width="58" height="76" rx="8" fill="#C9B6FF" ${S4}/><rect x="26" y="12" width="6" height="76" fill="#A98BFF"/><path d="M54 58c-11-7-16-12-13-18c3-4 9-4 13 1c4-5 10-5 13-1c3 6-2 11-13 18z" fill="#FF6B8B" ${S3}/><rect x="74" y="40" width="12" height="16" rx="3" fill="#FFC23D" ${S3}/>` },
-  { id: 'text', task: 'Write 4–6 messages between two friends (A: … B: …).', start: 'A: Did you hear about', name: 'Text message', tip: 'Write it as messages to a friend.', svg: `<rect x="26" y="8" width="48" height="84" rx="10" fill="#E3EEFF" ${S4}/><rect x="34" y="22" width="26" height="12" rx="6" fill="#7EE0A1"/><rect x="40" y="40" width="26" height="12" rx="6" fill="#8EC5FF"/><rect x="34" y="58" width="22" height="12" rx="6" fill="#7EE0A1"/><path d="M44 84h12" stroke="${O}" stroke-width="3" stroke-linecap="round"/>` },
-  { id: 'complaint', task: 'Write to someone in charge. Say what the problem is and what you want them to do.', start: 'Dear Sir or Madam, I am writing to complain about', name: 'Complaint email', tip: 'Complain politely to someone in charge.', svg: `<rect x="10" y="24" width="80" height="54" rx="8" fill="#FFE27A" ${S4}/><path d="M12 28l38 28l38-28" fill="none" ${S4}/><circle cx="78" cy="24" r="12" fill="#FF6B6B" ${S3}/><path d="M78 17v8" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="78" cy="30" r="2.2" fill="#fff"/>` },
-  { id: 'post', task: 'Share your opinion and give a reason. Add a hashtag at the end.', start: "I can't believe", name: 'Social media post', tip: 'Write a post with your opinion.', svg: `<rect x="12" y="14" width="76" height="72" rx="14" fill="#FFC1DC" ${S4}/><circle cx="30" cy="32" r="8" fill="#fff" ${S3}/><path d="M44 30h30M44 38h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M50 74c-12-8-17-13-14-20c3-5 10-5 14 1c4-6 11-6 14-1c3 7-2 12-14 20z" fill="#FF4F7B" ${S3}/>` },
-  { id: 'speech', task: 'Persuade your classmates. Give reasons and say what they should do.', start: 'Dear friends, today I want to talk about', name: 'Short speech', tip: 'Speak to the class to persuade them.', svg: `<path d="M24 52h52l-6 36h-40z" fill="#8EC5FF" ${S4}/><rect x="18" y="44" width="64" height="10" rx="4" fill="#4DA3FF" ${S3}/><rect x="44" y="12" width="12" height="22" rx="6" fill="#C9B6FF" ${S3}/><path d="M50 34v10" stroke="${O}" stroke-width="4"/>${spark(80, 20, .8)}` }
+  { id: 'news', ex: "Yesterday at Bayview High School, students organised a protest against the new phone rule. The school says phones cannot be used during the day, even at lunch. More than 200 students joined the protest in the garden. \"We understand the problem, but we need our phones in an emergency,\" said one student. The head teacher will meet the students next week.", task: '5–7 sentences. Say what happened, where, who was there and why it matters.', start: 'Yesterday in Istanbul,', name: 'News report', tip: 'Tell what happened, like a journalist.', svg: `<rect x="14" y="16" width="72" height="68" rx="8" fill="#fff" ${S4}/><rect x="22" y="24" width="56" height="12" rx="3" fill="#4DA3FF"/><rect x="22" y="44" width="24" height="20" rx="3" fill="#FFC23D"/><path d="M52 46h26M52 54h26M52 62h18M22 72h56" stroke="#C3CAD9" stroke-width="4" stroke-linecap="round"/>` },
+  { id: 'diary', ex: "Dear diary, today was a strange day. Our school started a new rule: no phones at all. At first I was angry, because I always check my messages at lunch. But in the afternoon something happened. I talked to my friends more than usual and we laughed a lot. Maybe this rule is not so bad after all.", task: 'Write about your day and how you felt. Use the past tense.', start: 'Dear diary, today', name: 'Diary entry', tip: 'Write it as “Dear diary, today…”.', svg: `<rect x="20" y="12" width="58" height="76" rx="8" fill="#C9B6FF" ${S4}/><rect x="26" y="12" width="6" height="76" fill="#A98BFF"/><path d="M54 58c-11-7-16-12-13-18c3-4 9-4 13 1c4-5 10-5 13-1c3 6-2 11-13 18z" fill="#FF6B8B" ${S3}/><rect x="74" y="40" width="12" height="16" rx="3" fill="#FFC23D" ${S3}/>` },
+  { id: 'text', ex: "A: Did you hear about the new phone rule? 😱\nB: Yes! No phones at school, even at lunch.\nA: That's crazy. How can my mum call me?\nB: The office will have a phone for emergencies.\nA: Hmm, OK. But I still don't like it.\nB: Me neither. Let's talk to our teacher tomorrow.", task: 'Write 4–6 messages between two friends (A: … B: …).', start: 'A: Did you hear about', name: 'Text message', tip: 'Write it as messages to a friend.', svg: `<rect x="26" y="8" width="48" height="84" rx="10" fill="#E3EEFF" ${S4}/><rect x="34" y="22" width="26" height="12" rx="6" fill="#7EE0A1"/><rect x="40" y="40" width="26" height="12" rx="6" fill="#8EC5FF"/><rect x="34" y="58" width="22" height="12" rx="6" fill="#7EE0A1"/><path d="M44 84h12" stroke="${O}" stroke-width="3" stroke-linecap="round"/>` },
+  { id: 'complaint', ex: "Dear Sir or Madam,\nI am writing to complain about the new phone rule at our school. I understand that phones can be a problem in class. However, students also need them for emergencies and for homework apps. I would like you to allow phones during lunch breaks. I hope you will consider this request.\nYours faithfully,\nDeniz Kaya", task: 'Write to someone in charge. Say what the problem is and what you want them to do.', start: 'Dear Sir or Madam, I am writing to complain about', name: 'Complaint email', tip: 'Complain politely to someone in charge.', svg: `<rect x="10" y="24" width="80" height="54" rx="8" fill="#FFE27A" ${S4}/><path d="M12 28l38 28l38-28" fill="none" ${S4}/><circle cx="78" cy="24" r="12" fill="#FF6B6B" ${S3}/><path d="M78 17v8" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="78" cy="30" r="2.2" fill="#fff"/>` },
+  { id: 'post', ex: "I can't believe our school banned phones completely! 📵 I agree that we shouldn't use them in class, but a total ban is too much. We use our phones to check the bus times and to call our families. A better idea is a phone box in every classroom. What do you think? #FairRules #StudentVoice", task: 'Share your opinion and give a reason. Add a hashtag at the end.', start: "I can't believe", name: 'Social media post', tip: 'Write a post with your opinion.', svg: `<rect x="12" y="14" width="76" height="72" rx="14" fill="#FFC1DC" ${S4}/><circle cx="30" cy="32" r="8" fill="#fff" ${S3}/><path d="M44 30h30M44 38h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M50 74c-12-8-17-13-14-20c3-5 10-5 14 1c4-6 11-6 14-1c3 7-2 12-14 20z" fill="#FF4F7B" ${S3}/>` },
+  { id: 'speech', ex: "Dear friends, today I want to talk about our new phone rule. Many of you are angry, and I understand why. But let's think about it for a minute. Without phones, we talk more, we focus more and we get better grades. So I ask you: give this rule one month. If it doesn't work, we can change it together. Thank you!", task: 'Persuade your classmates. Give reasons and say what they should do.', start: 'Dear friends, today I want to talk about', name: 'Short speech', tip: 'Speak to the class to persuade them.', svg: `<path d="M24 52h52l-6 36h-40z" fill="#8EC5FF" ${S4}/><rect x="18" y="44" width="64" height="10" rx="4" fill="#4DA3FF" ${S3}/><rect x="44" y="12" width="12" height="22" rx="6" fill="#C9B6FF" ${S3}/><path d="M50 34v10" stroke="${O}" stroke-width="4"/>${spark(80, 20, .8)}` }
 ];
 const svgOf = inner => `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 
@@ -564,6 +569,7 @@ const TEAMS = [
   { name: 'Owls', emoji: '🦉', color: '#A77BFF' }, { name: 'Tigers', emoji: '🐯', color: '#FF9A3D' },
   { name: 'Unicorns', emoji: '🦄', color: '#FF6FC0' }, { name: 'Koalas', emoji: '🐨', color: '#5F8FA8' }
 ];
+function tn(t) { const n = (typeof G !== 'undefined' && G && G.names && G.names[t]) || (typeof S !== 'undefined' && S.live && S.live.names && S.live.names[t]); return n || (TEAMS[t] ? TEAMS[t].name : 'Group'); }
 const TINTS = ['#FFB3C7', '#B5E3FF', '#C9B6FF', '#FFE27A', '#B9F0CF', '#FFD3A6'];
 // w = target word, base = what to look for (verb/noun base), f = other word-family forms that also count
 const WORDS = [
@@ -765,7 +771,7 @@ function defaults() { return { teams: 4, set: 'w10', n: 4, min: 8, genre: true, 
 function freshGame() {
   const prev = G;
   G = { v: 2, gid: rid(6), phase: 'lobby', round: 0, settings: prev ? { ...prev.settings } : defaults(), endsAt: 0,
-    roster: {}, joinSeq: 0, code: prev ? prev.code : null, cubes: {}, dice: {}, rolled: {}, genre: {}, hints: {}, drafts: {}, rounds: {}, usedWords: [],
+    roster: {}, joinSeq: 0, code: prev ? prev.code : null, cubes: {}, dice: {}, rolled: {}, names: prev && prev.names ? { ...prev.names } : {}, genre: {}, hints: {}, drafts: {}, rounds: {}, usedWords: [],
     chat: prev && prev.chat ? prev.chat : [], chatOn: prev ? prev.chatOn !== false : true, seenChat: prev && prev.seenChat ? prev.seenChat : {}, seenSub: {} };
   if (prev) for (const [sid, r] of Object.entries(prev.roster)) G.roster[sid] = { name: r.name, team: r.team, online: r.online, seq: r.seq };
   H.view = null;
@@ -795,6 +801,11 @@ function ingest(s) {
     addMsg(sid, r.name, r.team, text, mid); ch = true;
   }
   const t = r.team;
+  if (Array.isArray(s.tname) && +s.tname[0] === t && t >= 0) {
+    const k = clean(s.tname[2], 12);
+    const nm = clean(s.tname[1], 18).replace(/[<>]/g, '');
+    if (k && !G.seenSub['n' + k]) { G.seenSub['n' + k] = 1; if (nm && nm !== tn(t)) { const old = tn(t); G.names[t] = nm; addMsg('system', '', -1, `${TEAMS[t].emoji} ${old} are now called "${nm}"`, rid(8)); ch = true; } }
+  }
   if (s.gid === G.gid && s.r === G.round && G.phase === 'write' && t >= 0 && G.dice[t]) {
     if (Array.isArray(s.roll) && s.roll[0] === G.round && !G.rolled[t]) { doRoll(t, r.name); ch = true; }
   }
@@ -847,7 +858,7 @@ function doRoll(t, who) {
   }
   G.rolled[t] = faces; G.cubes[t] = dice.map((d, i) => d[faces[i]]);
   G.genre[t] = G.settings.genre ? Math.floor(Math.random() * GENRES.length) : -1;
-  if (who) addMsg('system', '', -1, `${TEAMS[t].emoji} ${who} rolled the ${TEAMS[t].name}' dice!`, rid(8));
+  if (who) addMsg('system', '', -1, `${TEAMS[t].emoji} ${who} rolled the ${tn(t)}' dice!`, rid(8));
   markDirty();
 }
 function endWriting() {
@@ -989,7 +1000,7 @@ function buildLive() {
   const roster = {}; for (const [sid, r] of Object.entries(G.roster)) roster[sid] = [r.name, r.team, r.online ? 1 : 0];
   const drafts = {}; for (const [t, d] of Object.entries(G.drafts)) drafts[t] = [d.by, d.text.slice(0, 700), d.sid];
   const subs = {}; for (const [t, s] of Object.entries(curSubs())) subs[t] = pubSub(s);
-  return { gid: G.gid, phase: G.phase, round: G.round, endsAt: G.endsAt, set: { teams: nTeams(), n: G.settings.n }, roster, cubes: G.cubes, dice: G.dice, rolled: G.rolled, genre: G.genre, hints: G.hints, drafts, subs,
+  return { gid: G.gid, phase: G.phase, round: G.round, endsAt: G.endsAt, set: { teams: nTeams(), n: G.settings.n }, roster, names: G.names, cubes: G.cubes, dice: G.dice, rolled: G.rolled, genre: G.genre, hints: G.hints, drafts, subs,
     totals: totals(), chat: G.chat.slice(-40).map(m => [m.mid, m.sid, m.name, m.team, m.text, m.kind || '']), chatOn: G.chatOn };
 }
 function flush() {
@@ -1126,7 +1137,7 @@ function seg(key, vals, cur, labels) { return `<div class="seg">${vals.map((v, i
 function scorestrip() {
   if (!G.round) return '';
   const sc = totals(); const order = [...Array(nTeams()).keys()].sort((a, b) => sc[b] - sc[a]);
-  return `<div class="scorestrip">${order.map((t, i) => `<div class="schip" style="--c:${TEAMS[t].color}"><span class="rk">${i + 1}.</span><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<b>${fmtPts(sc[t])}</b></div>`).join('')}</div>`;
+  return `<div class="scorestrip">${order.map((t, i) => `<div class="schip" style="--c:${TEAMS[t].color}"><span class="rk">${i + 1}.</span><span class="em">${TEAMS[t].emoji}</span>${tn(t)}<b>${fmtPts(sc[t])}</b></div>`).join('')}</div>`;
 }
 function renderHost() {
   try { renderHostInner(); } catch (e) {
@@ -1160,7 +1171,7 @@ function lobbyHTML() {
     <section class="card join">${joinInfo}</section>
     <section><div class="row between" style="margin-bottom:12px"><h2><span id="pcount">0</span> players</h2><div class="row"><button class="btn ghost" data-act="addBots">🤖 Add demo players</button></div></div>
       <div id="unass" class="unass" hidden></div><div class="groups" id="groups"></div>
-      <p class="small" style="margin-top:10px">Students choose their group on their phones. Tap a name to move that student to the next group.</p></section>
+      <p class="small" style="margin-top:10px">Students choose their group and can give it a name on their phones (✕ changes a name back). Tap a student to move them to the next group.</p></section>
     <section class="card settings"><h3>Settings</h3>
       <div class="set"><span>Groups</span>${seg('teams', [2, 3, 4, 5, 6, 7, 8], s.teams)}</div>
       <div class="set"><span>Words</span>${seg('set', ['w10', 'w10c1', 'w10c2', 'all'], s.set, ['Week 10', 'Week 10 · Ch 1', 'Week 10 · Ch 2', 'All words'])}<div class="small" style="margin-top:4px">All words = Weeks 3, 5, 9 and 10 + sports and environment words (${WORDS.length} words).</div></div>
@@ -1178,7 +1189,7 @@ function updLobby() {
   const un = Object.entries(G.roster).filter(([, r]) => r.team < 0 && r.online);
   const ue = $('#unass'); if (ue) { ue.hidden = !un.length; ue.textContent = 'Choosing a group: ' + un.map(([, r]) => r.name).join(', '); }
   const g = $('#groups'); if (!g) return;
-  g.innerHTML = [...Array(nTeams()).keys()].map(t => { const m = teamMembers(t); return `<div class="gcol" style="--c:${TEAMS[t].color}"><div class="ghead"><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<span class="cnt">${m.length}</span></div>
+  g.innerHTML = [...Array(nTeams()).keys()].map(t => { const m = teamMembers(t); return `<div class="gcol" style="--c:${TEAMS[t].color}"><div class="ghead"><span class="em">${TEAMS[t].emoji}</span>${esc(tn(t))}${G.names[t] ? `<button class="mini" data-act="resetName" data-g="${t}" title="Change back to ${TEAMS[t].name}">✕</button>` : ''}<span class="cnt">${m.length}</span></div>
     <div class="names">${m.map(([sid, r]) => `<button data-act="move" data-sid="${esc(sid)}" class="${r.online ? '' : 'off'}">${esc(r.name)}</button>`).join('') || '<span class="small">No one yet</span>'}</div></div>`; }).join('');
 }
 function playHTML() {
@@ -1235,7 +1246,7 @@ function updPlay() {
     if (s) body = resultBlock(G.round, t, s, true, G.hints[t]);
     else if (!rolled) body = `<div class="draft empty">🎲 Waiting for the group to roll their dice…</div>`;
     else body = `<div class="draft${d ? '' : ' empty'}">${d ? `<span class="by typing">${esc(d.by)} is writing</span>${esc(d.text)}` : 'Dice rolled! Waiting for the first sentence…'}</div>`;
-    card.innerHTML = `<div class="ghead"><span class="em">${TEAMS[t].emoji}</span>${TEAMS[t].name}<small>${m} online${s && s.st === 'done' ? ' · ✅ done' : s ? ' · 📤 sent' : ''}</small></div>
+    card.innerHTML = `<div class="ghead"><span class="em">${TEAMS[t].emoji}</span>${tn(t)}<small>${m} online${s && s.st === 'done' ? ' · ✅ done' : s ? ' · 📤 sent' : ''}</small></div>
       ${diceRow(G.dice[t] || [], rolled, cubes, G.genre[t], { s: 54, animate })}
       ${rolled ? genreHTML(G.genre[t]) : ''}${body}`;
     runRolls(card);
@@ -1245,8 +1256,8 @@ function endHTML() {
   const sc = totals(); const order = [...Array(nTeams()).keys()].sort((a, b) => sc[b] - sc[a]);
   const pod = [order[1], order[0], order[2]].filter(x => x !== undefined); const hgt = { 0: 190, 1: 130, 2: 90 };
   return `<div class="endwrap"><h1 style="font-size:46px">🏆 Story Cubes champions</h1>
-    <div class="podium">${pod.map(t => { const rank = order.indexOf(t); return `<div class="pod" style="--c:${TEAMS[t].color}"><span class="em" style="animation-delay:${(2 - rank) * .2}s">${TEAMS[t].emoji}</span><div class="nm">${TEAMS[t].name}</div><div class="small" style="font-weight:900">${fmtPts(sc[t])} pts</div><div class="blk" style="height:${hgt[rank]}px">${rank + 1}</div></div>`; }).join('')}</div>
-    <div class="others">${order.slice(3).map((t, i) => `<span class="pill">${i + 4}. ${TEAMS[t].emoji} ${TEAMS[t].name} · ${fmtPts(sc[t])} pts</span>`).join('')}</div>
+    <div class="podium">${pod.map(t => { const rank = order.indexOf(t); return `<div class="pod" style="--c:${TEAMS[t].color}"><span class="em" style="animation-delay:${(2 - rank) * .2}s">${TEAMS[t].emoji}</span><div class="nm">${tn(t)}</div><div class="small" style="font-weight:900">${fmtPts(sc[t])} pts</div><div class="blk" style="height:${hgt[rank]}px">${rank + 1}</div></div>`; }).join('')}</div>
+    <div class="others">${order.slice(3).map((t, i) => `<span class="pill">${i + 4}. ${TEAMS[t].emoji} ${tn(t)} · ${fmtPts(sc[t])} pts</span>`).join('')}</div>
     <p class="muted" style="font-weight:800">${G.round} round${G.round === 1 ? '' : 's'} · up to 10 points per round</p>
     <div class="row" style="justify-content:center;margin-top:18px"><button class="btn go big" data-act="again">↻ Play again (same groups)</button><button class="btn ghost" data-act="newGame">New game</button></div></div>`;
 }
@@ -1262,6 +1273,7 @@ function onHostClick(e) {
   else if (a === 'again') { G.phase = 'lobby'; G.round = 0; G.rounds = {}; G.cubes = {}; G.usedWords = []; H.view = null; markDirty(); }
   else if (a === 'newGame') confirmBox('Start a new game? Players and scores will be cleared.', () => { const keep = G.code; G = null; freshGame(); G.roster = {}; G.code = keep; H.bots = {}; H.chatEls = null; $('#chList').innerHTML = ''; markDirty(); }, 'New game');
   else if (a === 'addBots') addBots();
+  else if (a === 'resetName') { const g = +b.dataset.g; delete G.names[g]; markDirty(); }
   else if (a === 'resetGame') { H.view = null; const keep = G && G.code; G = null; freshGame(); G.code = keep || (MODE === 'p2p' ? newCode() : null); H.bots = {}; H.chatEls = null; const l = $('#chList'); if (l) l.innerHTML = ''; markDirty(); }
   else if (a === 'move') { const r = G.roster[b.dataset.sid]; if (r) { r.team = (r.team + 1) % nTeams(); markDirty(); } }
   else if (a === 'cyc') cycleWord(+b.dataset.r, +b.dataset.g, b.dataset.w);
@@ -1297,7 +1309,7 @@ async function startHost(makeT, opts) {
   function restoreOrFresh(saved) {
   if (saved && saved.v === 2 && saved.gid && saved.settings && now() - (saved.savedAt || 0) < 6 * 3600e3) {
     G = saved; G.roster = G.roster || {}; for (const r of Object.values(G.roster)) r.online = false; G.settings = Object.assign(defaults(), G.settings);
-    for (const k of ['cubes', 'dice', 'rolled', 'genre', 'hints', 'drafts', 'rounds', 'seenChat', 'seenSub']) if (!G[k] || typeof G[k] !== 'object') G[k] = {};
+    for (const k of ['cubes', 'dice', 'rolled', 'names', 'genre', 'hints', 'drafts', 'rounds', 'seenChat', 'seenSub']) if (!G[k] || typeof G[k] !== 'object') G[k] = {};
     if (!Array.isArray(G.chat)) G.chat = [];
     G.chatOn = G.chatOn !== false; if (!SETS[G.settings.set]) G.settings.set = 'w10';
     if (G.phase === 'write' && !Object.keys(G.dice).length) { G.phase = 'lobby'; G.endsAt = 0; }
@@ -1322,7 +1334,7 @@ async function startHost(makeT, opts) {
 const S = { T: null, sid: null, name: '', code: '', live: null, gid: null, round: 0, draft: '', sub: null, h: [], pickT: null, pickN: 0, chatOut: [], chatOpen: false, chatSeen: {}, chatInit: false, lastChatAt: 0, view: null, sendT: 0, endsLocal: 0 };
 function sendState() {
   if (!S.T || !S.name) return;
-  S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, r: S.round, d: S.draft, sub: S.sub, h: S.h, roll: S.rollReq, pick: S.pickT === null ? null : [S.pickT, S.pickN], chat: S.chatOut.map(m => [m[0], m[1]]) });
+  S.T.send({ role: 'student', sid: S.sid, name: S.name, gid: S.gid, r: S.round, d: S.draft, sub: S.sub, h: S.h, roll: S.rollReq, tname: S.tname || null, pick: S.pickT === null ? null : [S.pickT, S.pickN], chat: S.chatOut.map(m => [m[0], m[1]]) });
 }
 function sendSoon() { clearTimeout(S.sendT); S.sendT = setTimeout(sendState, 600); }
 function myRow() { return S.live && S.live.roster ? S.live.roster[S.sid] : null; }
@@ -1392,10 +1404,10 @@ function sTimer() {
 function renderStudent() {
   const v = sPhase(); const L = S.live; const t = myTeam();
   const badge = $('#sTeam');
-  if (badge) badge.innerHTML = t >= 0 && TEAMS[t] ? `<span style="font-size:26px">${TEAMS[t].emoji}</span><span>${esc(TEAMS[t].name)}</span>` : '🎲 <span>Story Cubes</span>';
+  if (badge) badge.innerHTML = t >= 0 && TEAMS[t] ? `<span style="font-size:26px">${TEAMS[t].emoji}</span><span>${esc(tn(t))}</span>` : '🎲 <span>Story Cubes</span>';
   const st = $('#sstage');
   const sub = L && L.subs ? L.subs[t] : null;
-  const key = v + '|' + (S.sub ? 's' : '') + (S.rollReq ? 'r' : '') + '|' + (L && L.rolled ? JSON.stringify(L.rolled[t] || 0) : '') + '|' + (L ? L.round : 0) + '|' + (sub ? sub.st + JSON.stringify(sub.score) + JSON.stringify(sub.res && sub.res.words) : '-') + '|' + (v === 'pick' ? (L && L.set.teams) : '') + '|' + '' + '|' + (v === 'end' || v === 'results' ? JSON.stringify(L.totals) : '');
+  const key = v + '|' + JSON.stringify((L && L.names) || {}) + '|' + (S.sub ? 's' : '') + (S.rollReq ? 'r' : '') + '|' + (L && L.rolled ? JSON.stringify(L.rolled[t] || 0) : '') + '|' + (L ? L.round : 0) + '|' + (sub ? sub.st + JSON.stringify(sub.score) + JSON.stringify(sub.res && sub.res.words) : '-') + '|' + (v === 'pick' ? (L && L.set.teams) : '') + '|' + '' + '|' + (v === 'end' || v === 'results' ? JSON.stringify(L.totals) : '');
   if (S.view === key) { updMates(); sTimer(); return; }
   const keepFocus = document.activeElement && document.activeElement.id === 'storyIn';
   S.view = key;
@@ -1407,9 +1419,10 @@ function renderStudent() {
     st.innerHTML = `<div class="scard center" style="margin-top:20px"><div class="logo">⏳</div><h2>Connecting to the board…</h2><p class="muted">Keep this page open.</p></div>`;
   } else if (v === 'pick') {
     const n = L.set.teams; const cnt = Array(n).fill(0); for (const r of Object.values(L.roster)) if (r[1] >= 0 && r[1] < n) cnt[r[1]]++;
-    st.innerHTML = `<div class="scard"><h2>Hi ${esc(S.name)}! Choose your group</h2><div class="pickgrid">${[...Array(n).keys()].map(i => `<button data-act="pick" data-t="${i}" style="--c:${TEAMS[i].color}"><span class="em">${TEAMS[i].emoji}</span>${TEAMS[i].name}<small>${cnt[i]} player${cnt[i] === 1 ? '' : 's'}</small></button>`).join('')}</div></div>`;
+    st.innerHTML = `<div class="scard"><h2>Hi ${esc(S.name)}! Choose your group</h2><div class="pickgrid">${[...Array(n).keys()].map(i => `<button data-act="pick" data-t="${i}" style="--c:${TEAMS[i].color}"><span class="em">${TEAMS[i].emoji}</span>${tn(i)}<small>${cnt[i]} player${cnt[i] === 1 ? '' : 's'}</small></button>`).join('')}</div></div>`;
   } else if (v === 'lobby') {
-    st.innerHTML = `<div class="scard center"><div class="logo">${TEAMS[t].emoji}</div><h2>You're in the ${esc(TEAMS[t].name)}!</h2><p class="muted" style="font-weight:700">Wait for your teacher to give out the dice. Then roll them and write <b>one text</b> together with the words that land face-up.</p>
+    st.innerHTML = `<div class="scard center"><div class="logo">${TEAMS[t].emoji}</div><h2>You're in the ${esc(tn(t))}!</h2>
+      <form id="tnF" class="row" style="justify-content:center;margin:8px 0"><input class="in" id="tnIn" maxlength="18" placeholder="Give your group a name" style="max-width:240px;font-size:16px;padding:9px 12px" autocomplete="off"><button class="btn go">Save</button></form><p class="muted" style="font-weight:700">Wait for your teacher to give out the dice. Then roll them and write <b>one text</b> together with the words that land face-up.</p>
       <div class="mates" id="mates"></div><button class="btn ghost" data-act="repick">Change group</button></div>`;
   } else if (v === 'write' && !sub && S.sub) {
     st.innerHTML = `<div class="scard center"><div class="logo">📤</div><h2>Sending your story…</h2><p class="muted" style="font-weight:700">Keep this page open.</p><div class="story" style="text-align:left;margin-top:10px">${esc(S.sub[1])}</div></div>`;
@@ -1422,7 +1435,7 @@ function renderStudent() {
     if (!S.anim) S.anim = {};
     const ak = L.gid + ':' + L.round; const animate = !S.anim[ak]; S.anim[ak] = 1;
     st.innerHTML = `<div class="pdice">${diceRow(L.dice[t], L.rolled[t], cubes, L.genre[t], { s: 104, animate })}</div>
-      <div class="sgenre">${genreHTML(L.genre[t], true)}</div>
+      <div class="sgenre">${genreHTML(L.genre[t], true)}${L.genre[t] >= 0 && GENRES[L.genre[t]].ex ? `<details class="exbox"><summary>📄 See an example ${esc(GENRES[L.genre[t]].name.toLowerCase())}</summary><div class="ex">${esc(GENRES[L.genre[t]].ex)}</div><div class="small">This example is about a different topic. Write your own text with your words.</div></details>` : ''}</div>
       <p class="small" style="font-weight:800;margin:0 0 6px">Write <b>one text for your group</b> (at least ${MIN_WORDS} words). Use all your words: <b>${cubes.map(esc).join(' · ')}</b> (+1 bonus if every word is correct).</p>
       <textarea class="story-in" id="storyIn" placeholder="${L.genre[t] >= 0 && GENRES[L.genre[t]].start ? esc(GENRES[L.genre[t]].start) + '…' : 'Start writing…'}" maxlength="1500"></textarea>
       <div class="wc" id="wc">${wordCount(S.draft)} words</div><div class="mates" id="mates"></div>
@@ -1451,6 +1464,7 @@ function updMates() {
   m.textContent = txt;
 }
 function onStudentSubmit(e) {
+  if (e.target.id === 'tnF') { e.preventDefault(); const n = clean($('#tnIn').value, 18); if (!n) return; S.tname = [myTeam(), n, rid(6)]; sendState(); $('#tnIn').value = ''; toast('Group name sent: ' + n); return; }
   if (e.target.id !== 'joinF') return; e.preventDefault();
   const n = clean($('#nameIn').value, 20); if (!n) { $('#nameIn').focus(); return; }
   if (MODE === 'p2p') { const ci = $('#codeIn'); const c = clean(ci ? ci.value : S.code, 8).toUpperCase(); if (!c) { ci && ci.focus(); return; } S.code = c; LS.set('sc.code', c); }
@@ -1458,7 +1472,7 @@ function onStudentSubmit(e) {
 }
 function onStudentClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
-  if (a === 'pick') { S.pickT = +b.dataset.t; S.pickN++; S.choosing = false; S.view = null; sendState(); toast(`Joining ${TEAMS[S.pickT].emoji} ${TEAMS[S.pickT].name}…`, 1500); renderStudent(); }
+  if (a === 'pick') { S.pickT = +b.dataset.t; S.pickN++; S.choosing = false; S.view = null; sendState(); toast(`Joining ${TEAMS[S.pickT].emoji} ${tn(S.pickT)}…`, 1500); renderStudent(); }
   else if (a === 'roll') { if (S.rollReq) return; S.rollReq = [S.round, rid(6)]; S.view = null; sendState(); renderStudent(); }
   else if (a === 'repick') { S.choosing = true; S.view = null; renderStudent(); }
   else if (a === 'send') {
