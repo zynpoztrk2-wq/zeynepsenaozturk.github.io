@@ -1291,8 +1291,10 @@ async function startHost(makeT, opts) {
   H.T = T;
   bootStep('loading saved game');
   const fresh = params.has('reset') || location.hash === '#reset';
-  let saved = null; try { saved = fresh ? null : (T ? await T.load() : LS.get('sc.host', null)); } catch (e) { saved = null; }
+  let saved = null; try { saved = fresh ? null : (T ? await T.load() : LS.get('sc.host', null)); saved = saved ? JSON.parse(JSON.stringify(saved)) : null; } catch (e) { saved = null; }
   bootStep('setting up');
+  try { restoreOrFresh(saved); } catch (e) { console.error(e); G = null; freshGame(); }
+  function restoreOrFresh(saved) {
   if (saved && saved.v === 2 && saved.gid && saved.settings && now() - (saved.savedAt || 0) < 6 * 3600e3) {
     G = saved; G.roster = G.roster || {}; for (const r of Object.values(G.roster)) r.online = false; G.settings = Object.assign(defaults(), G.settings);
     for (const k of ['cubes', 'dice', 'rolled', 'genre', 'hints', 'drafts', 'rounds', 'seenChat', 'seenSub']) if (!G[k] || typeof G[k] !== 'object') G[k] = {};
@@ -1302,6 +1304,7 @@ async function startHost(makeT, opts) {
     if (G.phase !== 'lobby') setTimeout(() => toast('Your game was restored'), 400);
     for (const sid of Object.keys(G.roster)) if (isBot(sid)) delete G.roster[sid];
   } else freshGame();
+  }
   if (MODE === 'p2p' && !G.code) G.code = newCode();
   H.ai = H.sample ? 'ready' : 'off';
   bootStep('listening');
