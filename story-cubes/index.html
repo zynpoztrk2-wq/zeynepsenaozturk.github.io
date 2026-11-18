@@ -767,7 +767,7 @@ async function ltCheck(text) {
 // ===================================================================
 const H = { T: null, sample: null, ai: 'off', aiCool: 0, view: null, dirty: false, rq: false, lastPub: '', saveAt: 0, saveDue: false, qrFor: null, demoOnly: false, checking: 0, queue: [], bots: {}, chatEls: null };
 let G = null, MODE = null;
-function defaults() { return { teams: 4, set: 'w10', n: 4, min: 8, genre: true, ai: true }; }
+function defaults() { return { teams: 4, set: 'w10', n: 4, min: 8, genre: true, ai: true, auto: true, wait: 30, rounds: 0 }; }
 function freshGame() {
   const prev = G;
   G = { v: 2, gid: rid(6), phase: 'lobby', round: 0, settings: prev ? { ...prev.settings } : defaults(), endsAt: 0,
@@ -844,7 +844,7 @@ function roll() {
   const n = nTeams(), k = Math.max(1, Math.min(G.settings.n, 6));
   G.round++; G.phase = 'write'; G.cubes = {}; G.dice = {}; G.rolled = {}; G.genre = {}; G.hints = {}; G.drafts = {}; G.rounds[G.round] = {};
   for (let t = 0; t < n; t++) { G.dice[t] = makeDice(k); G.genre[t] = -1; }
-  G.endsAt = now() + G.settings.min * 60000;
+  G.endsAt = now() + G.settings.min * 60000; G.nextAt = 0;
   addMsg('system', '', -1, `🎲 Round ${G.round}! Every group has ${k} dice. Roll them on your phone!`, rid(8));
   markDirty();
   if (H.sample && G.settings.ai && H.ai !== 'on') warmAI();
@@ -1007,11 +1007,32 @@ function flush() {
   if (!G) return;
   if (H.dirty) {
     H.dirty = false; H.saveDue = true;
-    if (H.T) { const live = buildLive(); const s = JSON.stringify(live); if (s !== H.lastPub) { H.lastPub = s; H.T.publish('live', Object.assign(live, { left: G.endsAt ? Math.max(0, G.endsAt - now()) : 0, now: now() })); } }
+    if (H.T) { const live = buildLive(); const s = JSON.stringify(live); if (s !== H.lastPub) { H.lastPub = s; H.T.publish('live', Object.assign(live, { left: G.endsAt ? Math.max(0, G.endsAt - now()) : 0, nleft: G.nextAt && !G.autoPaused ? Math.max(0, G.nextAt - now()) : 0, last: lastRound() ? 1 : 0, now: now() })); } }
   }
   if (H.saveDue && now() - H.saveAt > 2000) { H.saveDue = false; H.saveAt = now(); G.savedAt = now(); if (H.T) H.T.save(G); else LS.set('sc.host', G); }
 }
-function tick() { if (!G) return; if (G.phase === 'write' && G.endsAt && now() >= G.endsAt) endWriting(); updateTimer(); botsTick(); }
+function allChecked() { const subs = curSubs(); return [...Array(nTeams()).keys()].every(i => subs[i] && subs[i].st === 'done'); }
+function lastRound() { return G.settings.rounds > 0 && G.round >= G.settings.rounds; }
+function tick() {
+  if (!G) return;
+  if (G.phase === 'write' && G.endsAt && now() >= G.endsAt) endWriting();
+  if (G.phase === 'results' && G.settings.auto && !G.autoPaused) {
+    if (!G.nextAt && allChecked()) { G.nextAt = now() + G.settings.wait * 1000; markDirty(); }
+    else if (G.nextAt && now() >= G.nextAt) { G.nextAt = 0; if (lastRound()) { G.phase = 'end'; markDirty(); } else roll(); }
+  }
+  updateTimer(); updAuto(); botsTick();
+}
+function updAuto() {
+  const box = $('#autoBox'); if (!box || !G) return;
+  let txt = '', btn = '';
+  if (G.phase === 'results' && G.settings.auto) {
+    if (G.autoPaused) { txt = '⏸ Paused'; btn = '<button class="btn ghost" data-act="autoResume">▶ Continue</button>'; }
+    else if (!G.nextAt) txt = '⏳ Checking the texts…';
+    else { const s = Math.max(0, Math.ceil((G.nextAt - now()) / 1000)); txt = (lastRound() ? '🏆 Winners in ' : '🎲 Next round in ') + s + 's'; btn = '<button class="btn ghost" data-act="autoPause">⏸ Pause</button>'; }
+  }
+  const html = txt ? `<span class="pill warn" style="font-size:16px">${txt}</span>${btn}` : '';
+  if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; }
+}
 
 // ----- demo players -----
 const BOT_NAMES = ['Ece', 'Mert', 'Deniz', 'Arda', 'Elif', 'Kaan', 'Selin', 'Emre', 'Ada', 'Can', 'Defne', 'Yusuf', 'Ela', 'Berk', 'Zeynep', 'Ali'];
@@ -1177,6 +1198,9 @@ function lobbyHTML() {
       <div class="set"><span>Words</span>${seg('set', ['w10', 'w10c1', 'w10c2', 'all'], s.set, ['Week 10', 'Week 10 · Ch 1', 'Week 10 · Ch 2', 'All words'])}<div class="small" style="margin-top:4px">All words = Weeks 3, 5, 9 and 10 + sports and environment words (${WORDS.length} words).</div></div>
       <div class="set"><span>Dice per group</span>${seg('n', [3, 4, 5, 6], s.n)}<div class="small" style="margin-top:4px">Each die has 6 words. The words that land face-up are the ones to use.</div></div>
       <div class="set"><span>Writing time</span>${seg('min', [5, 8, 10, 15], s.min, ['5′', '8′', '10′', '15′'])}</div>
+      <div class="set"><label class="check"><input type="checkbox" data-act="auto" ${s.auto ? 'checked' : ''}> <span>Rounds run automatically<br><span class="small">After the results, the next round starts by itself.</span></span></label>
+        ${s.auto ? `<div class="row" style="margin-top:8px"><span class="small" style="font-weight:900">Results on screen</span>${seg('wait', [20, 30, 45, 60], s.wait, ['20s', '30s', '45s', '60s'])}</div>` : ''}</div>
+      <div class="set"><span>Number of rounds</span>${seg('rounds', [3, 4, 5, 0], s.rounds, ['3', '4', '5', 'No limit'])}<div class="small" style="margin-top:4px">After the last round the winners are shown.</div></div>
       <div class="set"><label class="check"><input type="checkbox" data-act="genre" ${s.genre ? 'checked' : ''}> <span>Story type die<br><span class="small">Each group also gets a type: news report, diary, text message…</span></span></label></div>
       <div class="set">${H.sample ? `<label class="check"><input type="checkbox" data-act="ai" ${s.ai ? 'checked' : ''}> <span>AI checks the stories<br><span class="small">Target words (meaning + form) and grammar. You can change any score on the board.</span></span></label>`
         : `<span class="small">${MODE === 'claude' ? 'Target words are checked automatically. Grammar: you give the band on the board.' : 'Target words are found automatically. Grammar is checked with the free LanguageTool service. You can change any score on the board.'}</span>`}</div>
@@ -1195,7 +1219,7 @@ function updLobby() {
 function playHTML() {
   const res = G.phase === 'results';
   return `<div class="phead"><h1>${res ? `Round ${G.round} results 📊` : `Round ${G.round}: write your story! ✍️`}</h1>
-    ${res ? `<button class="btn green big" data-act="roll">🎲 Next round</button><button class="btn ghost" data-act="finish">🏆 Finish game</button>`
+    ${res ? `<span class="row" id="autoBox"></span><button class="btn green big" data-act="roll">🎲 ${lastRound() ? 'Extra round' : 'Next round'}</button><button class="btn ghost" data-act="finish">🏆 Finish game</button>`
       : `<button class="btn ghost" data-act="plus1">+1 min</button><button class="btn stop" data-act="endWrite">Stop writing</button>`}</div>
     <div id="strip"></div>
     ${res ? '' : '<p class="muted" style="margin:-4px 0 14px;font-weight:700">Roll your dice on your phone and write one text with the words that land face-up, in the text type on your story die.</p>'}
@@ -1265,6 +1289,9 @@ function onHostClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
   if (a === 'set') { const k = b.dataset.k; let v = b.dataset.v; if (k !== 'set') v = +v; G.settings[k] = v; if (k === 'teams') for (const r of Object.values(G.roster)) if (r.team >= v) r.team = -1; H.view = null; markDirty(); }
   else if (a === 'genre') { G.settings.genre = b.checked; markDirty(); }
+  else if (a === 'auto') { G.settings.auto = b.checked; H.view = null; markDirty(); }
+  else if (a === 'autoPause') { G.autoPaused = true; G.nextAt = 0; markDirty(); }
+  else if (a === 'autoResume') { G.autoPaused = false; markDirty(); }
   else if (a === 'ai') { G.settings.ai = b.checked; if (b.checked) warmAI(); markDirty(); }
   else if (a === 'roll') { if (G.phase === 'lobby' && !Object.keys(G.roster).length) { confirmBox('Nobody has joined yet. Give out the dice anyway?', roll, 'Give out the dice'); return; } roll(); }
   else if (a === 'endWrite') confirmBox('Stop writing now? Groups that did not send their story will be checked with what they have written so far.', endWriting, 'Stop');
@@ -1355,7 +1382,7 @@ function onPart(part, data, meta) {
     S.rollReq = null;
     S.view = null; sendState();
   }
-  if (!(meta && meta.fromCache)) S.endsLocal = data.endsAt ? now() + (data.left || 0) : 0;
+  if (!(meta && meta.fromCache)) { S.endsLocal = data.endsAt ? now() + (data.left || 0) : 0; S.nextLocal = data.nleft ? now() + data.nleft : 0; }
   renderStudent(); renderChatS();
 }
 function renderStudentShell() {
@@ -1396,7 +1423,8 @@ function renderChatS(scroll) {
   if (near || scroll) list.scrollTop = list.scrollHeight;
   const off = L.chatOn === false; $('#sChOff').hidden = !off; $('#sChIn').disabled = off;
 }
-function sTimer() {
+function sNext() { const n = $('#nextIn'); if (!n) return; const s = S.nextLocal ? Math.max(0, Math.ceil((S.nextLocal - now()) / 1000)) : 0; n.textContent = s ? ((S.live && S.live.last ? '🏆 Winners in ' : '🎲 Next round in ') + s + 's') : ''; }
+function sTimer() { sNext();
   const t = $('#sTimer'); if (!t) return;
   const show = sPhase() === 'write' && S.endsLocal > 0 && !(S.live.subs && S.live.subs[myTeam()]);
   t.hidden = !show; if (!show) return; const left = S.endsLocal - now(); t.textContent = fmt(left); t.classList.toggle('low', left < 30000);
@@ -1445,7 +1473,7 @@ function renderStudent() {
   } else if (v === 'write' || v === 'results') {
     st.innerHTML = `<div class="scard" style="display:flex;flex-direction:column;gap:10px">${sub ? `<h2>${sub.st === 'done' ? 'Your score 🎉' : 'Text sent! 📤'}</h2>${resultBlock(L.round, t, sub, false)}` : '<h2>Time is up!</h2><p class="muted">Your group did not send a story this round.</p>'}</div>
       ${L.cubes && L.cubes[t] ? `<div class="pcubes" style="margin-top:16px">${L.cubes[t].map((w, i) => cubeHTML(w, i, { s: 96 })).join('')}</div>` : ''}
-      ${v === 'results' ? rankHTML(t) : '<p class="muted center" style="font-weight:800">Wait for the other groups…</p>'}`;
+      ${v === 'results' ? rankHTML(t) + '<p class="muted center" style="font-weight:800" id="nextIn"></p>' : '<p class="muted center" style="font-weight:800">Wait for the other groups…</p>'}`;
   } else if (v === 'end') {
     st.innerHTML = `<div class="scard center"><div class="logo">🏆</div><h2>Game over!</h2>${rankHTML(t)}</div>`;
   }
