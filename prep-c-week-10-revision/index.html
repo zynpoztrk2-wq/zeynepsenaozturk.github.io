@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prep C Week 10 Revision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: one exam-booklet column, item numbers in a left gutter, hairline rules between items, sticky progress strip, red-pen corrections in the blanks */
+  --paper: #eef1f5;
+  --sheet: #ffffff;
+  --ink: #15213a;
+  --muted: #5a6477;
+  --line: #d6dce6;
+  --accent: #2443c9;
+  --right: #1b7546;
+  --right-bg: #e7f3ec;
+  --wrong: #c42d24;
+  --wrong-bg: #fbebe9;
+  --display: "Newsreader", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pen: "Caveat", "Segoe Print", "Bradley Hand", cursive;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f131a;
+    --sheet: #161b24;
+    --ink: #e5e9f0;
+    --muted: #9aa3b4;
+    --line: #2b3240;
+    --accent: #8fa3ff;
+    --right: #5cc993;
+    --right-bg: #15291f;
+    --wrong: #ff7d70;
+    --wrong-bg: #33191a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f131a;
+  --sheet: #161b24;
+  --ink: #e5e9f0;
+  --muted: #9aa3b4;
+  --line: #2b3240;
+  --accent: #8fa3ff;
+  --right: #5cc993;
+  --right-bg: #15291f;
+  --wrong: #ff7d70;
+  --wrong-bg: #33191a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.sheet {
+  max-width: 820px;
+  margin: 0 auto;
+  background: var(--sheet);
+  min-height: 100%;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+@media (max-width: 840px) { .sheet { border: 0; } }
+
+header.intro { padding: 2.5rem 2rem 1.5rem; }
+.eyebrow {
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 .6rem;
+}
+h1 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 1.1;
+  margin: 0 0 .9rem;
+  text-wrap: balance;
+}
+.lede { max-width: 60ch; color: var(--muted); margin: 0; }
+.lede + .lede { margin-top: .4rem; font-size: .9rem; }
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--sheet);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: .7rem 2rem .8rem;
+}
+.bar-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.tally { font-size: .92rem; font-variant-numeric: tabular-nums; }
+.tally b { font-weight: 600; }
+.tally .ok { color: var(--right); }
+.tally .bad { color: var(--wrong); }
+.jump {
+  font: 500 .88rem var(--body);
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: .3rem .8rem;
+  cursor: pointer;
+}
+.jump:hover { border-color: var(--accent); }
+.strip {
+  display: grid;
+  grid-template-columns: repeat(50, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: .6rem;
+}
+.seg {
+  display: block;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.seg.ok { background: var(--right); }
+.seg.bad { background: var(--wrong); }
+
+main { padding: 0 2rem 1rem; }
+.q {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 0 1.1rem;
+  padding: 2rem 0;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 92px;
+}
+.q:first-child { border-top: 0; }
+.num {
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  padding-top: .1rem;
+}
+.q.ok .num { color: var(--right); }
+.q.bad .num { color: var(--wrong); }
+
+.stem {
+  font-family: var(--display);
+  font-size: 1.22rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+.blank {
+  display: inline-block;
+  min-width: 6.5em;
+  margin: 0 .15em;
+  border-bottom: 2px solid var(--ink);
+  text-align: center;
+  line-height: 1.25;
+  max-width: 100%;
+  position: relative;
+}
+.blank .fill { font-family: var(--body); font-weight: 600; font-size: .9em; padding: 0 .25em; }
+.blank.ok { border-color: var(--right); }
+.blank.ok .fill { color: var(--right); }
+.blank .tick { font-family: var(--pen); color: var(--right); font-size: 1.5em; line-height: .6; margin-left: .1em; }
+.blank.bad { border-color: var(--wrong); }
+.blank.bad s { color: var(--muted); text-decoration-color: var(--wrong); text-decoration-thickness: 2px; }
+.blank .pen {
+  font-family: var(--pen);
+  color: var(--wrong);
+  font-size: 1.45em;
+  line-height: .9;
+  margin-left: .2em;
+}
+
+.opts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+  margin-top: 1.1rem;
+  max-width: 620px;
+}
+.opt {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  min-height: 48px;
+  padding: .6rem .8rem;
+  text-align: left;
+  font: 500 1rem/1.3 var(--body);
+  color: var(--ink);
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.opt .L {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--muted);
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+.opt:not([disabled]):hover { border-color: var(--accent); }
+.opt:not([disabled]):hover .L { background: var(--accent); border-color: var(--accent); color: var(--sheet); }
+.opt:focus-visible, .jump:focus-visible, .btn:focus-visible, .seg:focus-visible, .link:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.opt[disabled] { cursor: default; }
+.opt.dim { opacity: .5; }
+.opt.correct { border-color: var(--right); background: var(--right-bg); opacity: 1; }
+.opt.correct .L { background: var(--right); border-color: var(--right); color: var(--sheet); }
+.opt.picked-wrong { border-color: var(--wrong); background: var(--wrong-bg); opacity: 1; }
+.opt.picked-wrong .L { background: var(--wrong); border-color: var(--wrong); color: var(--sheet); }
+.opt.picked-wrong .t { text-decoration: line-through; text-decoration-color: var(--wrong); }
+
+.fb {
+  margin-top: 1rem;
+  max-width: 62ch;
+  padding: .9rem 1.05rem;
+  border-left: 3px solid var(--right);
+  border-radius: 0 8px 8px 0;
+  background: var(--right-bg);
+  font-size: .97rem;
+  line-height: 1.55;
+  animation: rise .25s ease-out;
+}
+.fb.bad { border-left-color: var(--wrong); background: var(--wrong-bg); }
+.fb[hidden] { display: none; }
+.fb-head { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .7rem; margin-bottom: .35rem; }
+.verdict { font-weight: 600; }
+.fb .verdict { color: var(--right); }
+.fb.bad .verdict { color: var(--wrong); }
+.chip {
+  font-size: .76rem;
+  font-weight: 500;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: var(--sheet);
+  border-radius: 999px;
+  padding: .1rem .55rem;
+}
+.fb p { margin: .35rem 0 0; }
+.fb .lbl { font-weight: 600; }
+@keyframes rise { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+.results {
+  margin: 0 2rem;
+  padding: 2rem 0 3rem;
+  border-top: 2px solid var(--ink);
+}
+.results h2 { font-family: var(--display); font-weight: 600; font-size: 1.5rem; margin: 0 0 .8rem; }
+.score { display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; margin-bottom: .6rem; }
+.score .big { font-family: var(--display); font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.score .pct { color: var(--muted); font-variant-numeric: tabular-nums; }
+.results p { margin: .4rem 0; max-width: 60ch; }
+.review { display: flex; flex-wrap: wrap; gap: .45rem; margin: .7rem 0 1.2rem; padding: 0; list-style: none; }
+.review a {
+  display: inline-block;
+  font-size: .85rem;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: .25rem .7rem;
+}
+.review a:hover { border-color: var(--wrong); }
+.review .n { color: var(--wrong); font-weight: 600; margin-left: .35rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.btn {
+  font: 600 .95rem var(--body);
+  padding: .65rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--sheet);
+  cursor: pointer;
+}
+.btn.ghost { background: var(--sheet); color: var(--ink); border-color: var(--line); }
+.btn.ghost:hover { border-color: var(--ink); }
+.btn.armed { background: var(--wrong); border-color: var(--wrong); color: var(--sheet); }
+.link { color: var(--accent); background: none; border: 0; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 560px) {
+  header.intro { padding: 1.8rem 16px 1.2rem; }
+  .bar { padding: .6rem 16px .7rem; }
+  main { padding: 0 16px 1rem; }
+  .results { margin: 0 16px; }
+  .q { grid-template-columns: minmax(0, 1fr); padding: 1.6rem 0; }
+  .num { font-size: 1.35rem; margin-bottom: .45rem; }
+  .stem { font-size: 1.13rem; }
+  .opts { grid-template-columns: minmax(0, 1fr); }
+  .strip { gap: 1px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fb { animation: none; }
+  .opt, .opt .L { transition: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header class="intro">
+    <p class="eyebrow">Grammar practice · B2+</p>
+    <h1>Prep C Week 10 Revision</h1>
+    <p class="lede">50 sentences. Choose the option that completes each one. You see the result straight away, and if your answer is wrong, an explanation opens under the question.</p>
+    <p class="lede" id="saveNote" hidden>Your answers are saved in this browser, so you can stop and come back later.</p>
+  </header>
+
+  <div class="bar" role="region" aria-label="Progress">
+    <div class="bar-row">
+      <div class="tally" id="tally" aria-live="polite"></div>
+      <button class="jump" id="jump" type="button">Next unanswered</button>
+    </div>
+    <nav class="strip" id="strip" aria-label="Questions"></nav>
+  </div>
+
+  <main id="questions"></main>
+
+  <section class="results" id="results" aria-live="polite"></section>
+</div>
+
+<script id="data" type="application/json">[{"n":1,"stem":"Before the university announced its revised admission policy last month, the proposed changes _____ by several academic committees to ensure that they were consistent with existing institutional regulations.","options":["have reviewed","had been reviewed","had reviewed","were reviewing"],"answer":1,"tag":"Past perfect passive","explain":"The review happened before another past action (the announcement last month), so we need the past perfect. The changes were reviewed by the committees, so the verb is passive: had been + past participle.","why":["Present perfect does not fit a past time frame, and it is active: the changes did not review anything.","","The tense is right, but it is active. The phrase 'by several academic committees' shows the changes received the action.","Active past continuous: the changes were not doing the reviewing."]},{"n":2,"stem":"The international conference, _____ original programme included presentations by researchers from more than twenty countries, was unexpectedly postponed after several keynote speakers withdrew their participation.","options":["which","whose","that","where"],"answer":1,"tag":"Relative clauses: whose","explain":"'Whose' shows possession: the conference's original programme. A noun ('original programme') follows the blank, which is the typical pattern for whose + noun.","why":["'Which' cannot show possession; 'which original programme included...' does not connect to 'the conference'.","","'That' cannot be used after a comma (non-defining clause) and cannot show possession.","'Where' refers to places and must be followed by a complete clause; it does not show possession."]},{"n":3,"stem":"Over the past several years, educational researchers _____ increasing attention to the relationship between students' emotional well-being and their academic performance, particularly in highly competitive learning environments.","options":["paid","had paid","pay","have paid"],"answer":3,"tag":"Present perfect","explain":"'Over the past several years' describes a period that started in the past and continues up to now, so we use the present perfect.","why":["Past simple is for finished time. 'Over the past several years' reaches the present.","Past perfect needs an earlier past reference point; there is none here.","Present simple describes habits or general facts, not a period up to now.",""]},{"n":4,"stem":"Despite several meetings with the programme coordinators, the students were still uncertain about _____ they would be allowed to replace one of their compulsory courses with an elective offered by another department.","options":["that","what","whether","which"],"answer":2,"tag":"Noun clauses: whether","explain":"The students did not know if they would be allowed or not: a yes/no question inside the sentence. After a preposition ('about'), we use 'whether', not 'if'.","why":["'That' cannot follow a preposition, and the idea is uncertain (yes or no), not a stated fact.","'What' needs a missing element in the clause, but the clause is already complete.","","'Which' needs a noun or a missing element; the clause is already complete."]},{"n":5,"stem":"According to the updated examination guidelines, all written assignments _____ carefully before final grades are entered into the university's official system, especially when automated scoring tools have been used during the initial evaluation.","options":["should review","should have reviewed","should be reviewing","should be reviewed"],"answer":3,"tag":"Modal passive","explain":"Assignments are reviewed by instructors; they do not review anything. So we need a passive modal: should + be + past participle.","why":["Active: it says the assignments should review something.","Active, and it refers to the past (criticism or regret). This is a current rule.","Active continuous: the assignments are not doing the reviewing.",""]},{"n":6,"stem":"Although the number of international applicants varies considerably from one academic year to another, the proportion of students who successfully complete the preparatory programme _____ relatively stable across different cohorts.","options":["remain","remains","have remained","remaining"],"answer":1,"tag":"Subject–verb agreement","explain":"The head of the subject is 'the proportion' (singular), not 'students'. The sentence states a general fact, so we need present simple singular: remains.","why":["Plural verb. It agrees with 'students', but the subject is 'the proportion'.","","'Have' is plural, so it does not agree with 'the proportion'.","An -ing form cannot be the main verb; the sentence needs a finite verb."]},{"n":7,"stem":"The university recently introduced a new assessment system, _____ allows instructors to monitor students' progress throughout the semester and identify potential learning difficulties before the final examinations take place.","options":["that","which","where","whose"],"answer":1,"tag":"Relative clauses: which","explain":"The clause comes after a comma and adds extra information about a thing (the system), so it is non-defining: use 'which'. 'Which' is the subject of 'allows'.","why":["'That' is not used after a comma in a non-defining clause.","","'Where' is for places, and it would leave 'allows' without a subject.","'Whose' shows possession and needs a noun after it."]},{"n":8,"stem":"The research team has completed the initial analysis, but the final report _____ to the funding organization yet because several sections still require additional clarification.","options":["has not submitted","did not submit","has not been submitted","had not been submitted"],"answer":2,"tag":"Present perfect passive","explain":"'Yet' and the present result (it still needs clarification) call for the present perfect. The report is submitted by the team, so the verb is passive: has not been submitted.","why":["Active: the report does not submit anything.","Past simple and active. With 'yet' and a present result, present perfect is used.","","Past perfect needs a past reference point, but this context is present ('has completed', 'still require')."]},{"n":9,"stem":"The department has not yet clarified _____ will be responsible for reviewing applications from students who wish to transfer to a different programme after completing their first academic year.","options":["who","whose","that","which"],"answer":0,"tag":"Noun clauses: who","explain":"The clause has no subject, and the missing subject is a person: 'who will be responsible'.","why":["","'Whose' must be followed by a noun (whose office, whose team).","'That' introduces a statement, not an embedded question, and the clause would still have no subject.","'Which' asks about a choice from a known group of things (which department). For an unknown person, use 'who'."]},{"n":10,"stem":"When the research team finally received permission to access the university's student records, the administration _____ several important restrictions on the use of personal information, which significantly affected the original research design.","options":["has already imposed","already imposes","had already imposed","had already been imposed"],"answer":2,"tag":"Past perfect","explain":"The restrictions were imposed before the team received permission: an earlier past action. So we use the past perfect: had already imposed.","why":["Present perfect does not fit a past time frame ('received', 'affected').","Present simple does not fit a past narrative.","","Passive, but the administration did the imposing. 'Several restrictions' is the object, so the verb must be active."]},{"n":11,"stem":"The research centre, _____ was established through a partnership between three universities, provides opportunities for postgraduate students to participate in international projects involving researchers from different disciplines.","options":["which","that","where","whose"],"answer":0,"tag":"Relative clauses: which","explain":"Non-defining clause after a comma about a thing (the research centre). 'Which' is the subject of 'was established'.","why":["","'That' is not used after a comma in a non-defining clause.","'Where' must be followed by a complete clause; here the verb 'was established' has no subject.","'Whose' shows possession and needs a noun after it."]},{"n":12,"stem":"Although several departments have expressed concerns about the new assessment procedures, the university administration _____ the final decision regarding their implementation at the end of last week's meeting.","options":["was made","has been made","had been made","made"],"answer":3,"tag":"Active vs passive","explain":"The administration made the decision (active), and 'at the end of last week's meeting' is a finished past time, so we use past simple active: made.","why":["Passive, but the administration did the action and 'the final decision' is its object.","Passive and present perfect: wrong voice, and it clashes with 'last week'.","Passive past perfect: wrong voice, and there is no earlier past reference point.",""]},{"n":13,"stem":"What the researchers found particularly difficult to explain was _____ students who had received similar instruction demonstrated considerably different levels of achievement at the end of the semester.","options":["what","who","why","whether"],"answer":2,"tag":"Noun clauses: why","explain":"The researchers could not explain the reason for the different results, so the missing idea is a reason: why.","why":["'What' needs a missing element, but the clause (students ... demonstrated ... levels) is complete.","'Who' would replace a missing person, but 'students' is already the subject.","","We explain reasons, not yes/no questions. The different results are presented as a fact, so the missing idea is the reason."]},{"n":14,"stem":"The university has recently introduced several initiatives to support international students, and additional language courses _____ as part of these efforts since the beginning of the academic year.","options":["have been offered","have offered","were offering","had offered"],"answer":0,"tag":"Present perfect passive","explain":"'Since the beginning of the academic year' requires the present perfect. Courses are offered by the university, so the verb is passive: have been offered.","why":["","Active: the courses do not offer anything.","Past continuous and active. 'Since' requires the present perfect.","Past perfect and active: wrong voice, and there is no past reference point."]},{"n":15,"stem":"Although the institution now operates several research centres abroad, it _____ its first international partnership in 2016, when a small group of academics began collaborating with researchers at a university in Germany.","options":["established","had established","has established","establishes"],"answer":0,"tag":"Past simple","explain":"'In 2016' is a specific finished time, so we use past simple. 'Now operates' contrasts the present with that past moment.","why":["","Past perfect would mean 'before another past event', but the 'when' clause happens at the same time (2016).","Present perfect cannot be used with a specific past date such as 'in 2016'.","Present simple does not fit 2016."]},{"n":16,"stem":"The participants _____ completed the preliminary questionnaire were excluded from the main study because their previous exposure to the materials could have influenced the findings.","options":["which","whose","where","who"],"answer":3,"tag":"Relative clauses: who","explain":"Defining relative clause about people: it tells us which participants. 'Who' is the subject of 'completed'.","why":["'Which' is used for things, not people.","'Whose' shows possession and must be followed by a noun.","'Where' is for places, and the clause would have no subject.",""]},{"n":17,"stem":"The research team believes that several weaknesses in the original experimental design _____ through more careful participant selection and the use of standardized assessment procedures, although some methodological limitations may remain unavoidable.","options":["could address","could have addressed","could be addressed","could be addressing"],"answer":2,"tag":"Modal passive","explain":"The weaknesses are addressed by the researchers; they do not address anything. 'Could' expresses possibility, so: could be addressed.","why":["Active, and 'address' would have no object: weaknesses cannot address anything.","Active and past: the weaknesses are not doing the addressing.","","Active continuous: wrong voice."]},{"n":18,"stem":"Although the institution has expanded its international partnerships considerably in recent years, the responsibility for approving new academic agreements still _____ with a committee whose members represent several different faculties.","options":["has remained","remained","remains","had remained"],"answer":2,"tag":"Present simple","explain":"'Still' describes the situation now: the responsibility remains with the committee today. A current state is expressed with present simple.","why":["With 'still' describing a current state, present simple is the natural form; 'still has remained' sounds unnatural.","Past simple, but 'still' and 'has expanded' place the sentence in the present.","","Past perfect needs a past reference point; there is none."]},{"n":19,"stem":"The external reviewers questioned _____ the conclusions presented in the final report were sufficiently supported by the available evidence, particularly because several potentially influential variables had not been taken into consideration.","options":["that","what","which","whether"],"answer":3,"tag":"Noun clauses: whether","explain":"To 'question whether' something is true means to doubt it: yes or no? The embedded clause is a yes/no question, so we use 'whether'.","why":["'Question that' is not used to express doubt; you question whether something is true.","'What' needs a missing element, but the clause is complete.","'Which' needs a noun or a missing element; the clause is complete.",""]},{"n":20,"stem":"The results of the national survey _____ in an academic journal in February 2025, allowing researchers from different institutions to examine the findings and compare them with previous studies.","options":["were published","published","have published","had published"],"answer":0,"tag":"Past simple passive","explain":"The results were published (by the researchers or the journal), so the verb is passive. 'In February 2025' is a specific past time, so we use past simple.","why":["","Active: the results did not publish anything.","Active present perfect, which cannot be used with a specific past date.","Active past perfect: wrong voice, and there is no earlier past point."]},{"n":21,"stem":"The professor, _____ latest publication examines the relationship between language learning and social identity, has been invited to deliver a keynote speech at an international conference next spring.","options":["who","which","where","whose"],"answer":3,"tag":"Relative clauses: whose","explain":"'Whose' shows possession: the professor's latest publication. A noun ('latest publication') follows the blank.","why":["'Who' must be followed by a verb; it cannot show possession.","'Which' is for things, not people, and it does not show possession.","'Where' is for places.",""]},{"n":22,"stem":"The lecturer was surprised to discover that several students _____ the assigned readings by the time the seminar began, even though the articles had been available on the course website for more than two weeks.","options":["had not completed","have not completed","did not complete","do not complete"],"answer":0,"tag":"Past perfect","explain":"'By the time the seminar began' sets a past deadline. An action (not) finished before a past point takes the past perfect: had not completed.","why":["","Present perfect does not fit a past narrative ('was surprised', 'began').","'By the time' + past requires the past perfect, not past simple.","Present simple does not fit the past."]},{"n":23,"stem":"Although the new learning platform provides students with immediate feedback, instructors _____ the responsibility for evaluating complex written assignments that require detailed qualitative judgments.","options":["are retained","retaining","to retain","retain"],"answer":3,"tag":"Finite verbs and voice","explain":"The main clause needs a finite verb for 'instructors'. Instructors keep (retain) the responsibility, so the verb is active present simple: retain.","why":["Passive, but instructors are the ones who keep the responsibility; 'the responsibility' is the object.","An -ing form is not a finite verb, so the main clause would have no verb.","An infinitive is not a finite verb, so the main clause would have no verb.",""]},{"n":24,"stem":"The admissions committee has not yet reached a final decision about _____ applicants who fail to meet one of the minimum requirements should be given an opportunity to demonstrate their abilities through an additional assessment.","options":["whether","that","what","which"],"answer":0,"tag":"Noun clauses: whether","explain":"The decision is a yes/no question: should these applicants get another chance or not? After a preposition ('about'), we use 'whether'.","why":["","'That' cannot follow a preposition, and the decision is a yes/no question.","'What' needs a missing element, but the clause is complete.","'Which' needs a noun or a missing element; the clause is complete."]},{"n":25,"stem":"The university has introduced several measures to protect students' personal information; under the new security rules, confidential academic records _____ without authorization, even by staff members who normally have access to the student database.","options":["cannot access","cannot be accessed","could not access","should not access"],"answer":1,"tag":"Modal passive","explain":"Records are accessed by staff; they do not access anything. 'Even by staff members' confirms the passive: cannot be accessed.","why":["Active: it says the records cannot access something.","","Active and past, but this is a current rule.","Active: the records are not the ones accessing."]},{"n":26,"stem":"The revised examination guidelines, _____ were distributed to all instructors shortly before the beginning of the academic year, include several important changes to the way students' writing performance is evaluated.","options":["that","which","what","whose"],"answer":1,"tag":"Relative clauses: which","explain":"Non-defining clause after a comma about things (the guidelines). 'Which' is the subject of 'were distributed'.","why":["'That' is not used after a comma in a non-defining clause.","","'What' means 'the thing that'; it cannot follow a noun as a relative pronoun.","'Whose' shows possession and needs a noun after it."]},{"n":27,"stem":"A: 'I have just realized that the students have not received the updated examination schedule, and the deadline for making changes is tomorrow.' B: 'In that case, I _____ the revised document to everyone as soon as this meeting ends.'","options":["am going to send","sent","will send","have sent"],"answer":2,"tag":"Future forms","explain":"'In that case' shows that B decides at the moment of speaking. A decision made while speaking takes 'will'.","why":["'Going to' is for plans made before speaking. B is reacting to new information.","Past simple, but the action is in the future ('as soon as this meeting ends').","","Present perfect: the action has not happened yet."]},{"n":28,"stem":"The researchers _____ the participants about the possible risks of the experiment before they obtained written consent, as required by the institution's ethical guidelines.","options":["were informed","had informed","have been informed","had been informed"],"answer":1,"tag":"Past perfect","explain":"The researchers did the informing (active), and it happened before another past action (obtaining consent), so we use the past perfect active: had informed.","why":["Passive, but the researchers informed the participants; 'the participants' is the object.","","Passive and present perfect: wrong voice and wrong time.","Passive: the researchers did the action, so the verb must be active."]},{"n":29,"stem":"What remains uncertain is _____ the improvements observed during the initial stage of the intervention will continue once students return to their regular classroom routines.","options":["that","which","what","whether"],"answer":3,"tag":"Noun clauses: whether","explain":"'Uncertain' signals a yes/no question: will the improvements continue or not? So we use 'whether'.","why":["'That' presents a fact, but 'uncertain' needs a yes/no clause.","'Which' needs a noun or a missing element; the clause is complete.","'What' needs a missing element; the clause is complete.",""]},{"n":30,"stem":"The company _____ its first overseas branch in 2019, but it did not begin international recruitment until two years later, when the demand for its services increased substantially.","options":["has opened","had opened","opens","opened"],"answer":3,"tag":"Past simple","explain":"'In 2019' is a specific finished time, so we use past simple. The events are told in time order (2019, then two years later).","why":["Present perfect cannot be used with a specific past date such as 'in 2019'.","Past perfect is not needed: the events are told in time order, so past simple is used.","Present simple does not fit 2019.",""]},{"n":31,"stem":"The department recently published a set of guidelines, _____ provide detailed recommendations for designing assessment tasks that are both reliable and appropriate for learners at different proficiency levels.","options":["whose","which","that","where"],"answer":1,"tag":"Relative clauses: which","explain":"Non-defining clause after a comma about things (the guidelines). 'Which' is the subject of 'provide'.","why":["'Whose' shows possession and needs a noun after it.","","'That' is not used after a comma in a non-defining clause.","'Where' is for places, and 'provide' would have no subject."]},{"n":32,"stem":"The department has already finalized the list of successful applicants, and the official results _____ on the university website tomorrow morning as part of the scheduled announcement.","options":["will announce","have announced","are going to announce","are going to be announced"],"answer":3,"tag":"Future passive","explain":"The results are announced by the university, so the verb is passive. The announcement is already planned ('scheduled'), so 'going to' fits: are going to be announced.","why":["Active: the results do not announce anything.","Active present perfect, but the event is tomorrow.","Future, but active: the results are not doing the announcing.",""]},{"n":33,"stem":"The university administration has not provided a satisfactory explanation of _____ several applicants with higher examination scores were rejected while others with lower scores were offered places in the programme.","options":["whether","what","why","that"],"answer":2,"tag":"Noun clauses: why","explain":"An explanation gives a reason: why the applicants were rejected.","why":["The rejections are a fact, not a yes/no question. An explanation gives reasons.","'What' needs a missing element, but the clause is complete.","","'That' cannot follow a preposition ('of'), and it does not express a reason."]},{"n":34,"stem":"During the first stage of the investigation, the researchers _____ data from three different institutions and compared the results to identify patterns that might otherwise have remained unnoticed.","options":["collected","have collected","had collected","collect"],"answer":0,"tag":"Past simple","explain":"Finished actions in sequence in a past time frame ('During the first stage... collected... and compared') take past simple.","why":["","Present perfect does not fit a finished past stage, and 'compared' is already past simple.","Past perfect needs an earlier past reference point; here the actions simply happen in order.","Present simple does not fit the past narrative."]},{"n":35,"stem":"Although the revised curriculum includes several challenging components, students who experience difficulties with particular topics _____ additional support through supplementary workshops organized by the department.","options":["can be offered","can offer","could have offered","should be offering"],"answer":0,"tag":"Modal passive","explain":"The department offers support and the students receive it, so the verb is passive: can be offered.","why":["","Active: it would mean the students give support, which is not the meaning.","Active and past (a missed chance), which does not fit a current arrangement.","Active continuous: the students are not the ones offering support."]},{"n":36,"stem":"The new academic regulations, _____ implementation was delayed because several departments requested additional preparation time, are expected to affect the assessment procedures used across the university.","options":["which","whose","that","where"],"answer":1,"tag":"Relative clauses: whose","explain":"'Whose' shows possession: the regulations' implementation. A noun ('implementation') follows the blank.","why":["'Which' cannot show possession here.","","'That' is not used after a comma, and it does not show possession.","'Where' is for places."]},{"n":37,"stem":"The laboratory equipment has started making an unusual noise, and several warning lights are flashing on the control panel. Unless the technicians intervene immediately, the system _____ before the experiment is completed.","options":["has failed","is going to fail","failed","had failed"],"answer":1,"tag":"Future forms","explain":"There is present evidence (an unusual noise, flashing warning lights), so the prediction takes 'going to': is going to fail.","why":["Present perfect would mean the system has already failed, but the sentence describes a future possibility.","","Past simple does not fit a future prediction.","Past perfect does not fit a future prediction."]},{"n":38,"stem":"The committee has not yet explained _____ it means by 'relevant professional experience', which has caused considerable confusion among applicants from non-academic backgrounds.","options":["what","that","which","why"],"answer":0,"tag":"Noun clauses: what","explain":"'What' means 'the thing that'. It fills the missing object of 'means': what it means by 'relevant professional experience'.","why":["","'Means' needs an object, and 'that' cannot fill it.","'Which' would need a noun after it here (which term).","'Why' adds a reason, but 'means' would still have no object."]},{"n":39,"stem":"According to the official announcement, the university _____ the revised examination schedule on its website tomorrow, following the completion of the final administrative checks.","options":["will be published","has published","will publish","is published"],"answer":2,"tag":"Future forms and voice","explain":"The university does the publishing (active), and 'tomorrow' refers to the future: will publish.","why":["Passive, but the university is the doer and 'the revised examination schedule' is the object.","Present perfect, but the event is tomorrow.","","Passive and present: wrong voice and wrong time."]},{"n":40,"stem":"The researchers presented the findings of their longitudinal study at an international conference, _____ attracted considerable attention from academics working in the field of second language acquisition.","options":["that","what","which","where"],"answer":2,"tag":"Relative clauses: which","explain":"Non-defining clause after a comma. 'Which' is the subject of 'attracted'.","why":["'That' is not used after a comma in a non-defining clause.","'What' cannot follow a noun as a relative pronoun.","","'Where' must be followed by a complete clause; here 'attracted' would have no subject."]},{"n":41,"stem":"This is the first time the department _____ an international conference in which every presentation and discussion session is conducted entirely through a virtual platform.","options":["organized","had organized","organizes","has organized"],"answer":3,"tag":"Present perfect","explain":"After 'This is the first time...', English uses the present perfect.","why":["Past simple is not used after 'This is the first time'.","Past perfect follows 'It was the first time', not 'This is the first time'.","Present simple is not used after 'This is the first time'.",""]},{"n":42,"stem":"Although the committee initially questioned the reliability of the findings, the research proposal _____ after the investigators provided additional evidence supporting their methodological decisions.","options":["approved","has approved","was approved","had approved"],"answer":2,"tag":"Past simple passive","explain":"The proposal was approved by the committee, so the verb is passive. The event is finished in the past: was approved.","why":["Active: the proposal did not approve anything.","Active present perfect: wrong voice.","","Active past perfect: wrong voice."]},{"n":43,"stem":"What the committee has not yet determined is _____ the revised admission requirements will apply only to new applicants or also to students who have already completed part of the programme.","options":["that","whether","what","which"],"answer":1,"tag":"Noun clauses: whether","explain":"'Whether... or...' presents a choice that has not been decided: only new applicants, or current students too?","why":["'That' presents a fact, but the committee has not decided yet.","","'What' needs a missing element, but the clause is complete.","'Which' needs a noun or a missing element; the clause is complete."]},{"n":44,"stem":"The research assistants have already contacted all the volunteers, finalized the interview schedule, and reserved the necessary facilities. According to their agreed plan, they _____ the first round of interviews early next week.","options":["will have conducted","conducted","are going to conduct","have conducted"],"answer":2,"tag":"Future forms","explain":"The plan is already decided and the preparations are done ('agreed plan'), so we use 'going to' for a planned future action.","why":["Future perfect needs a 'by + time' deadline (by early next week); here the interviews simply take place then.","Past simple, but the action is next week.","","Present perfect: the interviews have not happened yet."]},{"n":45,"stem":"The researchers _____ findings were published in a leading international journal emphasized that the results should not be generalized to learners from substantially different educational backgrounds.","options":["who","whose","which","where"],"answer":1,"tag":"Relative clauses: whose","explain":"'Whose' shows possession: the researchers' findings. A noun ('findings') follows the blank.","why":["'Who' must be followed by a verb; it cannot show possession.","","'Which' is for things and does not show possession.","'Where' is for places."]},{"n":46,"stem":"Although the university has introduced several initiatives to encourage student participation in research, relatively few undergraduate students _____ advantage of these opportunities during the previous academic year.","options":["have taken","had taken","took","take"],"answer":2,"tag":"Past simple","explain":"'During the previous academic year' is a finished past period, so we use past simple: took advantage of.","why":["Present perfect cannot be used with a finished past period.","Past perfect needs an earlier past reference point.","","Present simple does not fit 'the previous academic year'."]},{"n":47,"stem":"The committee could not begin evaluating the scholarship applications on the scheduled date because several candidates _____ the required documents by the deadline, despite receiving two reminders from the admissions office.","options":["have not submitted","do not submit","had not been submitted","had not submitted"],"answer":3,"tag":"Past perfect","explain":"The candidates failed to submit before the committee could not begin: an earlier past action. Candidates submit documents (active), so: had not submitted.","why":["Present perfect does not fit a past narrative ('could not begin').","Present simple does not fit a past narrative.","Passive, but the candidates are the ones who submit; 'the required documents' is the object.",""]},{"n":48,"stem":"Although the new assessment procedures were introduced only recently, the department _____ a detailed review of their effectiveness later this term, before making any further changes to the official examination regulations next semester.","options":["will conduct","conducted","has conducted","had conducted"],"answer":0,"tag":"Future forms","explain":"'Later this term' refers to the future, so we use 'will': will conduct.","why":["","Past simple, but 'later this term' refers to the future.","Present perfect: the review has not happened yet.","Past perfect does not fit a future time."]},{"n":49,"stem":"The only course _____ first-year students are required to complete before the end of the autumn term is Academic Writing, since it is a prerequisite for all advanced modules.","options":["what","that","whose","where"],"answer":1,"tag":"Relative clauses: that","explain":"Defining relative clause about a thing (the course). 'That' is the object of 'complete'. After 'the only', 'that' is the usual choice.","why":["'What' cannot follow a noun ('the only course') as a relative pronoun.","","'Whose' shows possession and does not fit the meaning; 'complete' would still have no object.","'Where' is for places, and 'complete' would still have no object."]},{"n":50,"stem":"By the time the external evaluators arrive next month, the department _____ all the self-assessment reports required for the accreditation process.","options":["will have completed","has completed","completes","had completed"],"answer":0,"tag":"Future perfect","explain":"'By the time + future event' sets a future deadline. An action finished before a future point takes the future perfect: will have completed.","why":["","Present perfect cannot refer to a future deadline.","Present simple does not show completion before a future point.","Past perfect does not fit a future context."]}]</script>
+<script>
+(function () {
+  "use strict";
+  var ITEMS = JSON.parse(document.getElementById("data").textContent);
+  var LETTERS = ["A", "B", "C", "D"];
+  var STORE = "prof-b2-grammar-v1";
+  var state = { answers: {} };
+  var storageOK = false;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function loadStored() {
+    try {
+      var raw = window.localStorage.getItem(STORE);
+      storageOK = true;
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s && s.answers) return s;
+      }
+    } catch (e) { storageOK = false; }
+    return null;
+  }
+  function save() {
+    try { window.localStorage.setItem(STORE, JSON.stringify(state)); storageOK = true; } catch (e) {}
+  }
+  function scrollToQ(n) {
+    var q = document.getElementById("q-" + n);
+    if (!q) return;
+    q.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    var first = q.querySelector(".opt:not([disabled])") || q.querySelector(".opt");
+    if (first) first.focus({ preventScroll: true });
+  }
+  function firstUnanswered() {
+    for (var i = 0; i < ITEMS.length; i++) if (state.answers[ITEMS[i].n] == null) return ITEMS[i].n;
+    return null;
+  }
+
+  // Build the question list once
+  var qWrap = document.getElementById("questions");
+  var strip = document.getElementById("strip");
+  var refs = {};
+
+  ITEMS.forEach(function (it) {
+    var sec = el("section", "q");
+    sec.id = "q-" + it.n;
+    sec.setAttribute("aria-label", "Question " + it.n);
+    sec.appendChild(el("div", "num", String(it.n)));
+    var body = el("div", "body");
+
+    var parts = it.stem.split("_____");
+    var stem = el("p", "stem");
+    stem.appendChild(document.createTextNode(parts[0]));
+    var blank = el("span", "blank");
+    blank.setAttribute("aria-label", "blank");
+    stem.appendChild(blank);
+    stem.appendChild(document.createTextNode(parts[1] || ""));
+    body.appendChild(stem);
+
+    var opts = el("div", "opts");
+    opts.setAttribute("role", "group");
+    opts.setAttribute("aria-label", "Options for question " + it.n);
+    var btns = it.options.map(function (text, i) {
+      var b = el("button", "opt");
+      b.type = "button";
+      b.id = "q" + it.n + "-" + LETTERS[i];
+      b.appendChild(el("span", "L", LETTERS[i]));
+      b.appendChild(el("span", "t", text));
+      b.addEventListener("click", function () { answer(it.n, i); });
+      opts.appendChild(b);
+      return b;
+    });
+    body.appendChild(opts);
+
+    var fb = el("div", "fb");
+    fb.hidden = true;
+    fb.setAttribute("aria-live", "polite");
+    body.appendChild(fb);
+
+    sec.appendChild(body);
+    qWrap.appendChild(sec);
+
+    var seg = el("a", "seg");
+    seg.href = "#q-" + it.n;
+    seg.setAttribute("aria-label", "Question " + it.n);
+    seg.addEventListener("click", function (e) { e.preventDefault(); scrollToQ(it.n); });
+    strip.appendChild(seg);
+
+    refs[it.n] = { it: it, sec: sec, blank: blank, btns: btns, fb: fb, seg: seg };
+  });
+
+  function paint(n) {
+    var r = refs[n], it = r.it, pick = state.answers[n];
+    var answered = pick != null;
+    var ok = answered && pick === it.answer;
+
+    r.sec.classList.toggle("ok", answered && ok);
+    r.sec.classList.toggle("bad", answered && !ok);
+    r.seg.className = "seg" + (answered ? (ok ? " ok" : " bad") : "");
+    r.seg.setAttribute("aria-label", "Question " + n + (answered ? (ok ? ", correct" : ", wrong") : ", not answered"));
+
+    r.btns.forEach(function (b, i) {
+      b.disabled = answered;
+      b.classList.remove("correct", "picked-wrong", "dim");
+      b.removeAttribute("aria-pressed");
+      if (!answered) return;
+      if (i === it.answer) b.classList.add("correct");
+      else if (i === pick) b.classList.add("picked-wrong");
+      else b.classList.add("dim");
+      if (i === pick) b.setAttribute("aria-pressed", "true");
+    });
+
+    r.blank.textContent = "";
+    r.blank.className = "blank";
+    r.fb.textContent = "";
+    r.fb.className = "fb";
+    if (!answered) { r.fb.hidden = true; return; }
+
+    var right = it.options[it.answer];
+    if (ok) {
+      r.blank.classList.add("ok");
+      r.blank.appendChild(el("span", "fill", right));
+      var tick = el("span", "tick", "✓");
+      tick.setAttribute("aria-hidden", "true");
+      r.blank.appendChild(tick);
+    } else {
+      r.blank.classList.add("bad");
+      var s = el("s", null, it.options[pick]);
+      r.blank.appendChild(s);
+      r.blank.appendChild(el("span", "pen", right));
+    }
+
+    var head = el("div", "fb-head");
+    head.appendChild(el("span", "verdict", ok ? "Correct" : "Not quite"));
+    head.appendChild(el("span", "chip", it.tag));
+    r.fb.appendChild(head);
+
+    if (ok) {
+      r.fb.appendChild(el("p", null, it.explain));
+    } else {
+      r.fb.classList.add("bad");
+      var p1 = el("p");
+      p1.appendChild(el("span", "lbl", "You chose " + LETTERS[pick] + ") " + it.options[pick] + ". "));
+      p1.appendChild(document.createTextNode(it.why[pick]));
+      r.fb.appendChild(p1);
+      var p2 = el("p");
+      p2.appendChild(el("span", "lbl", "The answer is " + LETTERS[it.answer] + ") " + right + ". "));
+      p2.appendChild(document.createTextNode(it.explain));
+      r.fb.appendChild(p2);
+    }
+    r.fb.hidden = false;
+  }
+
+  function counts() {
+    var a = 0, c = 0;
+    ITEMS.forEach(function (it) {
+      var p = state.answers[it.n];
+      if (p != null) { a++; if (p === it.answer) c++; }
+    });
+    return { answered: a, correct: c, wrong: a - c };
+  }
+
+  var tally = document.getElementById("tally");
+  var jump = document.getElementById("jump");
+  var results = document.getElementById("results");
+  var armTimer = null;
+
+  function summary() {
+    var k = counts();
+    tally.innerHTML = "";
+    tally.appendChild(el("b", null, k.answered + " / " + ITEMS.length));
+    tally.appendChild(document.createTextNode(" answered · "));
+    tally.appendChild(el("b", "ok", k.correct + " correct"));
+    tally.appendChild(document.createTextNode(" · "));
+    tally.appendChild(el("b", "bad", k.wrong + " wrong"));
+
+    var next = firstUnanswered();
+    if (next == null) {
+      jump.textContent = "See score";
+    } else {
+      jump.textContent = k.answered === 0 ? "Start" : "Next unanswered";
+    }
+
+    results.textContent = "";
+    results.appendChild(el("h2", null, k.answered === ITEMS.length ? "Your score" : "Score so far"));
+    var sc = el("div", "score");
+    sc.appendChild(el("span", "big", k.correct + " / " + ITEMS.length));
+    if (k.answered > 0) sc.appendChild(el("span", "pct", Math.round((k.correct / ITEMS.length) * 100) + "%"));
+    results.appendChild(sc);
+
+    if (next != null) {
+      var p = el("p", null, k.answered + " of " + ITEMS.length + " answered. ");
+      var go = el("button", "link", "Go to question " + next);
+      go.type = "button";
+      go.addEventListener("click", function () { scrollToQ(next); });
+      p.appendChild(go);
+      results.appendChild(p);
+    }
+
+    // Topics to review
+    var byTag = {}, order = [];
+    ITEMS.forEach(function (it) {
+      var p = state.answers[it.n];
+      if (p != null && p !== it.answer) {
+        if (!byTag[it.tag]) { byTag[it.tag] = []; order.push(it.tag); }
+        byTag[it.tag].push(it.n);
+      }
+    });
+    if (order.length) {
+      results.appendChild(el("p", null, "Topics to review:"));
+      var ul = el("ul", "review");
+      order.forEach(function (tag) {
+        var li = el("li");
+        var a = el("a");
+        a.href = "#q-" + byTag[tag][0];
+        a.appendChild(document.createTextNode(tag));
+        a.appendChild(el("span", "n", String(byTag[tag].length)));
+        a.setAttribute("aria-label", tag + ", " + byTag[tag].length + " wrong, go to question " + byTag[tag][0]);
+        a.addEventListener("click", function (e) { e.preventDefault(); scrollToQ(byTag[tag][0]); });
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      results.appendChild(ul);
+    } else if (k.answered === ITEMS.length) {
+      results.appendChild(el("p", null, "No mistakes. Well done."));
+    }
+
+    var actions = el("div", "actions");
+    if (k.wrong > 0) {
+      var retry = el("button", "btn", "Retry the ones I got wrong");
+      retry.type = "button";
+      retry.addEventListener("click", retryWrong);
+      actions.appendChild(retry);
+    }
+    if (k.answered > 0) {
+      var reset = el("button", "btn ghost", "Start over");
+      reset.type = "button";
+      reset.addEventListener("click", function () {
+        if (!reset.classList.contains("armed")) {
+          reset.classList.add("armed");
+          reset.textContent = "Tap again to clear all answers";
+          clearTimeout(armTimer);
+          armTimer = setTimeout(function () {
+            reset.classList.remove("armed");
+            reset.textContent = "Start over";
+          }, 4000);
+          return;
+        }
+        clearTimeout(armTimer);
+        state.answers = {};
+        save();
+        ITEMS.forEach(function (it) { paint(it.n); });
+        summary();
+        scrollToQ(ITEMS[0].n);
+      });
+      actions.appendChild(reset);
+    }
+    if (actions.childNodes.length) results.appendChild(actions);
+  }
+
+  function answer(n, i) {
+    if (state.answers[n] != null) return;
+    state.answers[n] = i;
+    save();
+    paint(n);
+    summary();
+  }
+
+  function retryWrong() {
+    var first = null;
+    ITEMS.forEach(function (it) {
+      var p = state.answers[it.n];
+      if (p != null && p !== it.answer) {
+        delete state.answers[it.n];
+        if (first == null) first = it.n;
+        paint(it.n);
+      }
+    });
+    save();
+    summary();
+    if (first != null) scrollToQ(first);
+  }
+
+  jump.addEventListener("click", function () {
+    var next = firstUnanswered();
+    if (next == null) results.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    else scrollToQ(next);
+  });
+
+  function start(data) {
+    var stored = loadStored();
+    if (data && data.answers) state = { answers: data.answers };
+    else if (stored) state = { answers: stored.answers };
+    // keep only valid answers
+    var clean = {};
+    ITEMS.forEach(function (it) {
+      var p = state.answers[it.n];
+      if (typeof p === "number" && p >= 0 && p < 4) clean[it.n] = p;
+    });
+    state.answers = clean;
+    document.getElementById("saveNote").hidden = !storageOK;
+    ITEMS.forEach(function (it) { paint(it.n); });
+    summary();
+  }
+
+  var hot = window.claude && window.claude.hot;
+  if (hot && typeof hot.snapshot === "function") hot.snapshot(function () { return state; });
+  if (hot && typeof hot.ready === "function") hot.ready(start);
+  else start((hot && hot.data) || {});
+})();
+</script>
+</body>
+</html>
