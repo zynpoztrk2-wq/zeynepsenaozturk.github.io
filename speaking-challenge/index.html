@@ -175,6 +175,10 @@ input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var
 .checks b{display:block}
 .checks span{color:var(--navy-2);font-size:15px}
 .heard{font-style:italic}
+.swc{grid-template-columns:auto 1fr auto;align-items:start;gap:14px;cursor:pointer}
+.swc-ic{width:44px;height:44px;border-radius:50%;background:var(--cream-2);color:var(--blue);display:grid;place-items:center;font-size:20px}
+.swc-b{display:grid;gap:6px}
+.swc-b .note,.swc-b .err{font-size:14.5px}
 
 /* rounds */
 .instr{background:var(--cream);color:var(--navy);border-radius:var(--r);padding:16px 20px;font-size:18px;display:flex;gap:12px;align-items:flex-start}
@@ -620,7 +624,12 @@ const ENV = (() => {
     device: (ios ? 'iPhone/iPad' : android ? 'Android' : 'Computer') + ' \u00b7 ' + browser,
   };
 })();
-const defaultMode = () => ENV.canRecord && ENV.SR ? 'both' : ENV.canRecord ? 'record' : ENV.SR ? 'transcript' : 'timer';
+function defaultMode(wantTr){
+  if (wantTr === undefined) wantTr = S.wantTr;
+  const tr = wantTr && !!ENV.SR;
+  return ENV.canRecord && tr ? 'both' : ENV.canRecord ? 'record' : tr ? 'transcript' : 'timer';
+}
+const HARD_TR = ['not-allowed','service-not-allowed','language-not-supported','unsupported'];
 
 /* =====================================================================
    STATE
@@ -635,7 +644,7 @@ function freshAttempt(){
 }
 const ME = LS.get('spk90.me', null) || {sid:rid(12), name:''};
 LS.set('spk90.me', ME);
-let S = {room:null, name:ME.name || '', pair:false, mode:defaultMode(), check:{state:'idle'}, cfg:{question:null, audio:true}, conn:{st:'idle', text:''},
+let S = {room:null, name:ME.name || '', pair:false, wantTr:ME.wantTr !== false, mode:defaultMode(ME.wantTr !== false), check:{state:'idle'}, cfg:{question:null, audio:true}, conn:{st:'idle', text:''},
   topic:'all', selectedId:null, lastTs:0, ackTs:0};
 freshAttempt();
 S.screen = 'landing';
@@ -978,7 +987,7 @@ function stepLabel(){
   }
 }
 function studentState(){
-  return {sid:ME.sid, aid:S.aid, name:S.name, step:stepLabel(), q:S.question ? {id:S.question.id, text:S.question.text} : null, mode:S.mode, device:ENV.device, ts:Date.now(), started:S.started, finished:S.screen === 'done',
+  return {sid:ME.sid, aid:S.aid, name:S.name, step:stepLabel(), q:S.question ? {id:S.question.id, text:S.question.text} : null, mode:S.mode, wantTr:S.wantTr, trWhy:trWhy(), device:ENV.device, ts:Date.now(), started:S.started, finished:S.screen === 'done',
     rounds:S.rounds.map(r => ({done:r.done, doneAt:r.doneAt, duration:Math.round(r.duration*10)/10, transcript:r.transcript, trTried:r.trTried, trErr:r.trError,
       analysis:r.analysis && r.analysis.reliable ? {pauses:r.analysis.pauses, startDelay:+r.analysis.startDelay.toFixed(1), talk:Math.round(r.analysis.talk)} : null,
       self:r.self, reflected:r.reflected, hasAudio:!!r.blob, mime:r.mime})),
@@ -1059,18 +1068,36 @@ function renderJoin(){
     <div class="actions center on-blue"><button class="linkbtn" data-a="to-landing">Wrong code? Go back</button></div>
   </div>`;
 }
+function noSrMsg(){
+  return 'This browser can\u2019t make transcripts. ' + (ENV.android ? 'Open this page in Chrome.' : ENV.ios ? 'Open this page in Safari.' : 'Use Chrome or Edge.');
+}
+function openElsewhere(){
+  if (ENV.SR) return '';
+  const chrome = ENV.android ? `<a class="btn amber" href="intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(location.href)};end">Open in Chrome</a>` : '';
+  return `<div class="actions center on-blue">${chrome}<button class="btn line inv" data-a="copy-page">${ICON.copy} Copy this page\u2019s link</button></div>`;
+}
+function trCard(){
+  const has = !!ENV.SR;
+  return `<label class="card swc" for="trT">
+      <span class="swc-ic">${ICON.text}</span>
+      <span class="swc-b"><h3>Automatic transcript</h3><span class="hint">Turns your speech into text so you can compare rounds, and your teacher gets your words. Your browser will ask for permission once.</span>
+        ${has ? (S.wantTr ? '' : '<span class="note">Off: your voice is only recorded. Your teacher will not get a transcript.</span>') : `<span class="err">${noSrMsg()}</span>`}</span>
+      <input type="checkbox" class="switch" id="trT" data-a="tr-toggle" ${has && S.wantTr ? 'checked' : ''} ${has ? '' : 'disabled'} aria-label="Automatic transcript">
+    </label>${openElsewhere()}`;
+}
 function renderCheck(){
-  const c = S.check, canTest = ENV.canRecord || ENV.SR;
+  const c = S.check, canTest = ENV.canRecord || (ENV.SR && S.wantTr);
+  const say = `<div class="check-say">\u201cHello, my name is ${esc(S.name || '\u2026')} and I am ready to speak.\u201d</div>`;
   let body = '';
-  if (!canTest) body = `<p class="err">This browser can\u2019t record or make transcripts. Use the latest Chrome, Edge or Safari. You can still practise with the timer.</p>`;
-  else if (c.state === 'running') body = `<div class="check-say">\u201cHello, my name is ${esc(S.name || '\u2026')} and I am ready to speak.\u201d</div>
-      <div class="lvl" aria-hidden="true"><i id="chkLvl"></i></div>
-      <p class="hint" id="chkInfo">Listening\u2026 <b id="chkSec">6</b> s</p>
-      ${ENV.SR ? `<p class="heard" id="chkWords"></p>` : ''}`;
+  if (!canTest) body = `<p class="err">This browser can\u2019t record${ENV.SR ? '' : ' or make transcripts'}. Use the latest Chrome, Edge or Safari. You can still practise with the timer.</p>`;
+  else if (c.state === 'running') body = (c.phase === 'solo' ? `<p class="ok-note">Step 2 of 2: transcript test. Read the sentence once more.</p>` : `<p class="hint"><b>${S.wantTr && ENV.SR ? 'Recording and transcript test' : 'Recording test'}</b>: read this sentence aloud.</p>`)
+      + say + (c.phase === 'solo' ? '' : `<div class="lvl" aria-hidden="true"><i id="chkLvl"></i></div>`)
+      + `<p class="hint">Listening\u2026 <b id="chkSec">${c.phase === 'solo' ? 5 : 6}</b> s</p><p class="heard" id="chkWords"></p>`;
   else if (c.state === 'done') body = checkResultHTML(c);
-  else body = `<p>Tap <b>Test</b> and read this sentence aloud:</p><div class="check-say">\u201cHello, my name is ${esc(S.name || '\u2026')} and I am ready to speak.\u201d</div>`;
+  else body = `<p>Tap <b>Test</b> and read this sentence aloud:</p>` + say;
   return `<div class="narrow" style="max-width:640px">
     <div class="head"><p class="kicker">Before you start</p><h1 class="display sm">Check your microphone</h1></div>
+    ${trCard()}
     <div class="card">
       ${body}
       <div class="actions">
@@ -1084,17 +1111,21 @@ function renderCheck(){
 function checkResultHTML(c){
   const items = [];
   const micOk = ENV.canRecord && !c.gumErr && c.size > 400 && c.peak > 0.004;
-  const quiet = micOk && c.peak < 0.02 && c.words < 2;
+  const heardTr = c.words >= 2 || c.soloWords >= 2;
+  const quiet = micOk && c.peak < 0.02 && !heardTr;
+  const said = t => `We heard: \u201c${esc(t.slice(0,120))}${t.length > 120 ? '\u2026' : ''}\u201d`;
   if (!ENV.canRecord) items.push(['mid','!','Recording','This browser can\u2019t record audio.']);
   else if (c.gumErr){ const h = micHelp(c.gumErr); items.push(['bad', ICON.x, h.title, h.body]); }
-  else if (!micOk && c.words >= 2) items.push(['mid','!','Recording','This device can\u2019t record and make a transcript at the same time. We will keep the transcript, so your teacher gets your words.']);
+  else if (S.mode === 'transcript') items.push(['mid','!','Recording off','This phone can\u2019t record and make a transcript at the same time. Automatic transcript is on, so we keep the transcript. Turn it off if you want a recording instead.']);
   else if (!micOk) items.push(['bad', ICON.x, 'We couldn\u2019t hear you', 'Check that the microphone is not muted, then test again and speak a little louder.']);
   else if (quiet) items.push(['mid','!','Microphone is very quiet','Hold the phone closer or speak a little louder.']);
   else items.push(['ok', ICON.check, 'Microphone works', 'Your voice was recorded.']);
-  if (!ENV.SR) items.push(['mid','!','Transcript','This browser can\u2019t make transcripts. Chrome or Edge works best.']);
-  else if (c.words >= 2) items.push(['ok', ICON.check, 'Transcript works', `We heard: \u201c${esc(c.text.slice(0,120))}${c.text.length > 120 ? '\u2026' : ''}\u201d`]);
-  else if (c.trErr) items.push(['bad', ICON.x, 'Transcript not working', 'Reason: ' + esc(TR_ERR[c.trErr] || c.trErr) + (ENV.ios && c.trErr === 'service-not-allowed' ? '. On iPhone, turn on Dictation in the keyboard settings.' : '.')]);
-  else items.push(['mid','!','No words heard','The transcript heard nothing. Test again and read the sentence clearly.']);
+  if (!ENV.SR) items.push(['bad', ICON.x, 'Transcript not available', noSrMsg()]);
+  else if (!S.wantTr) items.push(['mid','!','Transcript off','Turn on Automatic transcript above if you want a transcript.']);
+  else if (!c.trTested) items.push(['mid','!','Transcript not tested yet','Tap Test again to check it.']);
+  else if (c.words >= 2) items.push(['ok', ICON.check, 'Transcript works', said(c.text)]);
+  else if (c.soloWords >= 2) items.push(['ok', ICON.check, 'Transcript works', said(c.soloText)]);
+  else { const er = c.soloErr || c.trErr; items.push(['bad', ICON.x, 'Transcript not working', er ? 'Reason: ' + esc(TR_ERR[er] || er) + (ENV.ios && er === 'service-not-allowed' ? '. On iPhone, turn on Dictation in the keyboard settings.' : '.') : 'It heard no words. Test again and read the sentence clearly.']); }
   return `<ul class="checks">${items.map(([cls, ic, t, d]) => `<li><span class="st ${cls}">${ic}</span><div><b>${t}</b><span>${d}</span></div></li>`).join('')}</ul>
     ${c.url ? `<div class="player"><audio controls preload="metadata" src="${c.url}"></audio></div>` : ''}
     <p class="ok-note">This device will use: ${MODE_TEXT[S.mode]}</p>`;
@@ -1104,7 +1135,7 @@ function renderHome(){
   if (fixed) return `<div class="narrow">
       <div class="head"><p class="kicker">Your teacher chose the question</p><h1 class="display sm">Ready?</h1></div>
       <div class="qbox" data-round="1"><span class="ql">${ICON.lock} Your question for all 3 rounds</span><span class="qt">${esc(S.cfg.question.text)}</span></div>
-      <div class="card"><label class="actions" for="pairT" style="justify-content:space-between;cursor:pointer"><span><b>Practising with a partner?</b><br><span class="hint">Your partner listens, then you check together.</span></span><input type="checkbox" class="switch" id="pairT" data-a="pair" ${S.pair ? 'checked' : ''}></label></div>
+      <div class="card">${devLine()}<label class="actions" for="pairT" style="justify-content:space-between;cursor:pointer;border-top:2px solid var(--cream-2);padding-top:14px"><span><b>Practising with a partner?</b><br><span class="hint">Your partner listens, then you check together.</span></span><input type="checkbox" class="switch" id="pairT" data-a="pair" ${S.pair ? 'checked' : ''}></label></div>
       <div class="actions center"><button class="btn amber xl" data-a="begin">Start Round 1 ${ICON.arrow}</button></div>
     </div>`;
   const list = QUESTIONS.filter(q => S.topic === 'all' || q.topic === S.topic);
@@ -1117,18 +1148,23 @@ function renderHome(){
         ${TOPICS.map(t => `<button class="chip" data-a="topic" data-topic="${t.id}" aria-pressed="${S.topic === t.id}">${t.name}</button>`).join('')}
       </div><button class="btn amber" data-a="random">${ICON.dice} Random question</button></div>
       <ul class="qlist">${list.map(q => `<li><button class="qbtn" data-a="pick" data-id="${q.id}" aria-pressed="${q.id === S.selectedId}">${S.topic === 'all' ? `<span class="tp">${q.topicName}</span>` : ''}<span>${esc(q.text)}</span></button></li>`).join('')}</ul>
+      <div style="border-top:2px solid var(--cream-2);padding-top:14px">${devLine()}</div>
       <label class="actions" for="pairT" style="justify-content:space-between;cursor:pointer;border-top:2px solid var(--cream-2);padding-top:14px"><span><b>Practising with a partner?</b><br><span class="hint">Your partner listens, then you check together.</span></span><input type="checkbox" class="switch" id="pairT" data-a="pair" ${S.pair ? 'checked' : ''}></label>
     </div>
     <div class="startbar" id="startbar"><div class="t"><span class="l">${sel ? 'Your question for all 3 rounds' : 'No question yet'}</span><span class="q" id="sbQ">${sel ? esc(sel.text) : 'Pick a question, or get a random one.'}</span></div><button class="btn amber lg" data-a="begin" ${sel ? '' : 'disabled'}>Start Round 1 ${ICON.arrow}</button></div>`;
 }
 
+function devLine(){
+  const on = S.wantTr && !!ENV.SR;
+  return `<div class="actions" style="justify-content:space-between"><span><b>This device: ${MODE_TEXT[S.mode]}</b><br><span class="hint">Automatic transcript is ${on ? 'on' : 'off'}.</span></span><button class="btn line sm" data-a="to-check">Change</button></div>`;
+}
 function questionBox(n){ return `<div class="qbox"><span class="ql">${ICON.lock} ${n === 1 ? 'Your question' : 'Same question as Round 1'}</span><span class="qt">${esc(S.question.text)}</span></div>`; }
 function roundHead(n){ return `<div class="head"><p class="kicker">Round ${n} of 3</p><h1 class="display">${ROUNDS[n-1].name}</h1></div>`; }
 const partnerCard = n => S.pair ? `<div class="partner">${ICON.users}<p>${PARTNER[n-1]}</p></div>` : '';
 const instr = t => `<div class="instr">${ICON.info}<p>${t}</p></div>`;
 function modeNote(){
   if (!S.modeNote) return '';
-  const t = S.modeNote === 'transcript' ? 'This device couldn\u2019t record and make a transcript at the same time. From now on we keep the transcript only.' : 'The transcript isn\u2019t working on this device. From now on we only record your voice.';
+  const t = S.modeNote === 'transcript' ? 'Your phone couldn\u2019t record and make a transcript at the same time, so from the next round recording is off and the transcript stays on.' : 'The transcript isn\u2019t working on this device. From the next round we only record your voice.';
   return `<div class="mode-note">${t}</div>`;
 }
 function speakWidget(n){
@@ -1334,37 +1370,62 @@ function render(scroll=true){
 }
 
 /* ---------- mic check ---------- */
+function checkTimer(sec, withLevel){
+  return new Promise(res => { const t0 = performance.now(); const iv = setInterval(() => {
+    const el = (performance.now() - t0)/1000;
+    if (withLevel){ const l = $('#chkLvl'); if (l) l.style.width = Math.min(100, Math.sqrt(Rec.level())*240) + '%'; }
+    const s = $('#chkSec'); if (s) s.textContent = Math.max(0, Math.ceil(sec - el));
+    if (el >= sec){ clearInterval(iv); res(); } }, 60); });
+}
+const showWords = e => { e.onUpdate = () => { const w = $('#chkWords'); if (w) w.textContent = e.live() ? '\u201c' + e.live() + '\u201d' : ''; }; };
 async function runCheck(){
   if (S.check.state === 'running') return;
   Rec.prime();
+  const useTr = S.wantTr && !!ENV.SR;
   let eng = null;
-  if (ENV.SR){ eng = new WebSpeechEngine(); eng.start(); }
-  S.check = {state:'running'};
+  if (useTr){ eng = new WebSpeechEngine(); eng.start(); } // same order as a real round: transcript first, then recorder
+  if (S.check.url) URL.revokeObjectURL(S.check.url);
+  S.check = {state:'running', phase:'both'};
   render(false);
-  if (eng) eng.onUpdate = () => { const w = $('#chkWords'); if (w) w.textContent = eng.live() ? '\u201c' + eng.live() + '\u201d' : ''; };
+  if (eng) showWords(eng);
   let gumErr = null, recording = false;
   if (ENV.canRecord){ try { await Rec.ensure(); Rec.connect(); Rec.start(); recording = true; } catch(e){ gumErr = e && e.name || 'Error'; } }
-  const t0 = performance.now();
-  await new Promise(res => { const iv = setInterval(() => { const el = (performance.now() - t0)/1000; const l = $('#chkLvl'); if (l) l.style.width = Math.min(100, Math.sqrt(Rec.level())*240) + '%'; const s = $('#chkSec'); if (s) s.textContent = Math.max(0, Math.ceil(6 - el)); if (el >= 6){ clearInterval(iv); res(); } }, 60); });
+  await checkTimer(6, true);
   const rec = recording ? await Rec.stop() : null; Rec.release();
   const text = eng ? await eng.stop() : '';
   let peak = 0; if (rec) for (const v of rec.rms) if (v > peak) peak = v;
-  if (S.check.url) URL.revokeObjectURL(S.check.url);
-  S.check = {state:'done', gumErr, peak, size: rec ? rec.blob.size : 0, words: wordCount(text), text, trErr: eng ? eng.error : null, url: rec && rec.blob.size ? URL.createObjectURL(rec.blob) : null};
-  S.mode = decideMode(S.check);
+  const c = {state:'done', trTested:useTr, gumErr, peak, size: rec ? rec.blob.size : 0, words: wordCount(text), text, trErr: eng ? eng.error : null,
+    url: rec && rec.blob.size ? URL.createObjectURL(rec.blob) : null, soloTried:false, soloWords:0, soloText:'', soloErr:null};
+  const micOk = ENV.canRecord && !gumErr && c.size > 400 && peak > 0.004;
+  // The student spoke and the recorder heard it, but the transcript got nothing: many phones can't do both at once.
+  // Test the transcript on its own, because the teacher needs the words.
+  if (useTr && micOk && peak > 0.02 && c.words < 2 && !HARD_TR.includes(c.trErr)){
+    S.check = Object.assign({}, c, {state:'running', phase:'solo'}); render(false);
+    const e2 = new WebSpeechEngine(); showWords(e2); e2.start();
+    await checkTimer(5, false);
+    const t2 = await e2.stop();
+    Object.assign(c, {soloTried:true, soloWords:wordCount(t2), soloText:t2, soloErr:e2.error});
+  }
+  S.check = c; S.mode = decideMode(c);
   render(false); sync();
 }
 function decideMode(c){
   const micOk = ENV.canRecord && !c.gumErr && c.size > 400 && c.peak > 0.004;
-  const trOk = ENV.SR && c.words >= 2;
-  const spoke = c.peak > 0.02 || c.words >= 2;
-  if (micOk && trOk) return 'both';
-  if (trOk) return 'transcript';
-  if (micOk && spoke) return ENV.SR ? 'record' : 'record';
-  if (!spoke && !c.gumErr && !c.trErr) return defaultMode();
-  if (c.gumErr && ENV.SR && !c.trErr) return 'transcript';
-  if (micOk) return 'record';
-  return c.gumErr ? (ENV.SR && !c.trErr ? 'transcript' : 'timer') : defaultMode();
+  const tr = S.wantTr && !!ENV.SR;
+  if (!tr) return (micOk || (ENV.canRecord && !c.gumErr)) ? 'record' : 'timer';
+  if (micOk && c.words >= 2) return 'both';
+  if (c.words >= 2 || c.soloWords >= 2) return 'transcript';
+  if (!c.trTested) return micOk ? 'both' : defaultMode();
+  if (micOk && c.peak > 0.02) return 'record';           // spoke clearly, transcript got nothing even alone
+  if (!c.gumErr) return defaultMode();                    // heard nothing at all: keep the default, ask to test again
+  return 'timer';
+}
+function trWhy(){
+  if (S.mode === 'both' || S.mode === 'transcript') return '';
+  if (!ENV.SR) return 'browser has no transcript';
+  if (!S.wantTr) return 'student turned it off';
+  const e = S.check && (S.check.soloErr || S.check.trErr);
+  return e ? (TR_ERR[e] || e) : 'transcript not working on this device';
 }
 
 /* ---------- speaking ---------- */
@@ -1456,7 +1517,12 @@ async function finishSpeaking(){
   const words = wordCount(R.transcript);
   if (S.mode === 'both' && rec && R.trTried){
     if (R.peak < 0.004 && words >= 3){ S.mode = 'transcript'; S.modeNote = 'transcript'; R.blob = null; if (R.url){ URL.revokeObjectURL(R.url); R.url = null; } }
-    else if (!words && R.peak > 0.02 && ['audio-capture','not-allowed','service-not-allowed','language-not-supported','unsupported','start'].includes(R.trError)){ S.mode = 'record'; S.modeNote = 'record'; }
+    else if (!words && R.peak > 0.02){
+      if (HARD_TR.includes(R.trError)){ S.mode = 'record'; S.modeNote = 'record'; }        // transcript can never work here
+      else if (R.trError !== 'network'){ S.mode = 'transcript'; S.modeNote = 'transcript'; } // the phone gave the mic to the recorder: keep the transcript next time
+    }
+  } else if (S.mode === 'transcript' && R.trTried && !words){
+    S.mode = ENV.canRecord ? 'record' : 'timer'; S.modeNote = 'record';                      // transcript alone gave nothing either: record instead
   }
   Session.engine = null; S.phase[n] = 'reflect';
   render(); announce(`Round ${n} finished.`); awardBadges();
@@ -1654,7 +1720,7 @@ function hostRefresh(force){
 function setPart(el, part, html, force){ const p = el.querySelector(`[data-part="${part}"]`); if (!p) return; if (force || p.dataset.h !== html){ p.innerHTML = html; p.dataset.h = html; } }
 function attHead(a, on, open){
   const rs = a.rounds.map((r,i) => { const au = H.audio[a.aid + '|' + (i+1)]; return `<span class="rchip ${r.done ? 'done' : ''}" data-round="${i+1}">R${i+1}${r.done ? ` \u00b7 ${Math.round(r.duration)}s` : ''}${r.transcript ? ' ' + ICON.text : ''}${au ? ' ' + ICON.mic : ''}</span>`; }).join('');
-  return `<div class="att-name"><span class="dot ${on ? 'on' : ''}" title="${on ? 'Online' : 'Offline'}"></span>${esc(a.name || 'No name')}<span class="tag">${esc(a.step || '')}</span>${a.mode && a.mode !== 'both' ? `<span class="tag mid">${esc(MODE_TEXT[a.mode] || a.mode)}</span>` : ''}</div>
+  return `<div class="att-name"><span class="dot ${on ? 'on' : ''}" title="${on ? 'Online' : 'Offline'}"></span>${esc(a.name || 'No name')}<span class="tag">${esc(a.step || '')}</span>${a.mode && a.mode !== 'both' ? `<span class="tag mid">${esc(MODE_TEXT[a.mode] || a.mode)}${a.trWhy ? ' \u00b7 ' + esc(a.trWhy) : ''}</span>` : ''}</div>
     <div class="att-rs">${rs}<span class="tag blue">${open ? 'Close' : 'Open'}</span></div>
     <div class="att-q">${a.q ? esc(a.q.text) : 'No question chosen yet'} \u00b7 ${esc(a.device || '')}</div>`;
 }
@@ -1726,6 +1792,8 @@ document.addEventListener('click', async e => {
     case 'solo': S.room = null; T = null; S.screen = 'check'; render(); break;
     case 'to-landing': S.screen = 'landing'; S.room = null; history.replaceState(null, '', location.pathname + (LOCAL ? '?local=1' : '')); render(); break;
     case 'run-check': runCheck(); break;
+    case 'to-check': S.screen = 'check'; render(); sync(); break;
+    case 'copy-page': { const ok = await copyText(location.href); toast(ok ? 'Paste it into Chrome or Safari.' : 'Copy the address from the address bar.', ok ? 'Link copied' : 'Could not copy', 'copy'); break; }
     case 'to-home': if (S.check.state === 'running') return; S.screen = 'home'; render(); sync(); break;
     case 'topic': S.topic = el.dataset.topic; render(false); break;
     case 'pick': selectQuestion(el.dataset.id, false); break;
@@ -1795,6 +1863,11 @@ document.addEventListener('click', async e => {
 document.addEventListener('change', e => {
   const el = e.target;
   if (el.dataset.a === 'pair') S.pair = el.checked;
+  if (el.dataset.a === 'tr-toggle'){
+    S.wantTr = el.checked; ME.wantTr = el.checked; LS.set('spk90.me', ME);
+    S.mode = S.check.state === 'done' ? decideMode(S.check) : defaultMode();
+    render(false); sync();
+  }
   if (el.dataset.a === 'h-audio'){ H.cfg.audio = el.checked; H.T && H.T.setCfg(H.cfg); hostSave(); }
   if (el.id === 'qSel'){ const q = QUESTIONS.find(x => x.id === el.value); H.cfg.question = {id:q.id, text:q.text}; H.T && H.T.setCfg(H.cfg); hostSave(); }
 });
