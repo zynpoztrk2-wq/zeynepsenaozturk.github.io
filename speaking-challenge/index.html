@@ -347,6 +347,27 @@ table.cmp{width:100%;border-collapse:collapse;min-width:620px;font-size:15.5px;c
 .trc p{line-height:1.75;max-width:72ch}
 mark.sig{color:var(--navy);padding:1px 5px;border-radius:6px}
 .legend{display:flex;flex-wrap:wrap;gap:8px;font-size:14px}
+.fb{border-top:10px solid var(--acc)}
+.fb-h{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.fb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.fb-grid{grid-template-columns:1fr}}
+.fb-col{background:var(--white);border-radius:18px;padding:14px 16px;display:grid;gap:8px;align-content:start}
+.fb-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fb-list li{display:flex;gap:10px;align-items:flex-start;line-height:1.4}
+.fb-list li::before{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:14px;margin-top:-1px}
+.fb-list li.good::before{content:"\2713";background:var(--ok-bg);color:var(--ok)}
+.fb-list li.up::before{content:"\2191";background:var(--mid-bg);color:var(--mid)}
+.fb-ok{color:var(--ok);font-weight:700;display:flex;gap:8px;align-items:center}
+.glist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.glist li{background:var(--cream);border-radius:12px;padding:8px 12px;display:grid;gap:3px}
+.gctx{color:var(--navy-2)}
+.gw{background:var(--bad-bg);color:var(--bad);font-weight:700;border-radius:5px;padding:0 4px}
+.gfix{color:var(--ok);font-weight:700;display:inline-flex;gap:6px;align-items:center}
+.glist small{color:var(--navy-3)}
+.fb-small{font-size:13.5px;color:var(--navy-3)}
+.fb-next{background:var(--acc);color:var(--navy);border-radius:16px;padding:12px 16px}
+.gdet summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--blue)}
+.gdet ul{margin:6px 0 0;padding-left:18px;font-size:14px;display:grid;gap:4px}
 .honest{background:var(--blue-2);color:var(--cream);border-radius:var(--r);padding:16px 18px;font-size:14.5px}
 
 /* done */
@@ -635,7 +656,7 @@ const HARD_TR = ['not-allowed','service-not-allowed','language-not-supported','u
    STATE
    ===================================================================== */
 function newRound(){
-  return {done:false, doneAt:0, duration:0, blob:null, url:null, mime:'', analysis:null, peak:0, transcript:'', trTried:false, trError:null, reflected:false,
+  return {done:false, doneAt:0, duration:0, blob:null, url:null, mime:'', analysis:null, peak:0, transcript:'', trTried:false, trError:null, reflected:false, grammar:{status:'none', issues:[]},
     self:{answered:null, reasons:null, example:null, extra:null, fluency:null, complete:null, stuck:[], stuckNote:'', newIdea:''}};
 }
 function freshAttempt(){
@@ -990,7 +1011,7 @@ function studentState(){
   return {sid:ME.sid, aid:S.aid, name:S.name, step:stepLabel(), q:S.question ? {id:S.question.id, text:S.question.text} : null, mode:S.mode, wantTr:S.wantTr, trWhy:trWhy(), device:ENV.device, ts:Date.now(), started:S.started, finished:S.screen === 'done',
     rounds:S.rounds.map(r => ({done:r.done, doneAt:r.doneAt, duration:Math.round(r.duration*10)/10, transcript:r.transcript, trTried:r.trTried, trErr:r.trError,
       analysis:r.analysis && r.analysis.reliable ? {pauses:r.analysis.pauses, startDelay:+r.analysis.startDelay.toFixed(1), talk:Math.round(r.analysis.talk)} : null,
-      self:r.self, reflected:r.reflected, hasAudio:!!r.blob, mime:r.mime})),
+      self:r.self, reflected:r.reflected, hasAudio:!!r.blob, mime:r.mime, grammar:{status:r.grammar.status, issues:r.grammar.issues.slice(0,8).map(x => ({wrong:x.wrong, fix:x.fix, msg:x.msg}))}})),
     plan:S.plan, kw:S.r3Keywords, final:S.final};
 }
 let syncTimer = 0;
@@ -1228,9 +1249,9 @@ function reflectForm(n){
 function startersHTML(){ return `<details class="starters"><summary>Sentence starters (optional)</summary><div class="sgrid">${MOVES.map(m => `<div><span class="mt" data-move="${m.id}">${m.name}</span><ul>${m.starters.map(s => `<li>${s}</li>`).join('')}</ul></div>`).join('')}</div></details>`; }
 function renderRound(n){
   const ph = S.phase[n]; let body = '';
-  if (n === 1) body = ph === 'speak' ? instr(ROUNDS[0].instr) + partnerCard(1) + speakWidget(1) : resultCard(1) + reflectForm(1);
-  if (n === 2) body = ph === 'learn' ? r2Learn() : ph === 'plan' ? r2Plan() : ph === 'speak' ? r2Speak() : resultCard(2) + reflectForm(2);
-  if (n === 3) body = ph === 'pick' ? r3Pick() : ph === 'speak' ? r3Speak() : resultCard(3) + reflectForm(3);
+  if (n === 1) body = ph === 'speak' ? instr(ROUNDS[0].instr) + partnerCard(1) + speakWidget(1) : resultCard(1) + feedbackCard(1) + reflectForm(1);
+  if (n === 2) body = ph === 'learn' ? r2Learn() : ph === 'plan' ? r2Plan() : ph === 'speak' ? r2Speak() : resultCard(2) + feedbackCard(2) + reflectForm(2);
+  if (n === 3) body = ph === 'pick' ? r3Pick() : ph === 'speak' ? r3Speak() : resultCard(3) + feedbackCard(3) + reflectForm(3);
   return `<div class="narrow" data-round="${n}">${roundHead(n)}${questionBox(n)}${modeNote()}${body}</div>`;
 }
 function r2Learn(){
@@ -1311,6 +1332,7 @@ function renderResults(){
     rows += group('From the automatic transcript') + row('Words', Tc(s => s.words)) + row('Words per minute', Tc(s => s.wpm ?? '\u2013'), 'words \u00f7 speaking time')
       + row('Opinion signals', Tc(s => s.sig.opinion), 'I think, I believe\u2026') + row('Reason signals', Tc(s => s.sig.reason), 'because, one reason\u2026') + row('Example signals', Tc(s => s.sig.example), 'for example, such as\u2026') + row('Extra-detail signals', Tc(s => s.sig.extend), 'however, as a result, also\u2026')
       + row('New content words vs Round 1', Tc((s,i) => i === 0 ? '<span class="muted">baseline</span>' : newWords[i] ? `${newWords[i].length}${newWords[i].length ? `<div class="wl">${esc(newWords[i].slice(0,8).join(', '))}${newWords[i].length > 8 ? '\u2026' : ''}</div>` : ''}` : '\u2013'), 'a sign of new ideas')
+      + row('Grammar suggestions', R.map(r => r.grammar && r.grammar.status === 'ok' ? r.grammar.issues.length : '<span class="muted">\u2013</span>'), 'LanguageTool, automatic')
       + row('Repeated 3-word phrases', Tc(s => `${s.repeated.length}${s.repeated.length ? `<div class="wl">${esc(s.repeated.slice(0,2).map(([g,c]) => `\u201c${g}\u201d \u00d7${c}`).join(', '))}</div>` : ''}`), 'repeating the same words'); }
   return `<div class="narrow" data-round="3" style="max-width:1000px">
     <div class="head"><p class="kicker">Results</p><h1 class="display">Your three rounds</h1><p class="sub">${esc(S.question.text)}</p></div>
@@ -1343,6 +1365,138 @@ function renderDone(){
     ${doneSendHTML()}
     <div class="badges">${BADGES.map((b,i) => { const on = b.test(); return `<div class="card badge ${on ? '' : 'off'}" style="animation-delay:${0.15 + i*0.08}s"><span class="bi" style="${on ? `background:${b.color}` : ''}">${ICON[b.icon]}</span><b>${b.name}</b><span>${b.desc}</span></div>`; }).join('')}</div>
     <div class="actions center on-blue"><button class="btn amber lg" data-a="again">${ICON.dice} Try a new question</button><button class="btn lg" data-a="copy">${ICON.copy} Copy my summary</button><button class="btn line lg" data-a="back-results">See results again</button></div>
+  </div>`;
+}
+
+/* =====================================================================
+   FEEDBACK BETWEEN ROUNDS (rules on the transcript + free LanguageTool grammar check, as in Story Cubes)
+   ===================================================================== */
+const LT_URL = 'https://api.languagetool.org/v2/check';
+const LT_KEEP = ['GRAMMAR','CONFUSED_WORDS','COLLOCATIONS','NONSTANDARD_PHRASES','SEMANTICS'];
+const LT_DELAYS = window.__ltDelays || [6000, 15000, 30000];
+const IDEA_STOP = new Set(['believe','reason','reasons','example','instance','result','another','point','important','opinion','really','however','because','also','first','second','finally','addition','moreover','although','think','maybe','something','someone','everyone','everything','always','never','sometimes','often','very','much','many','more','most','good','bad','thing','things','people']);
+const Q_GENERIC = new Set(['think','why','not','explain','answer','opinion','reasons','reason','examples','give','agree','your','yes','important','better','describe','talk']);
+async function ltCheck(text){
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(LT_URL, {method:'POST', body:new URLSearchParams({text, language:'en-US', level:'default'}), signal:ctl.signal});
+    if (!r.ok) throw {code:r.status};
+    const js = await r.json(), out = [];
+    for (const m of (js && js.matches) || []){
+      const cat = (m.rule && m.rule.category && m.rule.category.id) || '';
+      if (!LT_KEEP.includes(cat)) continue;
+      const wrong = text.substr(m.offset, m.length); if (!wrong.trim()) continue;
+      const a = Math.max(0, text.lastIndexOf(' ', Math.max(0, m.offset - 22)) + 1), b = text.indexOf(' ', Math.min(text.length, m.offset + m.length + 22));
+      out.push({wrong, fix: m.replacements && m.replacements[0] ? m.replacements[0].value : '', msg: String(m.shortMessage || m.message || '').slice(0, 110),
+        before: text.slice(a, m.offset), after: text.slice(m.offset + m.length, b < 0 ? text.length : b)});
+    }
+    return out.slice(0, 12);
+  } finally { clearTimeout(to); }
+}
+async function checkGrammar(n){
+  const R = S.rounds[n-1], text = R.transcript, aid = S.aid;
+  if (!text || wordCount(text) < 3){ R.grammar = {status:'short', issues:[]}; paintGrammar(n); return; }
+  R.grammar = {status:'loading', issues:[]}; paintGrammar(n);
+  for (let i = 0; i <= LT_DELAYS.length; i++){
+    try {
+      const issues = await ltCheck(text);
+      if (S.aid !== aid || S.rounds[n-1] !== R) return;           // round was redone meanwhile
+      R.grammar = {status:'ok', issues}; paintGrammar(n); sync(); return;
+    } catch(e){
+      if (S.aid !== aid || S.rounds[n-1] !== R) return;
+      if (i === LT_DELAYS.length){ R.grammar = {status: navigator.onLine === false ? 'offline' : 'busy', issues:[]}; paintGrammar(n); return; }
+      R.grammar = {status:'retry', issues:[]}; paintGrammar(n);
+      await sleep(LT_DELAYS[i] + Math.random()*3000);
+    }
+  }
+}
+function paintGrammar(n){ const el = $(`#fbGram-${n}`); if (el) el.innerHTML = grammarHTML(n); }
+const EXTEND_RE = /\b(however|on the other hand|as a result|another|in addition|moreover|although|instead|compared (to|with)|in conclusion)\b/gi;
+const SPECIFIC_RE = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|fifty|hundred|thousand|percent|hours?|minutes?|days?|weeks?|months?|years?|yesterday|tomorrow|last|every|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|june|july|august|september|october|november|december|istanbul|turkey|ankara|izmir|my (mother|father|brother|sister|cousin|friend|teacher|grandmother|grandfather))\b/gi;
+function contentFeedback(n){
+  const R = S.rounds[n-1], P = n > 1 ? S.rounds[n-2] : null, good = [], imp = [];
+  const t = Math.round(R.duration), st = R.transcript ? textStats(R.transcript, R.duration) : null, ps = P && P.transcript ? textStats(P.transcript, P.duration) : null;
+  const add = (arr, p, text) => arr.push({p, text});
+  if (t >= 80) add(good, 1, `You used almost all of the 90 seconds (${t} s).`);
+  else if (t < 45) add(imp, n === 1 ? 6 : 3, `You spoke for ${t} seconds. Aim for at least 60: add one more reason or example.`);
+  if (P){ const d = t - Math.round(P.duration); if (d >= 10) add(good, 2, `You spoke ${d} seconds longer than in Round ${n-1}.`); }
+  const a = R.analysis;
+  if (a && a.reliable){
+    if (a.pauses >= 4) add(imp, n === 3 ? 0 : 5, `You had about ${a.pauses} long pauses. When you need time, say “Let me think…” or “Another point is…” instead of stopping.`);
+    else if (a.pauses <= 1 && t >= 45) add(good, 3, 'You spoke with very few long pauses.');
+    if (a.startDelay > 4) add(imp, n === 3 ? 1 : 6, `You needed about ${Math.round(a.startDelay)} seconds to start. Begin with the words of the question: “I think young people…”.`);
+  }
+  if (st){
+    const qw = [...new Set(contentWords(S.question.text))].filter(w => !Q_GENERIC.has(w));
+    const hit = qw.filter(w => st.content.has(w) || st.content.has(w.replace(/s$/,'')) || st.content.has(w + 's'));
+    if (qw.length && hit.length) add(good, 4, `You stayed on the question (you used: ${hit.slice(0,3).join(', ')}).`);
+    else if (qw.length) add(imp, 1, `Use the key words of the question (${qw.slice(0,3).join(', ')}) so your answer is clearly on topic.`);
+    if (st.sig.opinion) add(good, 0, 'You gave a clear opinion.'); else add(imp, 0, 'Start with a direct answer: “I believe that…” or “In my opinion,…”.');
+    if (st.sig.reason >= 2) add(good, 0, `You explained your opinion with reasons (${st.sig.reason} reason words).`);
+    else if (st.sig.reason === 1) add(imp, 3, 'You gave one reason. Add a second one: “Another reason is that…”.');
+    else add(imp, 1, 'Explain why: use “because…” or “One reason is that…”.');
+    if (st.sig.example) add(good, 1, 'You gave an example.'); else add(imp, 2, 'Give a specific example: “For example, my friend…”.');
+    const ext = (R.transcript.match(EXTEND_RE) || []).length;
+    if (ext) add(good, 2, 'You extended your answer with another point or view.'); else add(imp, 3, 'Add one more point or another view: “However,…” or “As a result,…”.');
+    const spec = (R.transcript.match(SPECIFIC_RE) || []).length;
+    if (spec >= 2) add(good, n === 2 ? 0 : 3, 'You included specific details (people, numbers, times or places).');
+    else add(imp, n === 2 ? 1 : 4, 'Add a specific detail: a person, a number, a time or a place (e.g. “three hours a day”).');
+    if (ps && n === 2){ const stem = w => w.length > 4 ? w.replace(/ies$/,'y').replace(/(ing|ed|es|s)$/,'') : w, old = new Set([...ps.content].map(stem)); const nw = [...st.content].filter(w => !old.has(stem(w)) && !IDEA_STOP.has(w) && w.length > 3).sort((x,y) => y.length - x.length); if (nw.length >= 5) add(good, 0, `You added new ideas: ${nw.slice(0,4).join(', ')}…`); else add(imp, 0, 'Your answer was very similar to Round 1. Add at least one new idea or detail.'); }
+    if (ps && n === 3 && st.words < ps.words*0.7) add(imp, 2, `Round 3 had fewer words than Round 2 (${st.words} vs ${ps.words}). Did you keep all your ideas?`);
+    const cnt = new Map(); contentWords(R.transcript).filter(w => w.length > 3).forEach(w => cnt.set(w, (cnt.get(w) || 0) + 1));
+    const top = [...cnt].sort((x,y) => y[1]-x[1])[0];
+    if (top && top[1] >= 4) add(imp, 4, `You said “${top[0]}” ${top[1]} times. Sometimes use another word, or “it” / “this”.`);
+    if (st.repeated.length >= 3) add(imp, 5, `You repeated some phrases, e.g. “${st.repeated[0][0]}”.`);
+  }
+  const by = arr => arr.sort((x,y) => x.p - y.p).map(x => x.text);
+  return {good:by(good).slice(0,5), imp:by(imp).slice(0,3), next:nextTip(n, st), hasText:!!st};
+}
+function nextTip(n, st){
+  if (n === 1){
+    const miss = !st ? [] : [!st.sig.opinion && 'ANSWER', !st.sig.reason && 'EXPLAIN', !st.sig.example && 'EXEMPLIFY', !(S.rounds[0].transcript.match(EXTEND_RE) || []).length && 'EXTEND'].filter(Boolean);
+    return miss.length ? `In Round 2 you will learn four speaking moves. Your focus: ${miss.join(' and ')}.` : 'In Round 2, keep your four moves and add a new idea with a specific detail.';
+  }
+  if (n === 2) return 'In Round 3, say the same ideas more smoothly with only 3–5 keywords. Use complete sentences and keep going.';
+  return 'Open your results to compare all three rounds.';
+}
+function grammarTips(text){
+  const t = ' ' + String(text).toLowerCase() + ' ', tips = [];
+  const story = /for example|for instance|when i was|last (year|week|month|summer|weekend)|yesterday|ago\b/.test(t);
+  const past = (t.match(/\b(was|were|went|had|did|saw|made|got|came|took|said|told|bought|felt|thought|knew|left|met|ate|wrote|began|became|found|gave|spent|paid|lost|won|[a-z]+ed)\b/g) || []).length;
+  if (story && past === 0) tips.push('When you tell a past example, use the past tense: “Last year I spent…”, “She worked…”.');
+  if (!(t.match(/\b(if|when|which|who|although|while|unless|whereas)\b/g) || []).length) tips.push('Try one longer sentence with “if”, “when” or “which”: “If students use phones in class, they…”.');
+  if (!/\b(should|could|would|might|have to|must)\b/.test(t) && /should|why or why not|do you agree|better/i.test(S.question.text)) tips.push('For opinions, use modal verbs: “Universities should…”, “It could help…”.');
+  if (!tips.length) tips.push('Good range of sentences. Now check the small things: he/she/it + -s, and a / the.');
+  return tips.slice(0,2);
+}
+function grammarHTML(n){
+  const R = S.rounds[n-1], g = R.grammar || {status:'none'};
+  if (!R.transcript) return `<h3>Grammar</h3><p class="hint">Grammar feedback needs a transcript.${S.wantTr && ENV.SR ? '' : ' Turn on Automatic transcript in the mic check.'}</p>`;
+  let top = '';
+  if (g.status === 'loading' || g.status === 'none') top = '<p class="hint">Checking your grammar…</p>';
+  else if (g.status === 'short') top = '<p class="hint">Your transcript is too short to check.</p>';
+  else if (g.status === 'retry') top = '<p class="hint">The grammar checker is busy. Trying again…</p>';
+  else if (g.status === 'busy') top = '<p class="hint">The grammar checker is busy right now, so there are no suggestions this time.</p>';
+  else if (g.status === 'offline') top = '<p class="hint">No internet connection, so the grammar check didn’t run.</p>';
+  else if (!g.issues.length) top = `<p class="fb-ok">${ICON.check} No grammar problems found in your transcript.</p>`;
+  else top = `<p><b>Check these${g.issues.length > 5 ? ` (5 of ${g.issues.length})` : ''}:</b></p><ul class="glist">${g.issues.slice(0,5).map(x => `<li><span class="gctx">${esc(x.before)}<span class="gw">${esc(x.wrong)}</span>${esc(x.after)}</span>${x.fix ? `<span class="gfix">${ICON.arrow} ${esc(x.fix)}</span>` : ''}<small>${esc(x.msg)}</small></li>`).join('')}</ul>`;
+  return `<h3>Grammar</h3>${top}<p><b>To improve:</b></p><ul class="fb-list">${grammarTips(R.transcript).map(x => `<li class="up">${esc(x)}</li>`).join('')}</ul>
+    <p class="fb-small">Speech recognition sometimes corrects small mistakes, so also listen to your recording.</p>`;
+}
+function feedbackCard(n){
+  const f = contentFeedback(n);
+  return `<div class="card fb">
+    <div class="fb-h"><h2>Feedback</h2><span class="tag">automatic</span></div>
+    <p class="hint">Based on your transcript${S.rounds[n-1].analysis && S.rounds[n-1].analysis.reliable ? ' and recording' : ''}. It can be wrong, and it can’t judge pronunciation.</p>
+    <div class="fb-grid">
+      <div class="fb-col"><h3>Content and details</h3>
+        ${f.hasText ? '' : '<p class="hint">No transcript this round, so feedback on your words is limited.</p>'}
+        ${f.good.length ? `<ul class="fb-list">${f.good.map(x => `<li class="good">${esc(x)}</li>`).join('')}</ul>` : ''}
+        ${f.imp.length ? `<p><b>To improve:</b></p><ul class="fb-list">${f.imp.map(x => `<li class="up">${esc(x)}</li>`).join('')}</ul>` : ''}
+      </div>
+      <div class="fb-col" id="fbGram-${n}">${grammarHTML(n)}</div>
+    </div>
+    <div class="fb-next"><b>${n < 3 ? 'Next round' : 'Next'}:</b> ${esc(f.next)}</div>
   </div>`;
 }
 
@@ -1526,6 +1680,7 @@ async function finishSpeaking(){
   }
   Session.engine = null; S.phase[n] = 'reflect';
   render(); announce(`Round ${n} finished.`); awardBadges();
+  checkGrammar(n);
   sync(true); sendAudio(n);
 }
 function abortSession(){
@@ -1733,6 +1888,7 @@ function attRound(a, n){
     <div class="hr-t"><b>Round ${n}</b><span>${Math.round(r.duration)} s</span>${r.trTried ? `<span>${words} words</span>` : ''}${r.analysis ? `<span>${r.analysis.pauses} long pauses (est.)</span>` : ''}</div>
     ${r.reflected ? `<div class="selfmini">${selfTag('Answer', r.self.answered)}${selfTag('Reasons', r.self.reasons)}${selfTag('Example', r.self.example)}${selfTag('Extra', r.self.extra)}${r.self.fluency ? `<span class="tag">Fluency ${r.self.fluency}/5</span>` : ''}${n === 3 && r.self.complete != null ? selfTag('Full sentences', r.self.complete) : ''}</div>` : '<span class="hint">Self-check not done yet</span>'}
     <p class="tx">${r.transcript ? highlight(r.transcript) : `<span class="muted">${r.trTried ? 'No transcript' + (r.trErr ? ` (${esc(TR_ERR[r.trErr] || r.trErr)})` : '') : 'Transcript was off on this device'}</span>`}</p>
+    ${r.grammar && r.grammar.status === 'ok' ? (r.grammar.issues.length ? `<details class="gdet"><summary>Grammar: ${r.grammar.issues.length} suggestion${r.grammar.issues.length > 1 ? 's' : ''}</summary><ul>${r.grammar.issues.map(x => `<li><b>${esc(x.wrong)}</b>${x.fix ? ' \u2192 ' + esc(x.fix) : ''} <span class="hint">${esc(x.msg)}</span></li>`).join('')}</ul></details>` : '<span class="hint">Grammar: no suggestions</span>') : ''}
     ${au ? `<audio controls preload="none" src="${au.url}"></audio><a class="linkbtn" href="${au.url}" download="${fileBase(a)}_round${n}.${extFor(au.mime)}">${ICON.download} Download recording</a>` : r.hasAudio && H.cfg.audio ? '<span class="hint">Recording on its way\u2026</span>' : ''}
   </div>`;
 }
@@ -1749,13 +1905,13 @@ function attExtra(a){
 const fileBase = a => ((a.name || 'student').normalize('NFKD').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_') || 'student') + '_' + a.aid.slice(0,4);
 function csvText(){
   const yn = v => v === 2 ? 'yes' : v === 1 ? 'a little' : v === 0 ? 'no' : '';
-  const head = ['student','started','device','mode','question','round','round_name','duration_s','words','words_per_min','long_pauses_est','start_delay_est_s','answered','reasons','example','extra_details','fluency_1to5','complete_sentences','transcript','transcript_note','round1_stuck','round2_new_idea','round2_plan','round3_keywords','improved','next_time'];
+  const head = ['student','started','device','mode','question','round','round_name','duration_s','words','words_per_min','long_pauses_est','start_delay_est_s','answered','reasons','example','extra_details','fluency_1to5','complete_sentences','transcript','transcript_note','grammar_suggestions','round1_stuck','round2_new_idea','round2_plan','round3_keywords','improved','next_time'];
   const q = v => { const s = String(v ?? ''); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const rows = [head];
   Object.values(H.attempts).sort((a,b) => (a.name||'').localeCompare(b.name||'')).forEach(a => a.rounds.forEach((r,i) => {
     if (!r.done) return; const st = r.transcript ? textStats(r.transcript, r.duration) : null;
     rows.push([a.name, new Date(a.rounds[0].doneAt || a.ts).toLocaleString('en-GB'), a.device, a.mode, a.q ? a.q.text : '', i+1, ROUNDS[i].name, Math.round(r.duration), st ? st.words : '', st && st.wpm ? st.wpm : '', r.analysis ? r.analysis.pauses : '', r.analysis ? r.analysis.startDelay : '',
-      yn(r.self.answered), yn(r.self.reasons), yn(r.self.example), yn(r.self.extra), r.self.fluency || '', i === 2 ? yn(r.self.complete) : '', r.transcript, r.transcript ? '' : (r.trTried ? (TR_ERR[r.trErr] || 'no words') : 'transcript off'),
+      yn(r.self.answered), yn(r.self.reasons), yn(r.self.example), yn(r.self.extra), r.self.fluency || '', i === 2 ? yn(r.self.complete) : '', r.transcript, r.transcript ? '' : (r.trTried ? (TR_ERR[r.trErr] || 'no words') : 'transcript off'), r.grammar && r.grammar.status === 'ok' ? r.grammar.issues.map(x => x.wrong + (x.fix ? ' -> ' + x.fix : '') + (x.msg ? ' (' + x.msg + ')' : '')).join('; ') : '',
       i === 0 ? (r.self.stuck || []).map(k => STUCK[k] ? STUCK[k].label : k).join('; ') + (r.self.stuckNote ? ' (' + r.self.stuckNote + ')' : '') : '', i === 1 ? r.self.newIdea : '',
       i === 1 && a.plan ? MOVES.map(m => m.name.toLowerCase() + ': ' + (a.plan[m.id] || []).join(', ')).join(' | ') : '', i === 2 ? (a.kw || []).join(', ') : '', i === 2 && a.final ? (a.final.improved || []).join('; ') : '', i === 2 && a.final ? a.final.next : '']);
   }));
