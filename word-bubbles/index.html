@@ -123,6 +123,19 @@ const COLORS = ["--c1","--c2","--c3"];
 
 // Other word forms, shown with faint arrows when a word is opened ("form:part of speech")
 const FORMS = {
+  "generate":["generation:n","generator:n"],
+  "instruction":["instruct:v","instructor:n","instructional:adj"],
+  "balanced":["balance:n / v","unbalanced:adj"],
+  "concept":["conceptual:adj"],
+  "intellectual":["intellect:n","intellectually:adv"],
+  "term":["terminology:n"],
+  "operate":["operation:n","operator:n","operational:adj"],
+  "match":["mismatch:n"],
+  "compassionate":["compassion:n","compassionately:adv"],
+  "artificial":["artificially:adv"],
+  "take over":["takeover:n"],
+  "emphasize":["emphasis:n","emphatic:adj"],
+  "tremendous":["tremendously:adv"],
   "intend":["intention:n","intentional:adj","intentionally:adv"],
   "trial":["try:v"],
   "noticeable":["notice:v","noticeably:adv"],
@@ -284,6 +297,14 @@ const SETS = {
     ["sacrifice","give up",9,"⚖️"],["invade","intrude on",10,"🚪"],["surveillance","close watching",11,"👁️"],["investigate","look into",12,"🕵️"],
     ["contradiction","opposite claim",13,"🔀"],["convenience","ease",15,"🛋️"],
     ["interfere with","get in the way of",18,"✋"]
+  ],
+  w11ch1: [
+    ["generate","produce",0,"⚡"],["breakthrough","major discovery",1,"💡"],
+    ["instruction","teaching",2,"📋"],["content","material",4,"📄"],
+    ["balanced","even",5,"⚖️"],["concept","idea",6,"🧩"],["objectives","goals",7,"🎯"],["intellectual","smart",8,"🎓"],
+    ["term","word",9,"🔤"],["operate","work",10,"⚙️"],["match","be as good as",11,"🤝"],["compassionate","caring",12,"🤗"],
+    ["artificial","man-made",13,"🤖"],["take over","gain control",15,"👑"],
+    ["emphasize","stress",16,"❗"],["tremendous","huge",17,"🏔️"]
   ]
 };
 
@@ -291,7 +312,8 @@ const WEEKS = [
   {id:"w3", label:"Week 3", chapters:[{id:"w3"}]},
   {id:"w5", label:"Week 5", chapters:[{id:"w5ch1",label:"Ch 1"},{id:"w5ch2",label:"Ch 2"}]},
   {id:"w9", label:"Week 9", chapters:[{id:"w9ch1",label:"Ch 1"},{id:"w9ch2",label:"Ch 2"}]},
-  {id:"w10", label:"Week 10", chapters:[{id:"w10ch1",label:"Ch 1"},{id:"w10ch2",label:"Ch 2"}]}
+  {id:"w10", label:"Week 10", chapters:[{id:"w10ch1",label:"Ch 1"},{id:"w10ch2",label:"Ch 2"}]},
+  {id:"w11", label:"Week 11", chapters:[{id:"w11ch1",label:"Ch 1"}]}
 ];
 
 const cloud = document.getElementById("cloud");
