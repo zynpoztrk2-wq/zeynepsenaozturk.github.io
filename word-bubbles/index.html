@@ -123,6 +123,17 @@ const COLORS = ["--c1","--c2","--c3"];
 
 // Other word forms, shown with faint arrows when a word is opened ("form:part of speech")
 const FORMS = {
+  "cruel":["cruelty:n","cruelly:adv"],
+  "competence":["competent:adj","incompetent:adj"],
+  "remarkable":["remark:n / v","remarkably:adv"],
+  "erase":["eraser:n"],
+  "approach":["approachable:adj"],
+  "sentient":["sentience:n"],
+  "consciousness":["conscious:adj","unconscious:adj","consciously:adv"],
+  "inevitable":["inevitably:adv"],
+  "declare":["declaration:n"],
+  "occur":["occurrence:n"],
+  "assess":["assessment:n"],
   "generate":["generation:n","generator:n"],
   "instruction":["instruct:v","instructor:n","instructional:adj"],
   "balanced":["balance:n / v","unbalanced:adj"],
@@ -305,6 +316,14 @@ const SETS = {
     ["term","word",9,"🔤"],["operate","work",10,"⚙️"],["match","be as good as",11,"🤝"],["compassionate","caring",12,"🤗"],
     ["artificial","man-made",13,"🤖"],["take over","gain control",15,"👑"],
     ["emphasize","stress",16,"❗"],["tremendous","huge",17,"🏔️"]
+  ],
+  w11ch2: [
+    ["remarkable","amazing",0,"🌟"],["sentient","able to feel",1,"🧠"],
+    ["competence","ability",2,"💪"],["consciousness","awareness",4,"🧘"],
+    ["cruel","unkind",5,"💔"],["display","show",6,"🖼️"],["approach","method",7,"🗺️"],["branch","part",8,"🌿"],
+    ["erase","remove",9,"🧽"],["error","mistake",12,"❌"],
+    ["inevitable","unavoidable",13,"⏳"],["declare","state",15,"📢"],
+    ["occur","happen",16,"💥"],["assess","evaluate",17,"📝"]
   ]
 };
 
@@ -313,7 +332,7 @@ const WEEKS = [
   {id:"w5", label:"Week 5", chapters:[{id:"w5ch1",label:"Ch 1"},{id:"w5ch2",label:"Ch 2"}]},
   {id:"w9", label:"Week 9", chapters:[{id:"w9ch1",label:"Ch 1"},{id:"w9ch2",label:"Ch 2"}]},
   {id:"w10", label:"Week 10", chapters:[{id:"w10ch1",label:"Ch 1"},{id:"w10ch2",label:"Ch 2"}]},
-  {id:"w11", label:"Week 11", chapters:[{id:"w11ch1",label:"Ch 1"}]}
+  {id:"w11", label:"Week 11", chapters:[{id:"w11ch1",label:"Ch 1"},{id:"w11ch2",label:"Ch 2"}]}
 ];
 
 const cloud = document.getElementById("cloud");
