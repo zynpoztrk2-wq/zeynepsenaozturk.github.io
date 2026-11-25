@@ -11,7 +11,7 @@
   --bg:#EEF2F7; --ink:#1B2B4B; --muted:#5A6882; --card:#FFFFFF; --line:#C9D3E3;
   --accent:#2F5BD3; --accent-ink:#FFFFFF;
   --good:#0F8B6A; --good-soft:#D5F1E7; --bad:#D23B3B; --bad-soft:#FBE0E0; --warn:#C27A00;
-  --w3:#2F5BD3; --w5:#0F8B7A; --w9:#B4448C; --w10:#6A4FC9; --sp:#C26A00; --env:#3F8A2E;
+  --w3:#2F5BD3; --w5:#0F8B7A; --w9:#B4448C; --w10:#6A4FC9; --w11:#1F7A8C; --sp:#C26A00; --env:#3F8A2E;
   --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
   --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
 }
@@ -21,7 +21,7 @@
     --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --card:#1B2436; --line:#2E3A52;
     --accent:#7B9DF4; --accent-ink:#0E1422;
     --good:#3CC29A; --good-soft:#163A30; --bad:#F07070; --bad-soft:#3D1D22; --warn:#F2B04A;
-    --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --w10:#A894F2; --sp:#F2A54A; --env:#7CCB63;
+    --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --w10:#A894F2; --w11:#5CC3D6; --sp:#F2A54A; --env:#7CCB63;
   }
 }
 :root[data-theme="dark"]{
@@ -29,7 +29,7 @@
   --bg:#111827; --ink:#E6ECF7; --muted:#9AA7BF; --card:#1B2436; --line:#2E3A52;
   --accent:#7B9DF4; --accent-ink:#0E1422;
   --good:#3CC29A; --good-soft:#163A30; --bad:#F07070; --bad-soft:#3D1D22; --warn:#F2B04A;
-  --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --w10:#A894F2; --sp:#F2A54A; --env:#7CCB63;
+  --w3:#7B9DF4; --w5:#3CC2AE; --w9:#E07DBE; --w10:#A894F2; --w11:#5CC3D6; --sp:#F2A54A; --env:#7CCB63;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.45}
@@ -230,6 +230,38 @@ const DECKS = [
     ["contradiction",["opposite","contradict","say","true"]],
     ["convenience",["easy","comfortable","store","useful"]],
     ["interfere with",["get in the way","stop","involve","disturb"]]
+  ]},
+  {id:"w11", label:"Week 11", color:"--w11", cards:[
+    ["generate",["produce","create","electricity","make"]],
+    ["breakthrough",["discovery","important","science","new"]],
+    ["instruction",["teach","direction","order","how"]],
+    ["content",["material","inside","video","social media"]],
+    ["balanced",["equal","diet","fair","healthy"]],
+    ["concept",["idea","think","abstract","understand"]],
+    ["objectives",["goals","aim","target","plan"]],
+    ["intellectual",["smart","mind","think","clever"]],
+    ["term",["word","expression","school","period"]],
+    ["operate",["work","machine","run","surgery"]],
+    ["match",["equal","same","football","fit"]],
+    ["compassionate",["kind","caring","feel","help"]],
+    ["artificial",["natural","man-made","fake","AI"]],
+    ["take over",["control","company","power","replace"]],
+    ["emphasize",["stress","important","focus","highlight"]],
+    ["tremendous",["huge","big","very","great"]],
+    ["remarkable",["amazing","special","unusual","notice"]],
+    ["sentient",["feel","alive","conscious","aware"]],
+    ["competence",["ability","skill","able","good at"]],
+    ["consciousness",["awareness","aware","mind","awake"]],
+    ["cruel",["unkind","hurt","mean","evil"]],
+    ["display",["show","screen","exhibition","see"]],
+    ["approach",["method","way","come","near"]],
+    ["branch",["tree","part","office","government"]],
+    ["erase",["delete","remove","rubber","clean"]],
+    ["error",["mistake","wrong","correct","computer"]],
+    ["inevitable",["unavoidable","must","happen","certain"]],
+    ["declare",["state","announce","say","officially"]],
+    ["occur",["happen","event","take place","accident"]],
+    ["assess",["evaluate","test","judge","exam"]]
   ]},
   {id:"sp", label:"Sports & culture", color:"--sp", cards:[
     ["highly",["very","much","recommend","high"]],
