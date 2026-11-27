@@ -98,6 +98,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
 .bhead h1{color:#fff;font-size:clamp(32px,5vw,52px);margin:0}.bhead p{margin:0;font-weight:700;font-size:20px}
 .side .btn,.side .ghost{width:100%;margin-top:10px}
 .qr{background:#fff;border-radius:12px;padding:10px;max-width:220px;margin:0 auto 8px}.qr svg{width:100%;height:auto;display:block}
+.code{font:800 clamp(40px,5vw,56px)/1 Archivo,sans-serif;letter-spacing:.12em;text-align:center;margin:0 0 10px;color:var(--ink)}
 .cap{text-align:center;font-size:14px;color:var(--mut);margin:0 0 6px;overflow-wrap:anywhere}
 details{margin-top:14px}summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
 #man{display:grid;gap:8px}
@@ -123,6 +124,7 @@ textarea{width:100%;margin-top:10px;font:14px/1.4 Figtree,sans-serif;min-height:
     <div class="card">
       <h1>Three texts, ten gaps each</h1>
       <ol class="rules">
+        <li>Scan the QR on the board, or type the room code shown there.</li>
         <li>Tap a gap in the text, then choose A, B, C or D.</li>
         <li>When all 10 gaps are filled, tap <b>Check</b>. You see your score and feedback, then move on to the next text.</li>
         <li>Each correct answer is worth 10 points. The live scoreboard shows the whole class.</li>
@@ -130,8 +132,12 @@ textarea{width:100%;margin-top:10px;font:14px/1.4 Figtree,sans-serif;min-height:
       <label for="nm">Your name</label>
       <input id="nm" maxlength="24" placeholder="e.g. Ayşe K." autocomplete="off" enterkeyhint="go">
       <p id="nmErr" class="err" hidden>Please enter your name first.</p>
+      <label for="rc" style="margin-top:14px">Room code <span class="muted" style="font-weight:600">(on the board)</span></label>
+      <input id="rc" maxlength="5" autocapitalize="characters" autocomplete="off" placeholder="e.g. K7Q2M" style="text-transform:uppercase;letter-spacing:.14em">
+      <p id="rcErr" class="err" hidden>Enter the 5-character room code from the board.</p>
       <button id="go" class="btn full">Start</button>
-      <p id="live1" class="live">Connecting to the class board…</p>
+      <button id="anyway" class="ghost full" hidden>Start without the board</button>
+      <p id="live1" class="live">Scan the QR on the board or type its room code.</p>
     </div>
     <a class="teacher" href="#board">Teacher: open the scoreboard →</a>
   </section>
@@ -184,11 +190,14 @@ textarea{width:100%;margin-top:10px;font:14px/1.4 Figtree,sans-serif;min-height:
     <div class="bgrid">
       <div class="card"><ol id="bList" class="lb"></ol><p id="bEmpty" class="muted">Students appear here when they start. Scores update live.</p></div>
       <aside class="card side">
+        <p class="lab" style="text-align:center;margin:0">Room code</p>
+        <p id="bCode" class="code">·····</p>
         <div id="qr" class="qr"></div>
         <p class="cap" id="qrCap">Scan to join</p>
         <button id="pod" class="btn">Show podium</button>
         <button id="copy" class="ghost">Copy results</button>
         <button id="clr" class="ghost">Clear scoreboard</button>
+        <button id="newCode" class="ghost">New room code</button>
         <textarea id="copyOut" readonly hidden aria-label="Results"></textarea>
         <details><summary>Add a student manually</summary>
           <form id="man"><input id="mN" maxlength="24" placeholder="Name" aria-label="Name"><input id="mC" type="number" inputmode="numeric" min="0" max="30" placeholder="Correct answers (0–30)" aria-label="Correct answers"><button class="btn">Add</button></form>
@@ -269,7 +278,12 @@ const N=T.length,G=10,MAXP=N*G*10;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-const KEY='pcz-player-v1',BKEY='pcz-board-v1';
+const KEY='pcz-player-v1',BKEY='pcz-board-v1',CKEY='pcz-code-v1';
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
+const CODE_ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const newCode=()=>{const a=crypto.getRandomValues(new Uint8Array(5));let s='';for(const x of a)s+=CODE_ALPH[x%CODE_ALPH.length];return s};
+const cleanCode=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rid=()=>{const a=crypto.getRandomValues(new Uint8Array(8));return [...a].map(x=>x.toString(36).padStart(2,'0')).join('').slice(0,12)};
 const num=(v,m)=>Math.max(0,Math.min(m,Math.round(Number(v)||0)));
@@ -283,6 +297,7 @@ const cleanP=s=>{
 
 let S=ls.get(KEY);
 if(!(S&&typeof S.sid==='string'&&Array.isArray(S.ans)&&S.ans.length===N&&S.ans.every(a=>Array.isArray(a)&&a.length===G)&&Array.isArray(S.sc)&&S.sc.length===N))S=null;
+if(S&&ROOM&&S.code!==ROOM){if(S.fin)S=null;else S.code=ROOM}
 const save=()=>ls.set(KEY,S);
 const totalC=()=>S.sc.reduce((a,x)=>a+(x>0?x:0),0);
 const filled=()=>S.fin||S.cur>=N?G:S.ans[S.cur].filter(x=>x!=null).length;
@@ -291,28 +306,32 @@ let act=0,rank=[],revT=0;
 const VIEWS=['vJoin','vText','vRes','vEnd','vBoard'];
 const show=v=>{for(const x of VIEWS)$(x).hidden=x!==v;document.body.classList.toggle('board',v==='vBoard');document.body.classList.toggle('playing',v==='vText'||v==='vRes');$('hud').hidden=!(v==='vText'||v==='vRes')};
 
-/* ---------- connection: one fixed class room over PeerJS; the board is the host ---------- */
+/* ---------- connection: PeerJS room per code; the board is the host ---------- */
 let peerLib=null;
 const loadPeer=()=>peerLib||(peerLib=new Promise((res,rej)=>{if(window.Peer)return res(window.Peer);const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';s.onload=()=>res(window.Peer);s.onerror=()=>{peerLib=null;rej(new Error('PeerJS failed to load'))};document.head.appendChild(s)}));
 const peerOpts=()=>({debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
-const HOST_ID='zynpoztrk2-passive-cloze-board-v1';
+const hostId=c=>'zynpoztrk2-cloze-'+String(c).toLowerCase();
 
 // student side
-const C={peer:null,conn:null,timer:0,state:'wait'};
+const C={peer:null,conn:null,timer:0,state:'idle',code:'',onJoin:null};
 function setStu(st){
-  C.state=st;
-  $('live1').textContent={wait:'Connecting to the class board…',on:'Connected to the class board.',missing:'The class board is not open yet. You can start; your score appears when your teacher opens it.',off:'Could not connect. You can still play and show your score to your teacher.'}[st];
+  C.state=st;const c=C.code;
+  $('live1').textContent={wait:`Checking room ${c}…`,on:`Connected to room ${c}.`,missing:`Room ${c} not found. Check the code on the board.`,off:'Could not connect. Check the internet and try again.'}[st];
   $('live1').className='live'+(st==='on'?' on':'');
-  $('live2').textContent=st==='on'?'● Live scoreboard on':st==='wait'?'Connecting…':'Board not connected yet: keep going';
-  if(S)renderRank();
+  $('live2').textContent=st==='on'?`● Live · room ${c}`:st==='wait'?`Connecting to room ${c}…`:st==='missing'?`Room ${c} not found: reconnecting…`:'Board not connected: keep going';
+  if(C.onJoin&&(st==='on'||st==='missing')){const f=C.onJoin;C.onJoin=null;f(st==='on')}
+  if(S&&S.code)renderRank();
 }
-function connectStudent(){
-  if(C.peer&&!C.peer.destroyed)return;
-  setStu('wait');
+function connectStudent(code){
+  if(!code)return;
+  if(C.code===code&&C.peer&&!C.peer.destroyed){if(C.conn&&C.conn.open)setStu('on');else later(100);return}
+  try{C.peer&&C.peer.destroy()}catch(e){}
+  C.conn=null;C.code=code;setStu('wait');
   loadPeer().then(()=>{
+    if(C.code!==code)return;
     const p=C.peer=new window.Peer(peerOpts());
-    p.on('open',()=>link());
-    p.on('error',e=>{setStu(e&&e.type==='peer-unavailable'?'missing':'wait');later(4000)});
+    p.on('open',()=>{if(p===C.peer)link()});
+    p.on('error',e=>{if(p!==C.peer)return;setStu(e&&e.type==='peer-unavailable'?'missing':'wait');later(4000)});
     p.on('disconnected',()=>setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500));
   },()=>setStu('off'));
 }
@@ -322,35 +341,39 @@ function link(){
   if(p.disconnected){later(2000);return}
   if(C.conn&&C.conn.open)return;
   try{C.conn&&C.conn.close()}catch(e){}
-  const c=C.conn=p.connect(HOST_ID,{reliable:true});
-  c.on('open',()=>{setStu('on');send()});
-  c.on('data',m=>{if(m&&m.t==='rank'&&Array.isArray(m.d)){rank=m.d.slice(0,120).map(cleanP).filter(Boolean);if(S)renderRank()}});
+  const c=C.conn=p.connect(hostId(C.code),{reliable:true});
+  c.on('open',()=>{if(c!==C.conn)return;setStu('on');send()});
+  c.on('data',m=>{if(c!==C.conn)return;if(m&&m.t==='rank'&&Array.isArray(m.d)){rank=m.d.slice(0,120).map(cleanP).filter(Boolean);if(S)renderRank()}});
   c.on('close',()=>{if(c!==C.conn)return;setStu('wait');later(1500)});
   c.on('error',()=>{});
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&C.peer&&!(C.conn&&C.conn.open))later(200)});
-const send=()=>{if(S&&C.conn&&C.conn.open){try{C.conn.send({t:'st',s:{sid:S.sid,name:S.name,pts:S.pts,c:totalC(),s:S.sc,cur:S.cur,f:filled(),fin:!!S.fin,ft:S.ft||0}})}catch(e){}}};
+const send=()=>{if(S&&S.code&&C.conn&&C.conn.open){try{C.conn.send({t:'st',s:{sid:S.sid,name:S.name,pts:S.pts,c:totalC(),s:S.sc,cur:S.cur,f:filled(),fin:!!S.fin,ft:S.ft||0}})}catch(e){}}};
 let sT=0;const sendSoon=()=>{clearTimeout(sT);sT=setTimeout(send,400)};
 
 // board (host) side
-const H={peer:null,conns:new Map(),latest:null,started:false};
+const H={peer:null,conns:new Map(),latest:null,started:false,code:''};
 let B=new Map((ls.get(BKEY)||[]).map(cleanP).filter(Boolean).map(e=>[e.sid,{...e,on:false}]));
 function setHost(st,msg){$('bLive').textContent=msg;$('bLive').className='live'+(st==='on'?' on':'')}
 function qrSvg(text){try{if(typeof qrcode!=='function')return '';const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){return ''}}
+function showCode(){
+  $('bCode').textContent=H.code;
+  const u=new URL(location.href);u.search='';u.hash='';u.searchParams.set('room',H.code);const url=u.toString();
+  $('qr').innerHTML=qrSvg(url);$('qr').hidden=!$('qr').innerHTML;$('qrCap').textContent=url.replace(/^https?:\/\//,'');
+}
 function startHost(){
   if(H.started)return;H.started=true;
-  const u=new URL(location.href);u.search='';u.hash='';const url=u.toString();
-  $('qr').innerHTML=qrSvg(url);$('qr').hidden=!$('qr').innerHTML;$('qrCap').textContent=url.replace(/^https?:\/\//,'');
+  H.code=cleanCode(ls.get(CKEY));if(H.code.length!==5){H.code=newCode();ls.set(CKEY,H.code)}showCode();
   loadPeer().then(openHost,()=>{H.started=false;setHost('off','Could not load the connection. Check the internet and reload.')});
 }
 function openHost(){
   try{H.peer&&H.peer.destroy()}catch(e){}
-  H.conns.clear();setHost('wait','Opening the class board…');
-  const p=H.peer=new window.Peer(HOST_ID,peerOpts());
-  p.on('open',()=>setHost('on','Board open: students connect automatically.'));
+  H.conns.clear();setHost('wait','Opening room…');
+  const p=H.peer=new window.Peer(hostId(H.code),peerOpts());
+  p.on('open',()=>{if(p===H.peer)setHost('on',`Room ${H.code} open: students join with the code or the QR.`)});
   p.on('error',e=>{
     if(p!==H.peer)return;
-    if(e.type==='unavailable-id'){setHost('wait','The board is already open in another tab or on another device. Close it there; retrying…');setTimeout(()=>{if(p===H.peer)openHost()},4000)}
+    if(e.type==='unavailable-id'){setHost('wait','This room code is busy: is the board open in another tab? Close it there, or tap New room code. Retrying…');setTimeout(()=>{if(p===H.peer)openHost()},4000)}
     else if(['network','server-error','socket-error','socket-closed'].includes(e.type)){setHost('off','No connection. Retrying…');setTimeout(()=>{try{if(p.disconnected&&!p.destroyed)p.reconnect()}catch(x){}},3000)}
   });
   p.on('disconnected',()=>{if(p!==H.peer)return;setHost('wait','Reconnecting…');setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500)});
@@ -483,24 +506,37 @@ function renderPodium(list){const t=list.slice(0,3);const slot=(e,n)=>`<div clas
 
 function route(){
   if(location.hash==='#board'){show('vBoard');startHost();renderBoard();return}
-  connectStudent();
-  if(!S){show('vJoin');return}
+  if(!S||!S.code){show('vJoin');if(S)$('nm').value=S.name;const rc=ROOM||(S&&S.code)||'';if(rc){$('rc').value=rc;connectStudent(rc)}return}
+  connectStudent(S.code);
   if(S.fin){show('vEnd');renderEnd()}else if(S.view==='res'){show('vRes');renderRes()}else{show('vText');renderText()}
   send();
 }
+let joinT=0;
+function resetGo(label){$('go').disabled=false;$('go').textContent=label||'Start'}
 function start(){
-  const name=$('nm').value.trim().replace(/\s+/g,' ').slice(0,24);
+  const name=$('nm').value.trim().replace(/\s+/g,' ').slice(0,24),code=cleanCode($('rc').value);
   if(!name){$('nmErr').hidden=false;$('nm').focus();return}
-  S={sid:rid(),name,cur:0,view:'text',ans:T.map(()=>Array(G).fill(null)),sc:T.map(()=>-1),pts:0,fin:false,ft:0};
-  act=0;save();route();
+  if(code.length!==5){$('rcErr').hidden=false;$('rc').focus();return}
+  $('go').disabled=true;$('go').textContent='Checking the room…';$('anyway').hidden=true;clearTimeout(joinT);
+  const begin=()=>{
+    clearTimeout(joinT);C.onJoin=null;resetGo();$('anyway').hidden=true;
+    if(S){S.name=name;S.code=code}
+    else S={sid:rid(),name,code,cur:0,view:'text',ans:T.map(()=>Array(G).fill(null)),sc:T.map(()=>-1),pts:0,fin:false,ft:0};
+    act=0;save();route();
+  };
+  C.onJoin=ok=>{if(ok)begin();else{clearTimeout(joinT);resetGo('Try again')}};
+  joinT=setTimeout(()=>{if(!C.onJoin)return;C.onJoin=null;resetGo('Try again');$('anyway').hidden=false},9000);
+  $('anyway').onclick=begin;
+  connectStudent(code);
 }
-
 const flash=(b,t)=>{const o=b.dataset.o||(b.dataset.o=b.textContent);b.textContent=t;setTimeout(()=>b.textContent=o,1600)};
 const twoStep=(b,m,fn)=>{let armed=0;const o=b.textContent;b.addEventListener('click',()=>{if(armed){clearTimeout(armed);armed=0;b.textContent=o;fn();return}b.textContent=m;armed=setTimeout(()=>{armed=0;b.textContent=o},3000)})};
 
 $('go').addEventListener('click',start);
 $('nm').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();start()}});
 $('nm').addEventListener('input',()=>$('nmErr').hidden=true);
+$('rc').addEventListener('input',()=>{$('rcErr').hidden=true;$('rc').value=cleanCode($('rc').value)});
+$('rc').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();start()}});
 $('tBody').addEventListener('click',e=>{const g=e.target.closest('.gap');if(!g||g.dataset.g==null)return;act=+g.dataset.g;drawBody();renderTray()});
 $('opts').addEventListener('click',e=>{const b=e.target.closest('.opt');if(b)choose(+b.dataset.j)});
 $('prv').addEventListener('click',()=>{act=(act+G-1)%G;drawBody();renderTray();scrollToGap(act)});
@@ -513,6 +549,7 @@ $('shX').addEventListener('click',()=>$('sheet').hidden=true);
 $('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))$('sheet').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('sheet').hidden=true;$('podium').hidden=true}});
 twoStep($('again'),'Sure? Your answers will be deleted. Tap again',()=>{ls.del(KEY);S=null;rank=[];revT=0;$('nm').value='';route();try{scrollTo(0,0)}catch(e){}});
+twoStep($('newCode'),'Sure? Students must rejoin. Tap again',()=>{H.code=newCode();ls.set(CKEY,H.code);B.clear();showCode();boardChanged();if(window.Peer)openHost()});
 twoStep($('clr'),'Sure? Tap again',()=>{B=new Map([...B].filter(([,e])=>e.on));boardChanged()});
 $('copy').addEventListener('click',()=>{
   const list=sortLB([...B.values()]),d=x=>x>=0?x:'-';
