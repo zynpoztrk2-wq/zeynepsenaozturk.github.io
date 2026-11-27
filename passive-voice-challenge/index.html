@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passive Voice Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: lively classroom game, clear and fair, phone-first
+   IDEA: an answer card that gets stamped by the examiner
+   PICTURE: the active sentence card with the writing slot; a stamp lands on check
+   COLOUR and TYPE: ultramarine field, white cards, sun-yellow accent, red/green only for verdicts; Archivo 800 + Figtree
+   LAYOUT: one 680px column for players; wide list + side panel for the projector board */
+:root{color-scheme:light dark;--field:light-dark(#2236e6,#0a0f33);--card:light-dark(#fff,#151b4d);--ink:light-dark(#12153a,#eef0ff);--mut:light-dark(#585d82,#a7acd8);--line:light-dark(#e2e4f3,#2a316f);--soft:light-dark(#f3f4fb,#1d2459);--sun:#ffd23f;--ok:light-dark(#0b8a58,#52d6a0);--bad:light-dark(#d33a40,#ff8186);--acc:light-dark(#2236e6,#ffd23f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:var(--field);color:#fff;font:17px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;max-width:680px;margin:0 auto;padding:22px 16px 14px}
+.brand{font:800 clamp(28px,6vw,40px)/1.02 Archivo,sans-serif;margin:0}
+body.playing .brand{font-size:20px}
+body.board .top,body.board main{max-width:1240px}
+.hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.hud span{background:rgba(255,255,255,.16);border-radius:999px;padding:5px 12px;font-weight:700;white-space:nowrap;font-size:15px}
+main{max-width:680px;margin:0 auto;padding:0 16px 48px}
+.card{background:var(--card);color:var(--ink);border-radius:20px;padding:clamp(18px,4vw,28px);margin-bottom:16px;box-shadow:0 8px 0 rgba(0,0,0,.2)}
+h1,h2{font-family:Archivo,sans-serif;line-height:1.1;margin:0 0 12px;text-wrap:balance}
+h1{font-size:clamp(26px,5vw,34px)}h2{font-size:22px}
+.rules{padding-left:1.2em;margin:0 0 18px}.rules li{margin-bottom:6px}
+label,.lab{display:block;font-size:14px;font-weight:700;color:var(--mut);margin:0 0 6px}
+input,textarea{width:100%;font:inherit;font-size:18px;color:var(--ink);background:var(--soft);border:2px solid var(--line);border-radius:14px;padding:12px 14px;outline:none}
+input:focus,textarea:focus{border-color:var(--acc)}
+textarea{resize:vertical;min-height:100px;line-height:1.4}
+textarea[readonly]{opacity:.8}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border:0;border-radius:14px;background:var(--sun);color:#12153a;font:800 18px Archivo,sans-serif;cursor:pointer;box-shadow:0 4px 0 #c49c0c}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #c49c0c}
+.ghost{min-height:52px;padding:0 18px;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:14px;font:700 16px Figtree,sans-serif;cursor:pointer}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}.row .btn{flex:1 1 160px}
+.full{width:100%;margin-top:16px}
+.err{color:var(--bad);font-size:14px;font-weight:700;margin:6px 0 0}
+.act{font:700 clamp(21px,4.6vw,26px)/1.3 Figtree,sans-serif;margin:0 0 20px}
+.bar{height:10px;background:rgba(255,255,255,.18);border-radius:99px;overflow:hidden;margin-bottom:14px}.bar i{display:block;height:100%;width:0;background:var(--sun);transition:width .3s}
+.fb{margin-top:14px;padding:14px 16px;border-radius:14px}
+.fb.ok{background:color-mix(in srgb,var(--ok) 13%,var(--card))}.fb.bad{background:color-mix(in srgb,var(--bad) 11%,var(--card))}
+.fb p{margin:8px 0 0}
+.stamp{display:inline-block;font:800 16px Archivo,sans-serif;color:var(--ok);border:3px solid currentColor;border-radius:8px;padding:2px 10px;transform:rotate(-3deg);animation:stamp .35s ease-out}
+.stamp.bad{color:var(--bad)}
+@keyframes stamp{from{transform:scale(1.8) rotate(-12deg);opacity:0}to{transform:rotate(-3deg);opacity:1}}
+.model{font-weight:700}.opt{color:var(--mut);font-weight:600}
+.live{font-size:14px;color:var(--mut);margin:12px 0 0}.live.on{color:var(--ok)}
+.teacher{display:inline-flex;align-items:center;min-height:44px;color:#fff;opacity:.9;font-weight:600}
+.score{text-align:center}.score p{margin:0}
+.big{font:800 clamp(64px,18vw,104px)/1 Archivo,sans-serif;margin:6px 0!important}
+.rank{font-weight:700;font-size:20px;margin-top:10px!important}
+.lb{list-style:none;margin:0;padding:0}
+.lb li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--line)}
+.lb .rk{font:800 18px Archivo,sans-serif;color:var(--mut)}
+.lb .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb small{display:block;color:var(--mut);font-weight:600;font-size:13px}
+.lb .pt{font:800 20px Archivo,sans-serif;text-align:right;white-space:nowrap}
+.lb .pg{grid-column:2/4;height:6px;background:var(--soft);border-radius:9px;overflow:hidden}.lb .pg i{display:block;height:100%;background:var(--acc)}
+.lb li.me{background:color-mix(in srgb,var(--sun) 28%,var(--card));border-radius:10px}
+.lb li.off{opacity:.55}
+#bList li{font-size:clamp(18px,2vw,24px);padding:14px 8px}#bList .pt{font-size:clamp(22px,2.4vw,30px)}#bList .rk{font-size:22px}
+.bgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media(max-width:900px){.bgrid{grid-template-columns:minmax(0,1fr)}}
+.bhead{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.bhead h1{color:#fff;font-size:clamp(32px,5vw,52px);margin:0}.bhead p{margin:0;font-weight:700;font-size:20px}
+.side .btn,.side .ghost{width:100%;margin-top:10px}
+.qr{background:#fff;border-radius:12px;padding:10px;max-width:220px;margin:0 auto 8px}.qr svg{width:100%;height:auto;display:block}
+.code{font:800 clamp(40px,5vw,56px)/1 Archivo,sans-serif;letter-spacing:.12em;text-align:center;margin:0 0 10px;color:var(--ink)}
+.pill{font-size:14px;font-weight:600;margin:-6px 0 12px;opacity:.9}
+.cap{text-align:center;font-size:14px;color:var(--mut);margin:0 0 6px;overflow-wrap:anywhere}
+details{margin-top:14px}summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+#man{display:grid;gap:8px}#man .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#copyOut{margin-top:10px;font-size:14px;min-height:120px}
+.muted{color:var(--mut)}
+.chip{display:inline-block;font-size:13px;font-weight:800;border-radius:6px;padding:1px 8px;margin-right:8px}
+.chip.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.chip.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.rev{padding-left:1.4em;margin:0}.rev li{margin-bottom:16px}.rev p{margin:2px 0}
+.light{color:#fff;border-color:rgba(255,255,255,.4);width:100%}
+.podium{position:fixed;inset:0;background:var(--field);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9;padding:24px;overflow:auto}
+.podium h2{color:#fff;font-size:clamp(32px,5vw,52px)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end;width:min(900px,100%)}
+.step{text-align:center}.step p{margin:0 0 6px;color:#fff}
+.pn{font:800 clamp(18px,3vw,32px)/1.1 Archivo,sans-serif;overflow-wrap:anywhere}.pp{font-weight:700;opacity:.85}
+.blk{background:var(--card);color:var(--ink);border-radius:16px 16px 0 0;font:800 clamp(36px,5vw,56px) Archivo,sans-serif;display:flex;justify-content:center;padding-top:12px}
+.s1 .blk{height:clamp(150px,28vh,250px);background:var(--sun);color:#12153a}.s2 .blk{height:clamp(110px,20vh,180px)}.s3 .blk{height:clamp(80px,14vh,130px)}
+.podium .ghost{color:#fff;border-color:rgba(255,255,255,.4)}
+@media(prefers-reduced-motion:reduce){.stamp{animation:none}.bar i{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <p class="brand">Passive Voice<br>Challenge</p>
+  <div id="hud" class="hud" hidden><span id="hudQ">1/15</span><span id="hudP">0 pts</span></div>
+</header>
+<main>
+  <section id="vJoin">
+    <div class="card">
+      <h1>Rewrite the sentences in the passive</h1>
+      <ol class="rules">
+        <li>Rewrite each of the 15 sentences in the passive voice as a full sentence.</li>
+        <li>You can leave out the <b>by …</b> phrase when it isn’t needed; both versions are accepted.</li>
+        <li>Correct on the first try: 100 points + a speed bonus (up to 50). Correct on the second try: 50 points.</li>
+      </ol>
+      <label for="nm">Your name</label>
+      <input id="nm" maxlength="24" placeholder="e.g. Ayşe K." autocomplete="off" enterkeyhint="go">
+      <p id="nmErr" class="err" hidden>Please enter your name first.</p>
+      <label for="rc" style="margin-top:14px">Room code <span class="opt">(on the board)</span></label>
+      <input id="rc" maxlength="5" autocapitalize="characters" autocomplete="off" placeholder="e.g. K7Q2M" style="text-transform:uppercase;letter-spacing:.14em">
+      <button id="go" class="btn full">Start</button>
+      <p id="live1" class="live">No room code: you can still play and show your score to your teacher.</p>
+    </div>
+    <a class="teacher" href="#board">Teacher: open the scoreboard →</a>
+  </section>
+
+  <section id="vPlay" hidden>
+    <div class="bar"><i id="prog"></i></div>
+    <p id="live2" class="pill"></p>
+    <article class="card">
+      <p class="lab">Active sentence · <span id="qn">1</span>/15</p>
+      <p id="act" class="act"></p>
+      <label for="ans">Passive form</label>
+      <textarea id="ans" rows="3" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" enterkeyhint="send" placeholder="Write the passive sentence here"></textarea>
+      <div id="fb" class="fb" hidden></div>
+      <div id="btns" class="row"><button id="chk" class="btn">Check</button><button id="skip" class="ghost">I don’t know</button></div>
+      <button id="next" class="btn full" hidden>Next →</button>
+    </article>
+  </section>
+
+  <section id="vEnd" hidden>
+    <div class="card score">
+      <p class="lab" id="eName"></p>
+      <p class="big" id="ePts">0</p>
+      <p>points · <b id="eC">0</b>/15 correct</p>
+      <p id="eRank" class="rank"></p>
+    </div>
+    <div class="card"><h2>Class ranking</h2><ol id="eBoard" class="lb"></ol><p id="eLive" class="live"></p></div>
+    <div class="card"><h2>Your answers</h2><ol id="eRev" class="rev"></ol></div>
+    <button id="again" class="ghost light">New player</button>
+  </section>
+
+  <section id="vBoard" hidden>
+    <div class="bhead"><h1>Scoreboard</h1><p id="bStat"></p></div>
+    <div class="bgrid">
+      <div class="card"><ol id="bList" class="lb"></ol><p id="bEmpty" class="muted">Students appear here when they start. Scores update live.</p></div>
+      <aside class="card side">
+        <p class="lab" style="text-align:center;margin:0">Room code</p>
+        <p id="bCode" class="code">·····</p>
+        <div id="qr" class="qr"></div>
+        <p class="cap" id="qrCap">Scan to join</p>
+        <button id="pod" class="btn">Show podium</button>
+        <button id="copy" class="ghost">Copy results</button>
+        <button id="clr" class="ghost">Clear scoreboard</button>
+        <button id="newCode" class="ghost">New room code</button>
+        <textarea id="copyOut" readonly hidden aria-label="Results"></textarea>
+        <details><summary>Add a student manually</summary>
+          <form id="man"><input id="mN" maxlength="24" placeholder="Name" aria-label="Name"><div class="two"><input id="mP" type="number" inputmode="numeric" min="0" max="2250" placeholder="Points" aria-label="Points"><input id="mC" type="number" inputmode="numeric" min="0" max="15" placeholder="Correct" aria-label="Number correct"></div><button class="btn">Add</button></form>
+        </details>
+        <p id="bLive" class="live"></p>
+        <a class="teacher" style="color:var(--acc)" href="#">← Student screen</a>
+      </aside>
+    </div>
+    <div id="podium" class="podium" hidden><h2>Podium</h2><div id="steps" class="steps"></div><button id="podX" class="ghost">Close</button></div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+{
+/*DATA*/
+const Q=[
+{a:"The company produces thousands of electronic devices every year.",t:"Present simple",fx:"am / is / are + V3",forms:[{s:["thousands of electronic devices"],v:["are produced"],p:[["every year"]],f:[0],ag:["by the company"]}],m:"Thousands of electronic devices are produced {by the company} every year."},
+{a:"The police arrested the suspect yesterday.",t:"Past simple",fx:"was / were + V3",forms:[{s:["the suspect"],v:["was arrested"],p:[["yesterday"]],f:[0],ag:["by the police","by police"]}],m:"The suspect was arrested {by the police} yesterday."},
+{a:"Scientists have discovered a new species in the Amazon rainforest.",t:"Present perfect",fx:"have / has been + V3",forms:[{s:["a new species"],v:["has been discovered"],p:[["in the amazon rainforest","in the amazon"]],f:[0],ag:["by scientists","by the scientists"]}],m:"A new species has been discovered {by scientists} in the Amazon rainforest.",note:"'A new species' is singular, so it takes has been."},
+{a:"The government will introduce new environmental regulations next month.",t:"Future (will)",fx:"will be + V3",forms:[{s:["new environmental regulations"],v:["will be introduced"],p:[["next month"]],f:[0],ag:["by the government"]}],m:"New environmental regulations will be introduced {by the government} next month."},
+{a:"The school is going to organize an international conference.",t:"be going to",fx:"am / is / are going to be + V3",forms:[{s:["an international conference"],v:["is going to be organized"],ag:["by the school"]}],m:"An international conference is going to be organized {by the school}."},
+{a:"People use social media for various purposes.",t:"Present simple",fx:"am / is / are + V3",forms:[{s:["social media"],v:["is used","are used"],p:[["for various purposes"]],f:[0],ag:["by people"]}],m:"Social media is used for various purposes {by people}.",drop:"by people"},
+{a:"The manager had approved the project before the meeting.",t:"Past perfect",fx:"had been + V3",forms:[{s:["the project"],v:["had been approved"],p:[["before the meeting"]],f:[0],ag:["by the manager"]}],m:"The project had been approved {by the manager} before the meeting."},
+{a:"Students must submit their assignments by Friday.",t:"Modal (must)",fx:"must be + V3",forms:[{s:["the assignments","assignments","their assignments","students assignments","the students assignments"],v:["must be submitted"],p:[["by friday"]],f:[0],ag:["by students","by the students"]}],m:"The assignments must be submitted by Friday.",note:"'by Friday' is a time expression, not the agent.",drop:"by students"},
+{a:"The researchers conducted several experiments last year.",t:"Past simple",fx:"was / were + V3",forms:[{s:["several experiments"],v:["were conducted"],p:[["last year"]],f:[0],ag:["by the researchers","by researchers"]}],m:"Several experiments were conducted {by the researchers} last year."},
+{a:"Artificial intelligence can perform many complex tasks.",t:"Modal (can)",fx:"can be + V3",forms:[{s:["many complex tasks"],v:["can be performed"],ag:["by artificial intelligence","by ai"]}],m:"Many complex tasks can be performed by artificial intelligence.",keep:"by artificial intelligence"},
+{a:"The authorities have cancelled all international flights.",t:"Present perfect",fx:"have / has been + V3",forms:[{s:["all international flights"],v:["have been cancelled"],ag:["by the authorities","by authorities"]}],m:"All international flights have been cancelled {by the authorities}."},
+{a:"The government should provide more financial support to university students.",t:"Modal (should)",fx:"should be + V3",vk:["should be provided"],forms:[{s:["more financial support"],v:["should be provided"],p:[["to university students","for university students"]],ag:["by the government"]},{s:["university students"],v:["should be provided with more financial support","should be provided more financial support"],ag:["by the government"]}],m:"More financial support should be provided to university students {by the government}.",m2:"University students should be provided with more financial support."},
+{a:"The organization will announce the results next week.",t:"Future (will)",fx:"will be + V3",forms:[{s:["the results"],v:["will be announced"],p:[["next week"]],f:[0],ag:["by the organization"]}],m:"The results will be announced {by the organization} next week."},
+{a:"The engineers could solve the technical problem.",t:"Modal (could)",fx:"could be + V3",forms:[{s:["the technical problem"],v:["could be solved"],ag:["by the engineers","by engineers"]}],m:"The technical problem could be solved {by the engineers}."},
+{a:"The company had completed the construction before the deadline.",t:"Past perfect",fx:"had been + V3",forms:[{s:["the construction"],v:["had been completed"],p:[["before the deadline"]],f:[0],ag:["by the company"]}],m:"The construction had been completed {by the company} before the deadline."}
+];
+const MAXP=Q.length*150;
+const norm=s=>String(s).toLowerCase().replace(/̇/g,'').replace(/ı/g,'i').replace(/[’‘`´']/g,'').replace(/[.,!?;:"“”()\[\]\-–—_\/\\]+/g,' ').replace(/\bcanceled\b/g,'cancelled').replace(/organis/g,'organiz').replace(/\s+/g,' ').trim();
+const perms=a=>a.length<2?[a]:a.flatMap((x,i)=>perms(a.filter((_,j)=>j!==i)).map(r=>[x,...r]));
+const cart=l=>l.reduce((acc,o)=>acc.flatMap(a=>o.map(x=>[...a,x])),[[]]);
+const ACC=Q.map(q=>{const set=new Set();for(const f of q.forms)for(const r of cart(f.p||[])){const fr=(f.f||[]).map(i=>r[i]);for(const g of [null,...(f.ag||[])]){const pcs=g?[...r,g]:r;for(const s of f.s)for(const v of f.v)for(const pm of perms(pcs)){set.add([s,v,...pm].join(' '));if(pm.length&&fr.includes(pm[0]))set.add([pm[0],s,v,...pm.slice(1)].join(' '))}}}return set});
+const lev=(a,b)=>{if(Math.abs(a.length-b.length)>2)return 9;let p=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[b.length]};
+function check(k,raw){
+  const q=Q[k],n=norm(raw),pad=' '+n+' ';
+  const hasAg=q.forms.some(f=>(f.ag||[]).some(g=>pad.includes(' '+g+' ')));
+  if(ACC[k].has(n)){
+    let note='';
+    if(q.keep&&!hasAg)note=`Here "${q.keep}" is important information, so it is better to keep it.`;
+    if(q.drop&&hasAg)note=`"${q.drop}" is usually left out because it adds no new information.`;
+    return {ok:true,note};
+  }
+  let near=false;for(const a of ACC[k])if(lev(n,a)<=2){near=true;break}
+  const vOk=(q.vk||q.forms.flatMap(f=>f.v)).some(v=>pad.includes(' '+v+' '));
+  const sOk=q.forms.some(f=>[...f.s,...(f.f||[]).flatMap(i=>f.p[i])].some(s=>n.startsWith(s+' ')));
+  const hint=!vOk?`Check the verb: ${q.t} → ${q.fx}`:near?'Very close! There is a small spelling or word mistake.':!sOk?'The verb is right. What should the new subject be? Move the object of the active sentence to the front.':'The verb and the subject are right. Check for missing or extra words.';
+  return {ok:false,hint};
+}
+/*END*/
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mdl=q=>esc(q.m).replace(/\{(.+?)\}/g,'<span class="opt">($1)</span>')+(q.m2?`<br><span class="opt">or:</span> ${esc(q.m2)}`:'');
+const noteP=q=>q.note?`<p class="opt">${esc(q.note)}</p>`:'';
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const KEY='pvc-player-v2',BKEY='pvc-board-v2',CKEY='pvc-code-v2';
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
+const rid=()=>{const a=crypto.getRandomValues(new Uint8Array(8));return [...a].map(x=>x.toString(36).padStart(2,'0')).join('').slice(0,12)};
+const CODE_ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const newCode=()=>{const a=crypto.getRandomValues(new Uint8Array(5));let s='';for(const x of a)s+=CODE_ALPH[x%CODE_ALPH.length];return s};
+const num=(v,m)=>Math.max(0,Math.min(m,Math.round(Number(v)||0)));
+const INVIS=new RegExp('['+[[0,0x1f],[0x7f,0x9f],[0x200b,0x200f],[0x2028,0x202e],[0x2060,0x206f],[0xfeff,0xfeff]].map(r=>r.map(c=>'\\u'+c.toString(16).padStart(4,'0')).join('-')).join('')+']','g');
+const cleanP=s=>{if(!s||typeof s.name!=='string'||typeof s.sid!=='string')return null;const name=s.name.replace(INVIS,' ').replace(/\s+/g,' ').trim().slice(0,24);const sid=s.sid.replace(/[^a-zA-Z0-9-]/g,'').slice(0,40);if(!name||!sid)return null;return {sid,name,pts:num(s.pts,MAXP),n:num(s.n,15),c:num(s.c,15),fin:s.fin===true,ft:num(s.ft,9e12),man:s.man===true}};
+
+let S=ls.get(KEY);
+if(!S||!Array.isArray(S.order)||S.order.length!==Q.length||!Array.isArray(S.res)||typeof S.sid!=='string')S=null;
+if(S&&ROOM&&S.code!==ROOM){if(S.done)S=null;else S.code=ROOM}
+const save=()=>ls.set(KEY,S);
+if(S)save();
+const nC=()=>S.res.filter(r=>r.ok).length;
+let t0=0,resolved=false,rank=[];
+
+const show=v=>{for(const x of ['vJoin','vPlay','vEnd','vBoard'])$(x).hidden=x!==v;document.body.classList.toggle('board',v==='vBoard');document.body.classList.toggle('playing',v==='vPlay');$('hud').hidden=v!=='vPlay'};
+const fb=(kind,html)=>{const f=$('fb');f.className='fb '+kind;f.innerHTML=html;f.hidden=false};
+
+/* ---------- connection: PeerJS, the board is the host ---------- */
+let peerLib=null;
+const loadPeer=()=>peerLib||(peerLib=new Promise((res,rej)=>{if(window.Peer)return res(window.Peer);const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';s.onload=()=>res(window.Peer);s.onerror=()=>{peerLib=null;rej(new Error('PeerJS failed to load'))};document.head.appendChild(s)}));
+const peerOpts=()=>({debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
+const hostId=c=>'passivevoice-'+String(c).toLowerCase();
+
+// student side
+const C={peer:null,conn:null,code:'',timer:0,state:'none'};
+function setStu(st){
+  C.state=st;const c=C.code;
+  const t={none:'No room code: you can still play and show your score to your teacher.',wait:`Connecting to room ${c}…`,on:`Connected to room ${c}.`,missing:`Room ${c} not found. Check the code on the board.`,off:'Could not connect. You can still play; show your score to your teacher.'}[st];
+  $('live1').textContent=t;$('live1').className='live'+(st==='on'?' on':'');
+  $('live2').textContent=st==='on'?`● Live · room ${c}`:st==='none'?'':st==='wait'?'Connecting…':'Not connected to the board';
+  if(S&&S.done&&!$('vEnd').hidden)renderEnd();
+}
+function connectStudent(code){
+  if(!code){setStu('none');return}
+  if(C.code===code&&C.peer&&!C.peer.destroyed)return;
+  C.code=code;setStu('wait');
+  loadPeer().then(()=>{
+    try{C.peer&&C.peer.destroy()}catch(e){}
+    const p=C.peer=new window.Peer(peerOpts());
+    p.on('open',()=>link());
+    p.on('error',e=>{setStu(e&&e.type==='peer-unavailable'?'missing':'wait');later(3000)});
+    p.on('disconnected',()=>setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500));
+  },()=>setStu('off'));
+}
+function later(ms){clearTimeout(C.timer);C.timer=setTimeout(link,ms)}
+function link(){
+  const p=C.peer;if(!p||p.destroyed)return;
+  if(p.disconnected){later(2000);return}
+  if(C.conn&&C.conn.open)return;
+  try{C.conn&&C.conn.close()}catch(e){}
+  const c=C.conn=p.connect(hostId(C.code),{reliable:true});
+  c.on('open',()=>{setStu('on');pres()});
+  c.on('data',m=>{if(m&&m.t==='rank'&&Array.isArray(m.d)){rank=m.d.slice(0,100).map(cleanP).filter(Boolean);if(S&&S.done&&!$('vEnd').hidden)renderEnd()}});
+  c.on('close',()=>{if(c!==C.conn)return;setStu('wait');later(1500)});
+  c.on('error',()=>{});
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&C.peer&&!(C.conn&&C.conn.open))later(200)});
+const pres=()=>{if(S&&C.conn&&C.conn.open){try{C.conn.send({t:'st',s:{sid:S.sid,name:S.name,pts:S.pts,n:S.res.length,c:nC(),fin:!!S.done,ft:S.ft||0}})}catch(e){}}};
+
+// board (host) side
+const H={peer:null,conns:new Map(),code:'',latest:null,started:false};
+let B=new Map((ls.get(BKEY)||[]).map(cleanP).filter(Boolean).map(e=>[e.sid,{...e,on:false}]));
+function setHost(st,msg){$('bLive').textContent=msg;$('bLive').className='live'+(st==='on'?' on':'')}
+function qrSvg(text){try{if(typeof qrcode!=='function')return '';const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){return ''}}
+function showCode(){
+  $('bCode').textContent=H.code;
+  const u=new URL(location.href);u.search='';u.hash='';u.searchParams.set('room',H.code);
+  const url=u.toString();
+  $('qr').innerHTML=qrSvg(url);$('qr').hidden=!$('qr').innerHTML;
+  $('qrCap').textContent=url.replace(/^https?:\/\//,'');
+}
+function startHost(){
+  if(H.started)return;H.started=true;
+  H.code=ls.get(CKEY)||newCode();ls.set(CKEY,H.code);showCode();
+  loadPeer().then(openHost,()=>{H.started=false;setHost('off','Could not load the connection. Check the internet and reload.')});
+}
+function openHost(){
+  try{H.peer&&H.peer.destroy()}catch(e){}
+  H.conns.clear();setHost('wait','Opening room…');
+  const p=H.peer=new window.Peer(hostId(H.code),peerOpts());
+  p.on('open',()=>setHost('on','Room open: students join with the code or the QR.'));
+  p.on('error',e=>{
+    if(p!==H.peer)return;
+    if(e.type==='unavailable-id'){setHost('wait','This room code is busy (is the board open in another tab?). Retrying…');setTimeout(()=>{if(p===H.peer)openHost()},3000)}
+    else if(['network','server-error','socket-error','socket-closed'].includes(e.type)){setHost('off','No connection. Retrying…');setTimeout(()=>{try{if(p.disconnected&&!p.destroyed)p.reconnect()}catch(x){}},3000)}
+  });
+  p.on('disconnected',()=>{if(p!==H.peer)return;setHost('wait','Reconnecting…');setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500)});
+  p.on('connection',c=>{
+    c.on('open',()=>{H.conns.set(c,null);if(H.latest){try{c.send(H.latest)}catch(e){}}});
+    c.on('data',m=>{
+      if(!m||m.t!=='st')return;const e=cleanP(m.s);if(!e)return;
+      if(!B.has(e.sid)&&B.size>=120)return;
+      e.man=false;H.conns.set(c,e.sid);B.set(e.sid,{...e,on:true});boardChanged();
+    });
+    const gone=()=>{if(!H.conns.has(c))return;const sid=H.conns.get(c);H.conns.delete(c);if(sid&&![...H.conns.values()].includes(sid)&&B.has(sid)){B.set(sid,{...B.get(sid),on:false});boardChanged()}};
+    c.on('close',gone);c.on('error',gone);
+  });
+}
+let bT=0;
+function boardChanged(){
+  ls.set(BKEY,[...B.values()]);
+  if(location.hash==='#board')renderBoard();
+  clearTimeout(bT);bT=setTimeout(()=>{
+    H.latest={t:'rank',d:sortLB([...B.values()]).slice(0,100).map(e=>({sid:e.sid,name:e.name,pts:e.pts,n:e.n,c:e.c,fin:e.fin,ft:e.ft}))};
+    for(const c of H.conns.keys())if(c.open){try{c.send(H.latest)}catch(e){}}
+  },250);
+}
+
+/* ---------- game ---------- */
+function route(){
+  if(location.hash==='#board'){show('vBoard');startHost();renderBoard();return}
+  if(!S){show('vJoin');if(ROOM)$('rc').value=ROOM;return}
+  connectStudent(S.code);
+  if(S.done){show('vEnd');renderEnd()}else{show('vPlay');showQ()}
+  pres();
+}
+
+function start(){
+  const name=$('nm').value.trim().replace(/\s+/g,' ').slice(0,24);
+  if(!name){$('nmErr').hidden=false;$('nm').focus();return}
+  const code=$('rc').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
+  const order=[...Q.keys()];
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}
+  S={sid:rid(),name,code,order,res:[],pts:0,tries:0,first:'',hint:'',done:false,ft:0};save();route();
+}
+
+function showQ(){
+  const i=S.res.length;if(i>=Q.length){finish();return}
+  const q=Q[S.order[i]];
+  $('qn').textContent=i+1;$('act').textContent=q.a;
+  $('prog').style.width=(i/Q.length*100)+'%';
+  $('hudQ').textContent=`${i+1}/${Q.length}`;$('hudP').textContent=`${S.pts} pts`;
+  const a=$('ans');a.value=S.tries?S.first:'';a.readOnly=false;
+  $('fb').hidden=true;$('btns').hidden=false;$('next').hidden=true;
+  resolved=false;t0=Date.now();
+  if(S.tries)fb('bad',`<span class="stamp bad">Try again</span><p>${esc(S.hint)}</p>`);
+}
+
+function record(k,ans,ok,pts){
+  S.res.push({k,a1:S.tries?S.first:'',a:ans,ok,pts});S.pts+=pts;S.tries=0;S.first='';S.hint='';save();
+  resolved=true;$('btns').hidden=true;$('next').hidden=false;$('ans').readOnly=true;
+  $('hudP').textContent=`${S.pts} pts`;$('prog').style.width=(S.res.length/Q.length*100)+'%';
+  $('next').textContent=S.res.length===Q.length?'See results →':'Next →';
+  pres();$('next').focus();
+}
+
+function submit(){
+  if(resolved){next();return}
+  const raw=$('ans').value;
+  if(!norm(raw)){fb('bad','<p style="margin:0">Write the passive sentence first.</p>');$('ans').focus();return}
+  const k=S.order[S.res.length],q=Q[k],r=check(k,raw);
+  if(r.ok){
+    const el=(Date.now()-t0)/1000,pts=S.tries?50:100+Math.max(0,Math.round(50*(1-el/60)));
+    record(k,raw,true,pts);
+    fb('ok',`<span class="stamp">Correct · +${pts}</span>${r.note?`<p>${esc(r.note)}</p>`:''}${noteP(q)}`);
+  }else if(!S.tries){
+    S.tries=1;S.first=raw;S.hint=r.hint;save();
+    fb('bad',`<span class="stamp bad">Try again</span><p>${esc(r.hint)}</p>`);$('ans').focus();
+  }else{
+    record(k,raw,false,0);
+    fb('bad',`<span class="stamp bad">Not quite</span><p class="lab" style="margin-top:10px">Correct answer</p><p class="model">${mdl(q)}</p>${noteP(q)}`);
+  }
+}
+function skip(){
+  if(resolved)return;const k=S.order[S.res.length];
+  record(k,$('ans').value.trim(),false,0);
+  fb('bad',`<p class="lab" style="margin:0">Correct answer</p><p class="model">${mdl(Q[k])}</p>${noteP(Q[k])}`);
+}
+const next=()=>{if(S.res.length>=Q.length)finish();else showQ()};
+function finish(){if(!S.done){S.done=true;S.ft=Date.now();save()}pres();show('vEnd');renderEnd();try{window.scrollTo(0,0)}catch(e){}}
+
+const sortLB=a=>a.sort((x,y)=>y.pts-x.pts||y.c-x.c||(x.ft||9e15)-(y.ft||9e15)||x.name.localeCompare(y.name,'tr'));
+const row=(e,i)=>`<li class="${e.me?'me':''}${e.on===false&&!e.man?' off':''}"><span class="rk">${i+1}</span><span class="nm"><b>${esc(e.name)}</b><small>${e.c}/15 correct${e.fin?' · finished':` · ${e.n}/15 answered`}${e.man?' · added manually':''}${e.on===false&&!e.man?' · offline':''}</small></span><span class="pt">${e.pts}</span><span class="pg"><i style="width:${Math.round(e.n/15*100)}%"></i></span></li>`;
+
+function renderEnd(){
+  $('eName').textContent=S.name;$('ePts').textContent=S.pts;$('eC').textContent=nC();
+  const live=C.state==='on';
+  const me={sid:S.sid,name:S.name,pts:S.pts,n:S.res.length,c:nC(),fin:true,ft:S.ft,me:true};
+  const list=sortLB([...rank.filter(e=>e.sid!==S.sid),me]);
+  const r=list.indexOf(me);
+  let shown=list.slice(0,10).map((e,i)=>row(e,i)).join('');if(r>=10)shown+=row(me,r);
+  $('eBoard').innerHTML=shown;
+  $('eRank').textContent=list.length>1?`You are #${r+1} of ${list.length}`:'';
+  $('eLive').textContent=live?'Live: the ranking updates as others finish.':'Not connected to the board. Show your score to your teacher.';
+  $('eLive').className='live'+(live?' on':'');
+  $('eRev').innerHTML=S.res.map(x=>{const q=Q[x.k];return `<li><p class="muted">${esc(q.a)}</p><p><span class="chip ${x.ok?'ok':'bad'}">${x.ok?'Correct':'Wrong'}</span>${esc(x.a||'—')}</p>${x.ok?'':`<p class="model">${mdl(q)}</p>`}</li>`}).join('');
+}
+
+function renderBoard(){
+  const list=sortLB([...B.values()]);
+  $('bList').innerHTML=list.map((e,i)=>row(e,i)).join('');
+  $('bEmpty').hidden=list.length>0;
+  $('bStat').textContent=list.length?`${list.length} students · ${list.filter(e=>e.fin).length} finished`:'';
+  if(!$('podium').hidden)renderPodium(list);
+}
+function renderPodium(list){const t=list.slice(0,3);const slot=(e,n)=>`<div class="step s${n}"><p class="pn">${e?esc(e.name):'—'}</p><p class="pp">${e?e.pts+' pts':''}</p><div class="blk">${n}</div></div>`;$('steps').innerHTML=slot(t[1],2)+slot(t[0],1)+slot(t[2],3)}
+
+const flash=(b,t)=>{const o=b.dataset.o||(b.dataset.o=b.textContent);b.textContent=t;setTimeout(()=>b.textContent=o,1600)};
+const twoStep=(b,msg,fn)=>{let armed=0;const o=b.textContent;b.addEventListener('click',()=>{if(armed){clearTimeout(armed);armed=0;b.textContent=o;fn();return}b.textContent=msg;armed=setTimeout(()=>{armed=0;b.textContent=o},3000)})};
+
+$('go').addEventListener('click',start);
+for(const id of ['nm','rc'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();start()}});
+$('nm').addEventListener('input',()=>$('nmErr').hidden=true);
+$('chk').addEventListener('click',submit);
+$('skip').addEventListener('click',skip);
+$('next').addEventListener('click',next);
+$('ans').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();submit()}});
+twoStep($('again'),'Sure? Your result will be deleted. Tap again',()=>{ls.del(KEY);S=null;rank=[];$('nm').value='';route();try{window.scrollTo(0,0)}catch(e){}});
+twoStep($('clr'),'Sure? Tap again',()=>{B=new Map([...B].filter(([,e])=>e.on));boardChanged()});
+twoStep($('newCode'),'Sure? Students must rejoin. Tap again',()=>{H.code=newCode();ls.set(CKEY,H.code);B.clear();showCode();boardChanged();if(window.Peer)openHost()});
+$('copy').addEventListener('click',()=>{
+  const list=sortLB([...B.values()]);
+  const txt=['Rank\tName\tPoints\tCorrect\tAnswered',...list.map((e,i)=>`${i+1}\t${e.name}\t${e.pts}\t${e.c}\t${e.n}/15`)].join('\n');
+  const fall=()=>{const o=$('copyOut');o.value=txt;o.hidden=false;o.select()};
+  try{navigator.clipboard.writeText(txt).then(()=>flash($('copy'),'Copied'),fall)}catch(e){fall()}
+});
+$('man').addEventListener('submit',e=>{
+  e.preventDefault();const name=$('mN').value.trim().slice(0,24);if(!name){$('mN').focus();return}
+  const en=cleanP({sid:'m-'+rid(),name,pts:$('mP').value,c:$('mC').value,n:15,fin:true,ft:Date.now(),man:true});
+  if(en){B.set(en.sid,en);boardChanged()}
+  $('mN').value=$('mP').value=$('mC').value='';$('mN').focus();
+});
+$('pod').addEventListener('click',()=>{$('podium').hidden=false;renderPodium(sortLB([...B.values()]));$('podX').focus()});
+$('podX').addEventListener('click',()=>$('podium').hidden=true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('podium').hidden=true});
+window.addEventListener('hashchange',route);
+route();
+}
+</script>
+</body>
+</html>
