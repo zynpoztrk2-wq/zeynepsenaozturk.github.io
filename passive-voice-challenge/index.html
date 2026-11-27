@@ -109,10 +109,8 @@ details{margin-top:14px}summary{cursor:pointer;font-weight:700;min-height:44px;d
       <label for="nm">Your name</label>
       <input id="nm" maxlength="24" placeholder="e.g. Ayşe K." autocomplete="off" enterkeyhint="go">
       <p id="nmErr" class="err" hidden>Please enter your name first.</p>
-      <label for="rc" style="margin-top:14px">Room code <span class="opt">(on the board)</span></label>
-      <input id="rc" maxlength="5" autocapitalize="characters" autocomplete="off" placeholder="e.g. K7Q2M" style="text-transform:uppercase;letter-spacing:.14em">
       <button id="go" class="btn full">Start</button>
-      <p id="live1" class="live">No room code: you can still play and show your score to your teacher.</p>
+      <p id="live1" class="live">Connecting to the class board…</p>
     </div>
     <a class="teacher" href="#board">Teacher: open the scoreboard →</a>
   </section>
@@ -148,14 +146,11 @@ details{margin-top:14px}summary{cursor:pointer;font-weight:700;min-height:44px;d
     <div class="bgrid">
       <div class="card"><ol id="bList" class="lb"></ol><p id="bEmpty" class="muted">Students appear here when they start. Scores update live.</p></div>
       <aside class="card side">
-        <p class="lab" style="text-align:center;margin:0">Room code</p>
-        <p id="bCode" class="code">·····</p>
         <div id="qr" class="qr"></div>
         <p class="cap" id="qrCap">Scan to join</p>
         <button id="pod" class="btn">Show podium</button>
         <button id="copy" class="ghost">Copy results</button>
         <button id="clr" class="ghost">Clear scoreboard</button>
-        <button id="newCode" class="ghost">New room code</button>
         <textarea id="copyOut" readonly hidden aria-label="Results"></textarea>
         <details><summary>Add a student manually</summary>
           <form id="man"><input id="mN" maxlength="24" placeholder="Name" aria-label="Name"><div class="two"><input id="mP" type="number" inputmode="numeric" min="0" max="2250" placeholder="Points" aria-label="Points"><input id="mC" type="number" inputmode="numeric" min="0" max="15" placeholder="Correct" aria-label="Number correct"></div><button class="btn">Add</button></form>
@@ -215,19 +210,14 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const mdl=q=>esc(q.m).replace(/\{(.+?)\}/g,'<span class="opt">($1)</span>')+(q.m2?`<br><span class="opt">or:</span> ${esc(q.m2)}`:'');
 const noteP=q=>q.note?`<p class="opt">${esc(q.note)}</p>`:'';
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-const KEY='pvc-player-v2',BKEY='pvc-board-v2',CKEY='pvc-code-v2';
-const params=new URLSearchParams(location.search);
-const ROOM=(params.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
+const KEY='pvc-player-v2',BKEY='pvc-board-v2';
 const rid=()=>{const a=crypto.getRandomValues(new Uint8Array(8));return [...a].map(x=>x.toString(36).padStart(2,'0')).join('').slice(0,12)};
-const CODE_ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const newCode=()=>{const a=crypto.getRandomValues(new Uint8Array(5));let s='';for(const x of a)s+=CODE_ALPH[x%CODE_ALPH.length];return s};
 const num=(v,m)=>Math.max(0,Math.min(m,Math.round(Number(v)||0)));
 const INVIS=new RegExp('['+[[0,0x1f],[0x7f,0x9f],[0x200b,0x200f],[0x2028,0x202e],[0x2060,0x206f],[0xfeff,0xfeff]].map(r=>r.map(c=>'\\u'+c.toString(16).padStart(4,'0')).join('-')).join('')+']','g');
 const cleanP=s=>{if(!s||typeof s.name!=='string'||typeof s.sid!=='string')return null;const name=s.name.replace(INVIS,' ').replace(/\s+/g,' ').trim().slice(0,24);const sid=s.sid.replace(/[^a-zA-Z0-9-]/g,'').slice(0,40);if(!name||!sid)return null;return {sid,name,pts:num(s.pts,MAXP),n:num(s.n,15),c:num(s.c,15),fin:s.fin===true,ft:num(s.ft,9e12),man:s.man===true}};
 
 let S=ls.get(KEY);
 if(!S||!Array.isArray(S.order)||S.order.length!==Q.length||!Array.isArray(S.res)||typeof S.sid!=='string')S=null;
-if(S&&ROOM&&S.code!==ROOM){if(S.done)S=null;else S.code=ROOM}
 const save=()=>ls.set(KEY,S);
 if(S)save();
 const nC=()=>S.res.filter(r=>r.ok).length;
@@ -236,30 +226,28 @@ let t0=0,resolved=false,rank=[];
 const show=v=>{for(const x of ['vJoin','vPlay','vEnd','vBoard'])$(x).hidden=x!==v;document.body.classList.toggle('board',v==='vBoard');document.body.classList.toggle('playing',v==='vPlay');$('hud').hidden=v!=='vPlay'};
 const fb=(kind,html)=>{const f=$('fb');f.className='fb '+kind;f.innerHTML=html;f.hidden=false};
 
-/* ---------- connection: PeerJS, the board is the host ---------- */
+/* ---------- connection: one fixed class room over PeerJS; the board is the host ---------- */
 let peerLib=null;
 const loadPeer=()=>peerLib||(peerLib=new Promise((res,rej)=>{if(window.Peer)return res(window.Peer);const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';s.onload=()=>res(window.Peer);s.onerror=()=>{peerLib=null;rej(new Error('PeerJS failed to load'))};document.head.appendChild(s)}));
 const peerOpts=()=>({debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
-const hostId=c=>'passivevoice-'+String(c).toLowerCase();
+const HOST_ID='zynpoztrk2-passive-voice-board-v1';
 
 // student side
-const C={peer:null,conn:null,code:'',timer:0,state:'none'};
+const C={peer:null,conn:null,timer:0,state:'wait'};
 function setStu(st){
-  C.state=st;const c=C.code;
-  const t={none:'No room code: you can still play and show your score to your teacher.',wait:`Connecting to room ${c}…`,on:`Connected to room ${c}.`,missing:`Room ${c} not found. Check the code on the board.`,off:'Could not connect. You can still play; show your score to your teacher.'}[st];
-  $('live1').textContent=t;$('live1').className='live'+(st==='on'?' on':'');
-  $('live2').textContent=st==='on'?`● Live · room ${c}`:st==='none'?'':st==='wait'?'Connecting…':'Not connected to the board';
+  C.state=st;
+  $('live1').textContent={wait:'Connecting to the class board…',on:'Connected to the class board.',missing:'The class board is not open yet. You can start; your score appears when your teacher opens it.',off:'Could not connect. You can still play and show your score to your teacher.'}[st];
+  $('live1').className='live'+(st==='on'?' on':'');
+  $('live2').textContent=st==='on'?'● Live scoreboard on':st==='wait'?'Connecting…':'Board not connected yet: keep going';
   if(S&&S.done&&!$('vEnd').hidden)renderEnd();
 }
-function connectStudent(code){
-  if(!code){setStu('none');return}
-  if(C.code===code&&C.peer&&!C.peer.destroyed)return;
-  C.code=code;setStu('wait');
+function connectStudent(){
+  if(C.peer&&!C.peer.destroyed)return;
+  setStu('wait');
   loadPeer().then(()=>{
-    try{C.peer&&C.peer.destroy()}catch(e){}
     const p=C.peer=new window.Peer(peerOpts());
     p.on('open',()=>link());
-    p.on('error',e=>{setStu(e&&e.type==='peer-unavailable'?'missing':'wait');later(3000)});
+    p.on('error',e=>{setStu(e&&e.type==='peer-unavailable'?'missing':'wait');later(4000)});
     p.on('disconnected',()=>setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500));
   },()=>setStu('off'));
 }
@@ -269,7 +257,7 @@ function link(){
   if(p.disconnected){later(2000);return}
   if(C.conn&&C.conn.open)return;
   try{C.conn&&C.conn.close()}catch(e){}
-  const c=C.conn=p.connect(hostId(C.code),{reliable:true});
+  const c=C.conn=p.connect(HOST_ID,{reliable:true});
   c.on('open',()=>{setStu('on');pres()});
   c.on('data',m=>{if(m&&m.t==='rank'&&Array.isArray(m.d)){rank=m.d.slice(0,100).map(cleanP).filter(Boolean);if(S&&S.done&&!$('vEnd').hidden)renderEnd()}});
   c.on('close',()=>{if(c!==C.conn)return;setStu('wait');later(1500)});
@@ -279,30 +267,24 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 const pres=()=>{if(S&&C.conn&&C.conn.open){try{C.conn.send({t:'st',s:{sid:S.sid,name:S.name,pts:S.pts,n:S.res.length,c:nC(),fin:!!S.done,ft:S.ft||0}})}catch(e){}}};
 
 // board (host) side
-const H={peer:null,conns:new Map(),code:'',latest:null,started:false};
+const H={peer:null,conns:new Map(),latest:null,started:false};
 let B=new Map((ls.get(BKEY)||[]).map(cleanP).filter(Boolean).map(e=>[e.sid,{...e,on:false}]));
 function setHost(st,msg){$('bLive').textContent=msg;$('bLive').className='live'+(st==='on'?' on':'')}
 function qrSvg(text){try{if(typeof qrcode!=='function')return '';const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){return ''}}
-function showCode(){
-  $('bCode').textContent=H.code;
-  const u=new URL(location.href);u.search='';u.hash='';u.searchParams.set('room',H.code);
-  const url=u.toString();
-  $('qr').innerHTML=qrSvg(url);$('qr').hidden=!$('qr').innerHTML;
-  $('qrCap').textContent=url.replace(/^https?:\/\//,'');
-}
 function startHost(){
   if(H.started)return;H.started=true;
-  H.code=ls.get(CKEY)||newCode();ls.set(CKEY,H.code);showCode();
+  const u=new URL(location.href);u.search='';u.hash='';const url=u.toString();
+  $('qr').innerHTML=qrSvg(url);$('qr').hidden=!$('qr').innerHTML;$('qrCap').textContent=url.replace(/^https?:\/\//,'');
   loadPeer().then(openHost,()=>{H.started=false;setHost('off','Could not load the connection. Check the internet and reload.')});
 }
 function openHost(){
   try{H.peer&&H.peer.destroy()}catch(e){}
-  H.conns.clear();setHost('wait','Opening room…');
-  const p=H.peer=new window.Peer(hostId(H.code),peerOpts());
-  p.on('open',()=>setHost('on','Room open: students join with the code or the QR.'));
+  H.conns.clear();setHost('wait','Opening the class board…');
+  const p=H.peer=new window.Peer(HOST_ID,peerOpts());
+  p.on('open',()=>setHost('on','Board open: students connect automatically.'));
   p.on('error',e=>{
     if(p!==H.peer)return;
-    if(e.type==='unavailable-id'){setHost('wait','This room code is busy (is the board open in another tab?). Retrying…');setTimeout(()=>{if(p===H.peer)openHost()},3000)}
+    if(e.type==='unavailable-id'){setHost('wait','The board is already open in another tab or on another device. Close it there; retrying…');setTimeout(()=>{if(p===H.peer)openHost()},3000)}
     else if(['network','server-error','socket-error','socket-closed'].includes(e.type)){setHost('off','No connection. Retrying…');setTimeout(()=>{try{if(p.disconnected&&!p.destroyed)p.reconnect()}catch(x){}},3000)}
   });
   p.on('disconnected',()=>{if(p!==H.peer)return;setHost('wait','Reconnecting…');setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500)});
@@ -330,8 +312,8 @@ function boardChanged(){
 /* ---------- game ---------- */
 function route(){
   if(location.hash==='#board'){show('vBoard');startHost();renderBoard();return}
-  if(!S){show('vJoin');if(ROOM)$('rc').value=ROOM;return}
-  connectStudent(S.code);
+  connectStudent();
+  if(!S){show('vJoin');return}
   if(S.done){show('vEnd');renderEnd()}else{show('vPlay');showQ()}
   pres();
 }
@@ -339,10 +321,9 @@ function route(){
 function start(){
   const name=$('nm').value.trim().replace(/\s+/g,' ').slice(0,24);
   if(!name){$('nmErr').hidden=false;$('nm').focus();return}
-  const code=$('rc').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
   const order=[...Q.keys()];
   for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}
-  S={sid:rid(),name,code,order,res:[],pts:0,tries:0,first:'',hint:'',done:false,ft:0};save();route();
+  S={sid:rid(),name,order,res:[],pts:0,tries:0,first:'',hint:'',done:false,ft:0};save();route();
 }
 
 function showQ(){
@@ -420,7 +401,7 @@ const flash=(b,t)=>{const o=b.dataset.o||(b.dataset.o=b.textContent);b.textConte
 const twoStep=(b,msg,fn)=>{let armed=0;const o=b.textContent;b.addEventListener('click',()=>{if(armed){clearTimeout(armed);armed=0;b.textContent=o;fn();return}b.textContent=msg;armed=setTimeout(()=>{armed=0;b.textContent=o},3000)})};
 
 $('go').addEventListener('click',start);
-for(const id of ['nm','rc'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();start()}});
+for(const id of ['nm'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();start()}});
 $('nm').addEventListener('input',()=>$('nmErr').hidden=true);
 $('chk').addEventListener('click',submit);
 $('skip').addEventListener('click',skip);
@@ -428,7 +409,6 @@ $('next').addEventListener('click',next);
 $('ans').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();submit()}});
 twoStep($('again'),'Sure? Your result will be deleted. Tap again',()=>{ls.del(KEY);S=null;rank=[];$('nm').value='';route();try{window.scrollTo(0,0)}catch(e){}});
 twoStep($('clr'),'Sure? Tap again',()=>{B=new Map([...B].filter(([,e])=>e.on));boardChanged()});
-twoStep($('newCode'),'Sure? Students must rejoin. Tap again',()=>{H.code=newCode();ls.set(CKEY,H.code);B.clear();showCode();boardChanged();if(window.Peer)openHost()});
 $('copy').addEventListener('click',()=>{
   const list=sortLB([...B.values()]);
   const txt=['Rank\tName\tPoints\tCorrect\tAnswered',...list.map((e,i)=>`${i+1}\t${e.name}\t${e.pts}\t${e.c}\t${e.n}/15`)].join('\n');

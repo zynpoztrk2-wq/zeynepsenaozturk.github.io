@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passive Voice Cloze Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Figtree:wght@400;600;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a calm exam booklet with a game's scoreboard beside it, phone-first
+   IDEA: a reading passage whose blanks are filled from a tray, then marked like a corrected paper
+   PICTURE: the passage card itself, gaps as numbered slots, the A–D tray docked at the bottom
+   COLOUR and TYPE: violet field, white paper, sun-yellow accent, green/red only for marking; Archivo 800 + Figtree + Literata for the passage
+   LAYOUT: one 720px column for students; wide list + side panel for the board */
+:root{color-scheme:light dark;--field:light-dark(#4b23d6,#120a33);--card:light-dark(#fff,#1b1450);--ink:light-dark(#16123a,#efedff);--mut:light-dark(#5d5884,#aca7d8);--line:light-dark(#e4e1f4,#2f2770);--soft:light-dark(#f4f2fc,#241b5e);--sun:#ffd23f;--ok:light-dark(#0b8a58,#52d6a0);--bad:light-dark(#d33a40,#ff8186);--acc:light-dark(#4b23d6,#ffd23f);--onacc:light-dark(#fff,#16123a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:var(--field);color:#fff;font:17px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;max-width:720px;margin:0 auto;padding:22px 16px 14px}
+.brand{font:800 clamp(28px,6vw,40px)/1.02 Archivo,sans-serif;margin:0}
+body.playing .brand{font-size:20px}
+body.playing .brand br{display:none}body.playing .top{flex-wrap:wrap;align-items:center;row-gap:8px;padding-bottom:12px}body.playing .hud{justify-content:flex-start}
+body.board .top,body.board main{max-width:1240px}
+.hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.hud span,.hud button{background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:999px;padding:5px 12px;font:700 15px Figtree,sans-serif;white-space:nowrap}
+.hud button{background:var(--sun);color:#16123a;cursor:pointer;min-height:34px}
+main{max-width:720px;margin:0 auto;padding:0 16px 48px}
+.card{background:var(--card);color:var(--ink);border-radius:20px;padding:clamp(18px,4vw,28px);margin-bottom:16px;box-shadow:0 8px 0 rgba(0,0,0,.2)}
+h1,h2{font-family:Archivo,sans-serif;line-height:1.1;margin:0 0 12px;text-wrap:balance}
+h1{font-size:clamp(24px,5vw,32px)}h2{font-size:22px}
+.rules{padding-left:1.2em;margin:0 0 18px}.rules li{margin-bottom:6px}
+label,.lab{display:block;font-size:14px;font-weight:700;color:var(--mut);margin:0 0 6px}
+input{width:100%;font:inherit;font-size:18px;color:var(--ink);background:var(--soft);border:2px solid var(--line);border-radius:14px;padding:12px 14px;outline:none}
+input:focus{border-color:var(--acc)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border:0;border-radius:14px;background:var(--sun);color:#16123a;font:800 18px Archivo,sans-serif;cursor:pointer;box-shadow:0 4px 0 #c49c0c}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #c49c0c}
+.btn:disabled{background:var(--soft);color:var(--mut);box-shadow:none;cursor:default}
+.ghost{min-height:48px;padding:0 18px;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:14px;font:700 16px Figtree,sans-serif;cursor:pointer}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.full{width:100%;margin-top:16px}
+.err{color:var(--bad);font-size:14px;font-weight:700;margin:6px 0 0}
+.live{font-size:14px;color:var(--mut);margin:12px 0 0}.live.on{color:var(--ok)}
+.pill{font-size:14px;font-weight:600;margin:0 0 12px;opacity:.92}
+.teacher{display:inline-flex;align-items:center;min-height:44px;color:#fff;opacity:.9;font-weight:600}
+.body{font:18px/1.9 Literata,Georgia,serif}.body p{margin:0 0 14px}
+.gap{font:600 17px/1.5 Figtree,sans-serif;color:var(--ink);background:var(--soft);border:0;border-bottom:2px dashed var(--acc);border-radius:6px;padding:2px 8px;margin:0 1px;cursor:pointer;white-space:normal;text-align:start}
+.gap i{font:800 12px Archivo,sans-serif;font-style:normal;background:var(--acc);color:var(--onacc);border-radius:4px;padding:1px 5px;margin-right:6px;vertical-align:2px}
+.gap.on{border-bottom-style:solid}
+.gap.act{outline:3px solid var(--sun);outline-offset:1px}
+.gap.ok{background:color-mix(in srgb,var(--ok) 15%,var(--card));border-bottom:2px solid var(--ok);cursor:default}.gap.ok i{background:var(--ok);color:#fff}
+.gap.bad{background:color-mix(in srgb,var(--bad) 12%,var(--card));border-bottom:2px solid var(--bad);cursor:default}.gap.bad i{background:var(--bad);color:#fff}.gap.bad s{color:var(--bad);font-weight:600;margin-right:4px}
+.tray{position:sticky;bottom:10px;z-index:3;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.trow{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.trow b{font:800 17px Archivo,sans-serif}
+.nav{width:40px;height:40px;border-radius:12px;border:2px solid var(--line);background:transparent;color:var(--ink);font:800 20px Archivo,sans-serif;cursor:pointer;flex:none}
+.fill{margin-left:auto;font-size:14px;font-weight:700;color:var(--mut);white-space:nowrap}
+.small{min-height:40px;padding:0 16px;font-size:16px}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.opt{display:flex;align-items:center;gap:8px;min-height:52px;padding:8px 10px;border:2px solid var(--line);border-radius:12px;background:var(--soft);color:var(--ink);font:600 15px/1.25 Figtree,sans-serif;text-align:start;cursor:pointer}
+.opt i{font:800 13px Archivo,sans-serif;font-style:normal;flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:var(--card);border:2px solid var(--line)}
+.opt.sel{background:var(--sun);border-color:#c49c0c;color:#16123a}.opt.sel i{background:#16123a;color:var(--sun);border-color:#16123a}
+.done{font-size:14px;font-weight:700;color:var(--ok);margin:10px 0 0;text-align:center}
+@keyframes nudge{0%,100%{transform:none}50%{transform:scale(1.06)}}.nudge{animation:nudge .6s ease-in-out 2}
+.score{text-align:center}.score p{margin:0}
+.big{font:800 clamp(64px,18vw,100px)/1 Archivo,sans-serif;margin:6px 0!important}
+.msg{font-weight:700;font-size:19px;margin-top:10px!important}
+.tip{color:var(--mut);margin-top:8px!important;text-wrap:pretty}
+.counts{font-size:14px;font-weight:700;margin-top:8px!important}
+.trio{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.rank{font-weight:700;font-size:20px;margin-top:10px!important}
+.lb{list-style:none;margin:0;padding:0}
+.lb li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--line)}
+.lb .rk{font:800 18px Archivo,sans-serif;color:var(--mut)}
+.lb .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb small{display:block;color:var(--mut);font-weight:600;font-size:13px}
+.lb .pt{font:800 20px Archivo,sans-serif;text-align:right;white-space:nowrap}
+.lb .tcs{grid-column:2/4;display:flex;gap:6px;flex-wrap:wrap}
+.tc{font-size:12px;font-weight:700;border-radius:6px;padding:1px 7px;background:var(--soft);color:var(--mut);white-space:nowrap}
+.tc.d{background:color-mix(in srgb,var(--acc) 16%,var(--card));color:var(--ink)}.tc.now{outline:2px solid var(--sun)}
+.lb li.me{background:color-mix(in srgb,var(--sun) 28%,var(--card));border-radius:10px}
+.lb li.off{opacity:.55}
+#bList li{font-size:clamp(18px,2vw,24px);padding:14px 8px}#bList .pt{font-size:clamp(22px,2.4vw,30px)}#bList .rk{font-size:22px}#bList .tc{font-size:14px;padding:2px 9px}
+.fbl{padding-left:1.6em;margin:14px 0 0}.fbl li{margin-bottom:14px;padding-left:4px}.fbl li::marker{font:800 15px Archivo,sans-serif;color:var(--mut)}
+.fbl p{margin:2px 0}.ex{color:var(--mut);font-size:15px}
+.chip{display:inline-block;font-size:13px;font-weight:800;border-radius:6px;padding:1px 8px;margin-right:8px}
+.chip.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.chip.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.muted{color:var(--mut)}
+.tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.tab{min-height:44px;padding:0 16px;border-radius:12px;border:2px solid var(--line);background:transparent;color:var(--ink);font:700 15px Figtree,sans-serif;cursor:pointer}.tab.on{background:var(--acc);color:var(--onacc);border-color:var(--acc)}
+.light{color:#fff;border-color:rgba(255,255,255,.4);width:100%}
+.sheet{position:fixed;inset:0;background:rgba(10,6,30,.55);z-index:8;display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.sheet .card{width:min(720px,100%);max-height:85vh;overflow:auto;margin:0}
+.shead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.shead h2{margin:0}
+.bgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media(max-width:900px){.bgrid{grid-template-columns:minmax(0,1fr)}}
+.bhead{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.bhead h1{color:#fff;font-size:clamp(32px,5vw,52px);margin:0}.bhead p{margin:0;font-weight:700;font-size:20px}
+.side .btn,.side .ghost{width:100%;margin-top:10px}
+.qr{background:#fff;border-radius:12px;padding:10px;max-width:220px;margin:0 auto 8px}.qr svg{width:100%;height:auto;display:block}
+.cap{text-align:center;font-size:14px;color:var(--mut);margin:0 0 6px;overflow-wrap:anywhere}
+details{margin-top:14px}summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+#man{display:grid;gap:8px}
+textarea{width:100%;margin-top:10px;font:14px/1.4 Figtree,sans-serif;min-height:120px;color:var(--ink);background:var(--soft);border:2px solid var(--line);border-radius:12px;padding:10px}
+.podium{position:fixed;inset:0;background:var(--field);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9;padding:24px;overflow:auto}
+.podium h2{color:#fff;font-size:clamp(32px,5vw,52px)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end;width:min(900px,100%)}
+.step{text-align:center}.step p{margin:0 0 6px;color:#fff}
+.pn{font:800 clamp(18px,3vw,32px)/1.1 Archivo,sans-serif;overflow-wrap:anywhere}.pp{font-weight:700;opacity:.85}
+.blk{background:var(--card);color:var(--ink);border-radius:16px 16px 0 0;font:800 clamp(36px,5vw,56px) Archivo,sans-serif;display:flex;justify-content:center;padding-top:12px}
+.s1 .blk{height:clamp(150px,28vh,250px);background:var(--sun);color:#16123a}.s2 .blk{height:clamp(110px,20vh,180px)}.s3 .blk{height:clamp(80px,14vh,130px)}
+.podium .ghost{color:#fff;border-color:rgba(255,255,255,.4)}
+@media(prefers-reduced-motion:reduce){.nudge{animation:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <p class="brand">Passive Voice <br>Cloze Test</p>
+  <div id="hud" class="hud" hidden><span id="hT">Text 1/3</span><span id="hP">0 pts</span><button id="hR" type="button">Scoreboard</button></div>
+</header>
+<main>
+  <section id="vJoin">
+    <div class="card">
+      <h1>Three texts, ten gaps each</h1>
+      <ol class="rules">
+        <li>Tap a gap in the text, then choose A, B, C or D.</li>
+        <li>When all 10 gaps are filled, tap <b>Check</b>. You see your score and feedback, then move on to the next text.</li>
+        <li>Each correct answer is worth 10 points. The live scoreboard shows the whole class.</li>
+      </ol>
+      <label for="nm">Your name</label>
+      <input id="nm" maxlength="24" placeholder="e.g. Ayşe K." autocomplete="off" enterkeyhint="go">
+      <p id="nmErr" class="err" hidden>Please enter your name first.</p>
+      <button id="go" class="btn full">Start</button>
+      <p id="live1" class="live">Connecting to the class board…</p>
+    </div>
+    <a class="teacher" href="#board">Teacher: open the scoreboard →</a>
+  </section>
+
+  <section id="vText" hidden>
+    <p id="live2" class="pill"></p>
+    <article class="card">
+      <p class="lab" id="tLab">Text 1 of 3</p>
+      <h1 id="tTitle"></h1>
+      <div id="tBody" class="body"></div>
+    </article>
+    <div id="tray" class="card tray">
+      <div class="trow"><button id="prv" class="nav" aria-label="Previous gap">‹</button><b id="gLab">Gap 1</b><button id="nxt" class="nav" aria-label="Next gap">›</button><span id="fill" class="fill">0/10</span><button id="sub" class="btn small" disabled>Check</button></div>
+      <div id="opts" class="opts"></div>
+      <p id="allDone" class="done" hidden>All 10 gaps are filled. Tap Check when you are ready.</p>
+    </div>
+  </section>
+
+  <section id="vRes" hidden>
+    <div class="card score">
+      <p class="lab" id="rLab"></p>
+      <p class="big" id="rScore">0/10</p>
+      <p id="rPts"></p>
+      <p id="rMsg" class="msg"></p>
+      <p id="rCounts" class="counts"></p>
+      <p id="rTip" class="tip"></p>
+      <button id="rNext" class="btn full">Next text →</button>
+    </div>
+    <div class="card"><h2>Live scoreboard</h2><ol id="rBoard" class="lb"></ol><p id="rLive" class="live"></p></div>
+    <div class="card"><h2>Feedback</h2><div id="rRev"></div></div>
+    <button id="rNext2" class="btn full" style="margin-top:0">Next text →</button>
+  </section>
+
+  <section id="vEnd" hidden>
+    <div class="card score">
+      <p class="lab" id="eName"></p>
+      <p class="big" id="ePts">0</p>
+      <p>points · <b id="eC">0</b>/30 correct</p>
+      <div id="eTexts" class="trio"></div>
+      <p id="eRank" class="rank"></p>
+      <p id="eMsg" class="tip"></p>
+    </div>
+    <div class="card"><h2>Live scoreboard</h2><ol id="eBoard" class="lb"></ol><p id="eLive" class="live"></p></div>
+    <div class="card"><h2>Review your answers</h2><div id="eTabs" class="tabs"></div><div id="eRev"></div></div>
+    <button id="again" class="ghost light">New player</button>
+  </section>
+
+  <section id="vBoard" hidden>
+    <div class="bhead"><h1>Scoreboard</h1><p id="bStat"></p></div>
+    <div class="bgrid">
+      <div class="card"><ol id="bList" class="lb"></ol><p id="bEmpty" class="muted">Students appear here when they start. Scores update live.</p></div>
+      <aside class="card side">
+        <div id="qr" class="qr"></div>
+        <p class="cap" id="qrCap">Scan to join</p>
+        <button id="pod" class="btn">Show podium</button>
+        <button id="copy" class="ghost">Copy results</button>
+        <button id="clr" class="ghost">Clear scoreboard</button>
+        <textarea id="copyOut" readonly hidden aria-label="Results"></textarea>
+        <details><summary>Add a student manually</summary>
+          <form id="man"><input id="mN" maxlength="24" placeholder="Name" aria-label="Name"><input id="mC" type="number" inputmode="numeric" min="0" max="30" placeholder="Correct answers (0–30)" aria-label="Correct answers"><button class="btn">Add</button></form>
+        </details>
+        <p id="bLive" class="live"></p>
+        <a class="teacher" style="color:var(--acc)" href="#">← Student screen</a>
+      </aside>
+    </div>
+    <div id="podium" class="podium" hidden><h2>Podium</h2><div id="steps" class="steps"></div><button id="podX" class="ghost">Close</button></div>
+  </section>
+</main>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="card"><div class="shead"><h2>Live scoreboard</h2><button id="shX" class="ghost">Close</button></div><ol id="sBoard" class="lb"></ol><p id="sLive" class="live"></p></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+{
+/*DATA*/
+const T=[
+{title:"Artificial Intelligence in Education",p:[
+"Artificial intelligence has become an essential part of modern education. Over the past decade, numerous digital learning platforms {1} to meet the individual needs of students. These platforms {2} learners with opportunities to study at their own pace and receive personalised feedback.",
+"Before AI-based technologies became widely available, educational institutions {3} mainly on traditional teaching methods. By the time the first AI-based platform was introduced at one particular university, several alternative teaching methods {4} by its academic staff.",
+"Today, artificial intelligence {5} to identify students' academic strengths and weaknesses. However, the increasing use of technology raises important ethical concerns. Educational institutions {6} that students' personal information remains secure. Under no circumstances should sensitive information {7} without the individual's permission.",
+"Last year, an independent research team {8} a comprehensive study on the effectiveness of AI-based learning tools. According to the researchers, more advanced technologies {9} into classrooms over the next decade. Nevertheless, teachers {10} an essential role in supporting students' academic and emotional development in the future."],
+q:[
+{o:["have developed","have been developed","had developed","had been developed"],a:1,ex:"“Over the past decade” → present perfect. Platforms don't develop themselves, so we need the passive."},
+{o:["are provided","have been provided","provide","had been provided"],a:2,ex:"The platforms do the action and “learners” is the object: active, present simple for a general fact."},
+{o:["were relied","have relied","had been relied","relied"],a:3,ex:"“Before … became available” → past simple. “Rely on” takes no object here, so it cannot be passive."},
+{o:["had already been tested","had already tested","have already tested","will already be tested"],a:0,ex:"“By the time + past simple” → past perfect. The methods were tested “by its academic staff”: passive."},
+{o:["uses","is used","has used","had used"],a:1,ex:"“Today” → present simple. AI doesn't use itself; people use it: passive."},
+{o:["must be ensured","should be ensured","must ensure","have been ensured"],a:2,ex:"Institutions do the ensuring, and a that-clause follows as the object: active modal."},
+{o:["share","have shared","be sharing","be shared"],a:3,ex:"After inverted “should” we need be + V3: information is shared by someone."},
+{o:["conducted","was conducted","has been conducted","has conducted"],a:0,ex:"“Last year” → past simple. The team did the study (an object follows): active."},
+{o:["will integrate","will be integrated","had been integrated","will have integrated"],a:1,ex:"“Over the next decade” → future. Technologies are integrated by people: passive."},
+{o:["will be played","have been played","will play","had played"],a:2,ex:"Future, and teachers do the action with an object (“an essential role”): active."}]},
+{title:"Environmental Protection and Sustainability",p:[
+"Environmental sustainability is one of the most significant challenges facing contemporary societies. Every year, enormous quantities of plastic waste {1} into rivers and oceans. This pollution {2} serious damage to marine ecosystems and threatens the survival of numerous species.",
+"Since the beginning of the century, several international agreements {3} to address environmental problems. However, many industrial companies still {4} profit over environmental responsibility.",
+"By the time stricter environmental regulations came into force in some countries, large areas of forest {5} completely by commercial activities. Unfortunately, the consequences of these activities cannot easily be reversed.",
+"To prevent further environmental damage, governments {6} more effective policies. In addition, companies that violate environmental regulations must {7} responsible for their actions.",
+"Last year, an international environmental organisation {8} a campaign to raise public awareness of plastic pollution. As part of the campaign, thousands of educational materials {9} to schools during the first week of the programme.",
+"If individuals, businesses and governments fail to cooperate, future generations {10} the consequences of today's environmental decisions."],
+q:[
+{o:["release","have released","are released","had been released"],a:2,ex:"“Every year” → present simple. Waste is released by someone: passive."},
+{o:["causes","is caused","has been caused","had been caused"],a:0,ex:"Pollution does the action and “serious damage” is the object: active, present simple."},
+{o:["have established","had established","were establishing","have been established"],a:3,ex:"“Since the beginning of the century” → present perfect. Agreements are established by countries: passive."},
+{o:["are prioritised","prioritise","have been prioritised","were prioritised"],a:1,ex:"Companies do the action and “profit” is the object: active, present simple."},
+{o:["had been destroyed","had destroyed","have destroyed","will be destroyed"],a:0,ex:"“By the time + past simple” → past perfect. Forests were destroyed “by commercial activities”: passive."},
+{o:["should be introduced","must be introduced","should introduce","have been introduced"],a:2,ex:"Governments do the action and “more effective policies” is the object: active modal."},
+{o:["hold","be held","have held","be holding"],a:1,ex:"“Hold someone responsible” → in the passive, companies must be held responsible."},
+{o:["was launched","has been launched","has launched","launched"],a:3,ex:"“Last year” → past simple. The organisation did the action (“a campaign”): active."},
+{o:["were distributed","distributed","have distributed","had distributed"],a:0,ex:"Past time (“the first week of the programme”). Materials were distributed by someone: passive."},
+{o:["will be faced","have been faced","will face","had been faced"],a:2,ex:"Future result of an if-clause; generations do the action with an object (“the consequences”): active."}]},
+{title:"Social Media and the Spread of Misinformation",p:[
+"Social media has fundamentally changed the way people access information. Millions of articles, photographs and videos {1} on digital platforms every day. Although these platforms offer numerous benefits, they also {2} the rapid spread of misleading information.",
+"In recent years, researchers {3} several studies to examine the relationship between social media use and public opinion. Their findings suggest that false information can reach a large audience before its accuracy {4} by independent fact-checkers.",
+"In one particular case last year, a misleading news story attracted widespread attention. By the time journalists discovered that the story was false, it {5} by thousands of social media users. Unfortunately, many individuals who encountered the story {6} its accuracy at the time.",
+"To address this issue, social media companies should {7} more effective content moderation systems. Furthermore, potentially harmful information {8} from online platforms when it poses a serious threat to public safety.",
+"Several educational institutions have recently announced new media literacy programmes. Through these programmes, students {9} how to evaluate online sources during the next academic year.",
+"Ultimately, individuals must recognise that they also {10} responsibility for the information they share online."],
+q:[
+{o:["share","are shared","have shared","had shared"],a:1,ex:"“Every day” → present simple. Content is shared by users: passive."},
+{o:["are facilitated","have been facilitated","were facilitated","facilitate"],a:3,ex:"The platforms do the action and “the rapid spread” is the object: active."},
+{o:["have conducted","have been conducted","had been conducted","are conducted"],a:0,ex:"“In recent years” → present perfect. Researchers do the action and “several studies” is the object: active."},
+{o:["verifies","has verified","is verified","had verified"],a:2,ex:"A time clause after “before” uses present simple; accuracy is verified “by independent fact-checkers”: passive."},
+{o:["had shared","had been shared","has shared","will be shared"],a:1,ex:"“By the time + past simple” → past perfect. The story was shared “by thousands of users”: passive."},
+{o:["were not questioned","had not been questioned","have not been questioned","did not question"],a:3,ex:"Past simple; the individuals did the action and “its accuracy” is the object: active."},
+{o:["develop","be developed","have been developed","developed"],a:0,ex:"After “should” we need the base form; companies develop systems (an object follows): active."},
+{o:["must remove","should remove","must be removed","has removed"],a:2,ex:"Information is removed by the platforms, and no object follows the gap: passive modal."},
+{o:["will teach","will be taught","have taught","had been taught"],a:1,ex:"“Next academic year” → future. Students are taught how to evaluate sources: passive."},
+{o:["are taken","have been taken","were taken","take"],a:3,ex:"“Take responsibility”: individuals do the action, present simple: active."}]}
+];
+const isPas=o=>/\b(is|are|was|were|be|been)\s+(not\s+)?(already\s+)?[a-z]+$/i.test(o)&&!/ing$/i.test(o);
+/*END*/
+const N=T.length,G=10,MAXP=N*G*10;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const KEY='pcz-player-v1',BKEY='pcz-board-v1';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rid=()=>{const a=crypto.getRandomValues(new Uint8Array(8));return [...a].map(x=>x.toString(36).padStart(2,'0')).join('').slice(0,12)};
+const num=(v,m)=>Math.max(0,Math.min(m,Math.round(Number(v)||0)));
+const INVIS=new RegExp('['+[[0,0x1f],[0x7f,0x9f],[0x200b,0x200f],[0x2028,0x202e],[0x2060,0x206f],[0xfeff,0xfeff]].map(r=>r.map(c=>'\\u'+c.toString(16).padStart(4,'0')).join('-')).join('')+']','g');
+const cleanP=s=>{
+  if(!s||typeof s.name!=='string'||typeof s.sid!=='string')return null;
+  const name=s.name.replace(INVIS,' ').replace(/\s+/g,' ').trim().slice(0,24),sid=s.sid.replace(/[^a-zA-Z0-9-]/g,'').slice(0,40);
+  if(!name||!sid)return null;const sc=Array.isArray(s.s)?s.s:[];
+  return {sid,name,pts:num(s.pts,MAXP),c:num(s.c,N*G),s:[0,1,2].map(i=>{const v=Number(sc[i]);return Number.isFinite(v)&&v>=0?Math.min(G,Math.round(v)):-1}),cur:num(s.cur,N),f:num(s.f,G),fin:s.fin===true,ft:num(s.ft,9e12),man:s.man===true};
+};
+
+let S=ls.get(KEY);
+if(!(S&&typeof S.sid==='string'&&Array.isArray(S.ans)&&S.ans.length===N&&S.ans.every(a=>Array.isArray(a)&&a.length===G)&&Array.isArray(S.sc)&&S.sc.length===N))S=null;
+const save=()=>ls.set(KEY,S);
+const totalC=()=>S.sc.reduce((a,x)=>a+(x>0?x:0),0);
+const filled=()=>S.fin||S.cur>=N?G:S.ans[S.cur].filter(x=>x!=null).length;
+let act=0,rank=[],revT=0;
+
+const VIEWS=['vJoin','vText','vRes','vEnd','vBoard'];
+const show=v=>{for(const x of VIEWS)$(x).hidden=x!==v;document.body.classList.toggle('board',v==='vBoard');document.body.classList.toggle('playing',v==='vText'||v==='vRes');$('hud').hidden=!(v==='vText'||v==='vRes')};
+
+/* ---------- connection: one fixed class room over PeerJS; the board is the host ---------- */
+let peerLib=null;
+const loadPeer=()=>peerLib||(peerLib=new Promise((res,rej)=>{if(window.Peer)return res(window.Peer);const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';s.onload=()=>res(window.Peer);s.onerror=()=>{peerLib=null;rej(new Error('PeerJS failed to load'))};document.head.appendChild(s)}));
+const peerOpts=()=>({debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
+const HOST_ID='zynpoztrk2-passive-cloze-board-v1';
+
+// student side
+const C={peer:null,conn:null,timer:0,state:'wait'};
+function setStu(st){
+  C.state=st;
+  $('live1').textContent={wait:'Connecting to the class board…',on:'Connected to the class board.',missing:'The class board is not open yet. You can start; your score appears when your teacher opens it.',off:'Could not connect. You can still play and show your score to your teacher.'}[st];
+  $('live1').className='live'+(st==='on'?' on':'');
+  $('live2').textContent=st==='on'?'● Live scoreboard on':st==='wait'?'Connecting…':'Board not connected yet: keep going';
+  if(S)renderRank();
+}
+function connectStudent(){
+  if(C.peer&&!C.peer.destroyed)return;
+  setStu('wait');
+  loadPeer().then(()=>{
+    const p=C.peer=new window.Peer(peerOpts());
+    p.on('open',()=>link());
+    p.on('error',e=>{setStu(e&&e.type==='peer-unavailable'?'missing':'wait');later(4000)});
+    p.on('disconnected',()=>setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500));
+  },()=>setStu('off'));
+}
+function later(ms){clearTimeout(C.timer);C.timer=setTimeout(link,ms)}
+function link(){
+  const p=C.peer;if(!p||p.destroyed)return;
+  if(p.disconnected){later(2000);return}
+  if(C.conn&&C.conn.open)return;
+  try{C.conn&&C.conn.close()}catch(e){}
+  const c=C.conn=p.connect(HOST_ID,{reliable:true});
+  c.on('open',()=>{setStu('on');send()});
+  c.on('data',m=>{if(m&&m.t==='rank'&&Array.isArray(m.d)){rank=m.d.slice(0,120).map(cleanP).filter(Boolean);if(S)renderRank()}});
+  c.on('close',()=>{if(c!==C.conn)return;setStu('wait');later(1500)});
+  c.on('error',()=>{});
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&C.peer&&!(C.conn&&C.conn.open))later(200)});
+const send=()=>{if(S&&C.conn&&C.conn.open){try{C.conn.send({t:'st',s:{sid:S.sid,name:S.name,pts:S.pts,c:totalC(),s:S.sc,cur:S.cur,f:filled(),fin:!!S.fin,ft:S.ft||0}})}catch(e){}}};
+let sT=0;const sendSoon=()=>{clearTimeout(sT);sT=setTimeout(send,400)};
+
+// board (host) side
+const H={peer:null,conns:new Map(),latest:null,started:false};
+let B=new Map((ls.get(BKEY)||[]).map(cleanP).filter(Boolean).map(e=>[e.sid,{...e,on:false}]));
+function setHost(st,msg){$('bLive').textContent=msg;$('bLive').className='live'+(st==='on'?' on':'')}
+function qrSvg(text){try{if(typeof qrcode!=='function')return '';const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true})}catch(e){return ''}}
+function startHost(){
+  if(H.started)return;H.started=true;
+  const u=new URL(location.href);u.search='';u.hash='';const url=u.toString();
+  $('qr').innerHTML=qrSvg(url);$('qr').hidden=!$('qr').innerHTML;$('qrCap').textContent=url.replace(/^https?:\/\//,'');
+  loadPeer().then(openHost,()=>{H.started=false;setHost('off','Could not load the connection. Check the internet and reload.')});
+}
+function openHost(){
+  try{H.peer&&H.peer.destroy()}catch(e){}
+  H.conns.clear();setHost('wait','Opening the class board…');
+  const p=H.peer=new window.Peer(HOST_ID,peerOpts());
+  p.on('open',()=>setHost('on','Board open: students connect automatically.'));
+  p.on('error',e=>{
+    if(p!==H.peer)return;
+    if(e.type==='unavailable-id'){setHost('wait','The board is already open in another tab or on another device. Close it there; retrying…');setTimeout(()=>{if(p===H.peer)openHost()},4000)}
+    else if(['network','server-error','socket-error','socket-closed'].includes(e.type)){setHost('off','No connection. Retrying…');setTimeout(()=>{try{if(p.disconnected&&!p.destroyed)p.reconnect()}catch(x){}},3000)}
+  });
+  p.on('disconnected',()=>{if(p!==H.peer)return;setHost('wait','Reconnecting…');setTimeout(()=>{try{if(!p.destroyed)p.reconnect()}catch(x){}},1500)});
+  p.on('connection',c=>{
+    c.on('open',()=>{H.conns.set(c,null);if(H.latest){try{c.send(H.latest)}catch(e){}}});
+    c.on('data',m=>{
+      if(!m||m.t!=='st')return;const e=cleanP(m.s);if(!e)return;
+      if(!B.has(e.sid)&&B.size>=150)return;
+      e.man=false;H.conns.set(c,e.sid);B.set(e.sid,{...e,on:true});boardChanged();
+    });
+    const gone=()=>{if(!H.conns.has(c))return;const sid=H.conns.get(c);H.conns.delete(c);if(sid&&![...H.conns.values()].includes(sid)&&B.has(sid)){B.set(sid,{...B.get(sid),on:false});boardChanged()}};
+    c.on('close',gone);c.on('error',gone);
+  });
+}
+let bT=0;
+function boardChanged(){
+  ls.set(BKEY,[...B.values()]);
+  if(location.hash==='#board')renderBoard();
+  clearTimeout(bT);bT=setTimeout(()=>{
+    H.latest={t:'rank',d:sortLB([...B.values()]).slice(0,120).map(({on,me,...e})=>e)};
+    for(const c of H.conns.keys())if(c.open){try{c.send(H.latest)}catch(e){}}
+  },250);
+}
+
+/* ---------- rendering ---------- */
+const sortLB=a=>a.sort((x,y)=>y.pts-x.pts||y.c-x.c||(x.ft||9e15)-(y.ft||9e15)||x.name.localeCompare(y.name,'tr'));
+const isFin=e=>e.fin||e.s.every(x=>x>=0);
+const status=e=>e.man?'added manually':isFin(e)?'finished':e.s[e.cur]>=0?`Text ${e.cur+1} done`:`Text ${e.cur+1} · ${e.f}/10 filled`;
+const chips=e=>e.man?'':e.s.map((x,i)=>`<span class="tc${x>=0?' d':''}${!isFin(e)&&e.cur===i&&x<0?' now':''}">T${i+1} ${x>=0?x+'/10':'·'}</span>`).join('');
+const row=(e,i)=>`<li class="${e.me?'me':''}${e.on===false&&!e.man?' off':''}"><span class="rk">${i+1}</span><span class="nm"><b>${esc(e.name)}</b><small>${status(e)}${e.on===false&&!e.man?' · offline':''}</small></span><span class="pt">${e.pts}</span><span class="tcs">${chips(e)}</span></li>`;
+
+function bodyHTML(ti,mode){
+  const t=T[ti],ans=S.ans[ti];
+  return t.p.map(par=>'<p>'+esc(par).replace(/\{(\d+)\}/g,(m,n)=>{
+    const g=+n-1,q=t.q[g],a=ans[g];
+    if(mode==='mark'){const ok=a===q.a;return ok?`<span class="gap ok"><i>${g+1}</i>${esc(q.o[q.a])}</span>`:`<span class="gap bad"><i>${g+1}</i><s>${a!=null?esc(q.o[a]):'—'}</s>${esc(q.o[q.a])}</span>`}
+    return `<button type="button" class="gap${a!=null?' on':''}${g===act?' act':''}" data-g="${g}" aria-label="Gap ${g+1}"><i>${g+1}</i>${a!=null?esc(q.o[a]):'________'}</button>`;
+  })+'</p>').join('');
+}
+function stats(ti){let c=0,v=0,t=0;T[ti].q.forEach((q,g)=>{const a=S.ans[ti][g];if(a===q.a)c++;else if(a!=null&&isPas(q.o[a])!==isPas(q.o[q.a]))v++;else t++});return {c,v,t}}
+const msg=(c,n)=>c===n?'Perfect! Every form is right.':c>=n*.8?'Great work. Check the gaps you missed below.':c>=n*.5?'Good effort. Read the explanations for the gaps you missed.':'Keep practising. Go through each explanation below before you move on.';
+const tip=(v,t)=>!v&&!t?'':v>=t?`Most of your mistakes were active vs passive. Ask: does the subject do the action? An object after the gap usually means active; no object usually means passive.`:`Most of your mistakes were about tense. Look for time clues: every year, since, by the time, last year, over the next decade.`;
+function reviewHTML(ti){
+  const t=T[ti];
+  return `<div class="body">${bodyHTML(ti,'mark')}</div><ol class="fbl">${t.q.map((q,g)=>{const a=S.ans[ti][g],ok=a===q.a;return `<li><p><span class="chip ${ok?'ok':'bad'}">${ok?'Correct':'Wrong'}</span><b>${esc(q.o[q.a])}</b>${ok||a==null?'':` <span class="muted">· you chose ${esc(q.o[a])}</span>`}</p><p class="ex">${esc(q.ex)}</p></li>`}).join('')}</ol>`;
+}
+function hud(){$('hT').textContent=`Text ${Math.min(S.cur+1,N)}/${N}`;$('hP').textContent=`${S.pts} pts`}
+function myEntry(){return {sid:S.sid,name:S.name,pts:S.pts,c:totalC(),s:S.sc.slice(),cur:S.cur,f:filled(),fin:!!S.fin,ft:S.ft||0,me:true}}
+function renderRank(){
+  const me=myEntry(),list=sortLB([...rank.filter(e=>e.sid!==S.sid),me]),r=list.indexOf(me);
+  let top=list.slice(0,10).map((e,i)=>row(e,i)).join('');if(r>=10)top+=row(me,r);
+  $('rBoard').innerHTML=top;$('eBoard').innerHTML=top;$('sBoard').innerHTML=list.map((e,i)=>row(e,i)).join('');
+  const live=C.state==='on';
+  $('hR').textContent=live&&list.length>1?`#${r+1} of ${list.length} · Scoreboard`:'Scoreboard';
+  const lt=live?'Live: updates as classmates answer.':'Not connected to the board yet. Your score is saved on this phone.';
+  for(const id of ['rLive','eLive','sLive']){$(id).textContent=lt;$(id).className='live'+(live?' on':'')}
+  $('eRank').textContent=list.length>1?`You are #${r+1} of ${list.length}`:'';
+}
+
+function renderText(){
+  const t=T[S.cur];
+  $('tLab').textContent=`Text ${S.cur+1} of ${N}`;$('tTitle').textContent=t.title;
+  if(act<0||act>=G)act=0;
+  if(S.ans[S.cur][act]!=null){const e=S.ans[S.cur].findIndex(x=>x==null);if(e>=0)act=e}
+  drawBody();renderTray();hud();renderRank();
+}
+const drawBody=()=>{$('tBody').innerHTML=bodyHTML(S.cur,'edit')};
+function renderTray(){
+  const q=T[S.cur].q[act],sel=S.ans[S.cur][act],f=filled();
+  $('gLab').textContent=`Gap ${act+1}`;
+  $('opts').innerHTML=q.o.map((o,j)=>`<button type="button" class="opt${sel===j?' sel':''}" data-j="${j}"><i>${'ABCD'[j]}</i>${esc(o)}</button>`).join('');
+  $('fill').textContent=`${f}/10`;$('sub').disabled=f<G;$('allDone').hidden=f<G;
+}
+function scrollToGap(g){
+  const el=$('tBody').querySelector(`[data-g="${g}"]`);if(!el)return;
+  const r=el.getBoundingClientRect(),th=$('tray').getBoundingClientRect().height;
+  if(r.top<60||r.bottom>innerHeight-th-20)el.scrollIntoView({block:'center',behavior:reduce?'auto':'smooth'});
+}
+function choose(j){
+  if(S.sc[S.cur]>=0)return;
+  S.ans[S.cur][act]=j;save();
+  const nx=[...Array(G).keys()].map(k=>(act+1+k)%G).find(k=>S.ans[S.cur][k]==null);
+  const wasLast=nx===undefined;
+  if(!wasLast)act=nx;
+  drawBody();renderTray();sendSoon();renderRank();
+  if(wasLast){const b=$('sub');b.classList.remove('nudge');void b.offsetWidth;b.classList.add('nudge')}else scrollToGap(act);
+}
+function submit(){
+  const a=S.ans[S.cur];if(a.some(x=>x==null)||S.sc[S.cur]>=0)return;
+  const c=T[S.cur].q.reduce((n,q,g)=>n+(a[g]===q.a?1:0),0);
+  S.sc[S.cur]=c;S.pts+=c*10;S.view='res';S.ft=Date.now();save();send();
+  show('vRes');renderRes();try{scrollTo(0,0)}catch(e){}
+}
+function renderRes(){
+  const i=S.cur,st=stats(i),last=i===N-1;
+  $('rLab').textContent=`Text ${i+1} complete · ${T[i].title}`;
+  $('rScore').textContent=`${st.c}/${G}`;
+  $('rPts').textContent=`+${st.c*10} points · total ${S.pts}`;
+  $('rMsg').textContent=msg(st.c,G);
+  $('rCounts').textContent=st.v||st.t?`Active/passive mix-ups: ${st.v} · Tense or form mistakes: ${st.t}`:'';
+  $('rTip').textContent=tip(st.v,st.t);
+  for(const b of ['rNext','rNext2'])$(b).textContent=last?'See final results →':`Next: Text ${i+2} →`;
+  $('rRev').innerHTML=reviewHTML(i);
+  hud();renderRank();
+}
+function nextText(){
+  if(S.cur>=N-1){S.fin=true;S.cur=N}else{S.cur++;S.view='text';act=0}
+  save();send();route();try{scrollTo(0,0)}catch(e){}
+}
+function renderEnd(){
+  $('eName').textContent=S.name;$('ePts').textContent=S.pts;$('eC').textContent=totalC();
+  $('eTexts').innerHTML=T.map((t,i)=>`<span class="tc d">Text ${i+1} · ${Math.max(0,S.sc[i])}/10</span>`).join('');
+  let v=0,t=0;for(let i=0;i<N;i++){const s=stats(i);v+=s.v;t+=s.t}
+  const c=totalC();
+  $('eMsg').textContent=(c===N*G?'Perfect score! ':c>=24?'Excellent work. ':c>=15?'Good work. ':'Keep practising. ')+tip(v,t);
+  renderRank();renderReview();
+}
+function renderReview(){
+  $('eTabs').innerHTML=T.map((t,i)=>`<button type="button" class="tab${i===revT?' on':''}" data-t="${i}">Text ${i+1} · ${Math.max(0,S.sc[i])}/10</button>`).join('');
+  $('eRev').innerHTML=reviewHTML(revT);
+}
+function renderBoard(){
+  const list=sortLB([...B.values()]);
+  $('bList').innerHTML=list.map((e,i)=>row(e,i)).join('');
+  $('bEmpty').hidden=list.length>0;
+  $('bStat').textContent=list.length?`${list.length} students · ${list.filter(isFin).length} finished`:'';
+  if(!$('podium').hidden)renderPodium(list);
+}
+function renderPodium(list){const t=list.slice(0,3);const slot=(e,n)=>`<div class="step s${n}"><p class="pn">${e?esc(e.name):'—'}</p><p class="pp">${e?e.pts+' pts':''}</p><div class="blk">${n}</div></div>`;$('steps').innerHTML=slot(t[1],2)+slot(t[0],1)+slot(t[2],3)}
+
+function route(){
+  if(location.hash==='#board'){show('vBoard');startHost();renderBoard();return}
+  connectStudent();
+  if(!S){show('vJoin');return}
+  if(S.fin){show('vEnd');renderEnd()}else if(S.view==='res'){show('vRes');renderRes()}else{show('vText');renderText()}
+  send();
+}
+function start(){
+  const name=$('nm').value.trim().replace(/\s+/g,' ').slice(0,24);
+  if(!name){$('nmErr').hidden=false;$('nm').focus();return}
+  S={sid:rid(),name,cur:0,view:'text',ans:T.map(()=>Array(G).fill(null)),sc:T.map(()=>-1),pts:0,fin:false,ft:0};
+  act=0;save();route();
+}
+
+const flash=(b,t)=>{const o=b.dataset.o||(b.dataset.o=b.textContent);b.textContent=t;setTimeout(()=>b.textContent=o,1600)};
+const twoStep=(b,m,fn)=>{let armed=0;const o=b.textContent;b.addEventListener('click',()=>{if(armed){clearTimeout(armed);armed=0;b.textContent=o;fn();return}b.textContent=m;armed=setTimeout(()=>{armed=0;b.textContent=o},3000)})};
+
+$('go').addEventListener('click',start);
+$('nm').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();start()}});
+$('nm').addEventListener('input',()=>$('nmErr').hidden=true);
+$('tBody').addEventListener('click',e=>{const g=e.target.closest('.gap');if(!g||g.dataset.g==null)return;act=+g.dataset.g;drawBody();renderTray()});
+$('opts').addEventListener('click',e=>{const b=e.target.closest('.opt');if(b)choose(+b.dataset.j)});
+$('prv').addEventListener('click',()=>{act=(act+G-1)%G;drawBody();renderTray();scrollToGap(act)});
+$('nxt').addEventListener('click',()=>{act=(act+1)%G;drawBody();renderTray();scrollToGap(act)});
+$('sub').addEventListener('click',submit);
+for(const id of ['rNext','rNext2'])$(id).addEventListener('click',nextText);
+$('eTabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(b){revT=+b.dataset.t;renderReview()}});
+$('hR').addEventListener('click',()=>{$('sheet').hidden=false;renderRank();$('shX').focus()});
+$('shX').addEventListener('click',()=>$('sheet').hidden=true);
+$('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))$('sheet').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('sheet').hidden=true;$('podium').hidden=true}});
+twoStep($('again'),'Sure? Your answers will be deleted. Tap again',()=>{ls.del(KEY);S=null;rank=[];revT=0;$('nm').value='';route();try{scrollTo(0,0)}catch(e){}});
+twoStep($('clr'),'Sure? Tap again',()=>{B=new Map([...B].filter(([,e])=>e.on));boardChanged()});
+$('copy').addEventListener('click',()=>{
+  const list=sortLB([...B.values()]),d=x=>x>=0?x:'-';
+  const txt=['Rank\tName\tPoints\tCorrect\tText 1\tText 2\tText 3',...list.map((e,i)=>`${i+1}\t${e.name}\t${e.pts}\t${e.c}\t${d(e.s[0])}\t${d(e.s[1])}\t${d(e.s[2])}`)].join('\n');
+  const fall=()=>{const o=$('copyOut');o.value=txt;o.hidden=false;o.select()};
+  try{navigator.clipboard.writeText(txt).then(()=>flash($('copy'),'Copied'),fall)}catch(e){fall()}
+});
+$('man').addEventListener('submit',e=>{
+  e.preventDefault();const name=$('mN').value.trim().slice(0,24);if(!name){$('mN').focus();return}
+  const c=num($('mC').value,N*G);
+  const en=cleanP({sid:'m-'+rid(),name,pts:c*10,c,s:[-1,-1,-1],cur:N,f:G,fin:true,ft:Date.now(),man:true});
+  if(en){B.set(en.sid,en);boardChanged()}
+  $('mN').value=$('mC').value='';$('mN').focus();
+});
+$('pod').addEventListener('click',()=>{$('podium').hidden=false;renderPodium(sortLB([...B.values()]));$('podX').focus()});
+$('podX').addEventListener('click',()=>$('podium').hidden=true);
+window.addEventListener('hashchange',route);
+route();
+}
+</script>
+</body>
+</html>
